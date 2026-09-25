@@ -1,0 +1,34 @@
+{
+  "name": "zerostack-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZeroStack - Piattaforma open-source di newsletter, blogging, podcast e note per creator e aziende italiane (Competitor Substack)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npm run db:generate --workspace=@zerostack/database",
+    "db:push": "npm run db:push --workspace=@zerostack/database",
+    "db:seed": "npm run db:seed --workspace=@zerostack/database",
+    "deploy:vps": "bash scripts/deploy.sh"
+  },
+  "keywords": [
+    "substack-clone",
+    "newsletter",
+    "publishing",
+    "podcast",
+    "italy",
+    "creator-economy",
+    "self-hosted",
+    "vps",
+    "nextjs",
+    "react-native",
+    "expo"
+  ],
+  "author": "Dario De Leonardis",
+  "license": "MIT"
+}

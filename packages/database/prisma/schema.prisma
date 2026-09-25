@@ -1,0 +1,330 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  READER
+  AUTHOR
+  ADMIN
+  SUPERADMIN
+}
+
+enum PublicationMemberRole {
+  OWNER
+  EDITOR
+  CONTRIBUTOR
+}
+
+enum PostAccess {
+  FREE
+  PAID_SUBSCRIBERS
+  FOUNDING_MEMBERS
+  TIER_SPECIFIC
+}
+
+enum PostFormat {
+  ARTICLE
+  NEWSLETTER_ONLY
+  PODCAST
+  NOTE
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+  ONE_TIME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum CampaignStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  handle        String    @unique
+  avatarUrl     String?
+  bio           String?
+  passwordHash  String
+  role          Role      @default(READER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedPublications  Publication[]        @relation("PublicationOwner")
+  memberships        PublicationMember[]
+  posts              Post[]               @relation("AuthorPosts")
+  notes              Note[]               @relation("AuthorNotes")
+  comments           Comment[]
+  likes              Like[]
+  bookmarks          Bookmark[]
+  subscriptions      Subscription[]
+  billingDetails     ItalianBillingInfo[]
+}
+
+model Publication {
+  id                     String   @id @default(uuid())
+  ownerId                String
+  name                   String
+  slug                   String   @unique
+  description            String?
+  logoUrl                String?
+  coverUrl               String?
+  customDomain           String?  @unique
+  isDomainVerified       Boolean  @default(false)
+  primaryColor           String   @default("#FF5722")
+  fontStyle              String   @default("sans")
+  
+  // Impostazioni integrazione pagamenti & email (indipendenza del creator)
+  stripeAccountId        String?
+  emailProvider          String   @default("SMTP") // "BREVO" | "RESEND" | "POSTMARK" | "SMTP"
+  smtpHost               String?
+  smtpPort               Int?     @default(587)
+  smtpUser               String?
+  smtpPass               String?
+  fromEmail              String?
+  fromName               String?
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  owner                  User                @relation("PublicationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members                PublicationMember[]
+  tiers                  Tier[]
+  posts                  Post[]
+  notes                  Note[]
+  subscribers            NewsletterSubscriber[]
+  subscriptions          Subscription[]
+  emailCampaigns         EmailCampaign[]
+}
+
+model PublicationMember {
+  id            String                @id @default(uuid())
+  publicationId String
+  userId        String
+  role          PublicationMemberRole @default(CONTRIBUTOR)
+
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, userId])
+}
+
+model Tier {
+  id            String          @id @default(uuid())
+  publicationId String
+  name          String
+  description   String
+  priceCents    Int
+  currency      String          @default("EUR")
+  interval      BillingInterval @default(MONTH)
+  benefits      String[]
+  stripePriceId String?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+
+  publication   Publication    @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  publicationId        String
+  userId               String
+  tierId               String?
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  currentPeriodEnd     DateTime?
+  isPaid               Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  publication          Publication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier                 Tier?               @relation(fields: [tierId], references: [id])
+  billingInfo          ItalianBillingInfo?
+}
+
+model ItalianBillingInfo {
+  id             String   @id @default(uuid())
+  userId         String
+  subscriptionId String?  @unique
+  isCompany      Boolean  @default(false)
+  ragioneSociale String
+  codiceFiscale  String
+  partitaIva     String?
+  sdi            String?  // 7 caratteri
+  pec            String?
+  indirizzo      String
+  cap            String
+  citta          String
+  provincia      String   // 2 caratteri
+  paese          String   @default("IT")
+  createdAt      DateTime @default(now())
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+}
+
+model Post {
+  id              String      @id @default(uuid())
+  publicationId   String
+  authorId        String
+  title           String
+  subtitle        String?
+  slug            String
+  contentHtml     String      @db.Text
+  contentJson     Json?
+  excerpt         String?
+  coverImageUrl   String?
+  access          PostAccess  @default(FREE)
+  format          PostFormat  @default(ARTICLE)
+  status          PostStatus  @default(DRAFT)
+  viewsCount      Int         @default(0)
+  likesCount      Int         @default(0)
+  commentsCount   Int         @default(0)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  publication     Publication    @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  author          User           @relation("AuthorPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  podcastEpisode  PodcastEpisode?
+  comments        Comment[]
+  likes           Like[]
+  bookmarks       Bookmark[]
+  campaigns       EmailCampaign[]
+
+  @@unique([publicationId, slug])
+}
+
+model PodcastEpisode {
+  id              String   @id @default(uuid())
+  postId          String   @unique
+  audioUrl        String
+  durationSeconds Int      @default(0)
+  episodeNumber   Int?
+  seasonNumber    Int?
+  explicit        Boolean  @default(false)
+  transcript      String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id              String   @id @default(uuid())
+  authorId        String
+  publicationId   String?
+  content         String   @db.VarChar(1000)
+  mediaUrls       String[]
+  likesCount      Int      @default(0)
+  restacksCount   Int      @default(0)
+  repliesCount    Int      @default(0)
+  replyToNoteId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  author          User         @relation("AuthorNotes", fields: [authorId], references: [id], onDelete: Cascade)
+  publication     Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  comments        Comment[]
+  likes           Like[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  authorId  String
+  postId    String?
+  noteId    String?
+  parentId  String?
+  content   String   @db.Text
+  likesCount Int     @default(0)
+  createdAt DateTime @default(now())
+
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String?
+  noteId    String?
+  commentId String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, noteId, commentId])
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model NewsletterSubscriber {
+  id            String   @id @default(uuid())
+  publicationId String
+  email         String
+  name          String?
+  status        String   @default("ACTIVE") // ACTIVE, UNSUBSCRIBED, BOUNCED
+  isDoubleOptIn Boolean  @default(true)
+  source        String   @default("WEB") // WEB, IMPORT_SUBSTACK, API
+  createdAt     DateTime @default(now())
+
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, email])
+}
+
+model EmailCampaign {
+  id              String         @id @default(uuid())
+  publicationId   String
+  postId          String
+  subject         String
+  status          CampaignStatus @default(PENDING)
+  recipientsCount Int            @default(0)
+  opensCount      Int            @default(0)
+  clicksCount     Int            @default(0)
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+
+  publication     Publication    @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+}

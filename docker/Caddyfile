@@ -1,0 +1,19 @@
+{
+    # Abilita certificati SSL automatici Let's Encrypt On-Demand per domini personalizzati
+    on_demand_tls {
+        ask http://web:3000/api/domains/check
+    }
+}
+
+# Dominio principale di ZeroStack
+{$APP_DOMAIN:localhost} {
+    reverse_proxy web:3000
+}
+
+# Gestione dinamica per tutti i domini e sottodomini personalizzati dei creator
+:443 {
+    tls {
+        on_demand
+    }
+    reverse_proxy web:3000
+}
