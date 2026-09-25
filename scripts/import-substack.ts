@@ -32,12 +32,36 @@ async function importSubstack() {
   const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
   const header = lines[0].split(",");
 
+export function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
   console.log(`📄 Trovate ${lines.length - 1} righe nel file export di Substack.`);
 
   let importedCount = 0;
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
-    const email = cols[0]?.trim();
+    const cols = parseCsvLine(lines[i]);
+    const email = cols[0]?.replace(/^"|"$/g, "").trim();
     if (!email || !email.includes("@")) continue;
 
     const isPaid = lines[i].toLowerCase().includes("paid");

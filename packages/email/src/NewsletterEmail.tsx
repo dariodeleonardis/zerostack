@@ -79,7 +79,7 @@ export const NewsletterEmail: React.FC<NewsletterEmailProps> = ({
 
             {/* Blocco Paywall se presente */}
             {hasPaywall && (
-              <Section style={paywallBoxStyle}>
+              <Section data-section="paywall-gate" style={paywallBoxStyle}>
                 <Heading as="h3" style={{ marginTop: 0 }}>
                   🔒 Continua a leggere con l'abbonamento Premium
                 </Heading>
