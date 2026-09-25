@@ -1,0 +1,113 @@
+version: '3.8'
+
+# ==============================================================================
+# ZeroStack - Stack Docker Compose di Produzione per VPS
+# ==============================================================================
+
+services:
+  # 1. Applicazione Web & API Next.js Standalone
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    image: zerostack-web:latest
+    restart: always
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${APP_URL}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - zerostack-prod-net
+
+  # 2. Worker Asincrono per invio newsletter massive (BullMQ + Redis)
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    image: zerostack-worker:latest
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - zerostack-prod-net
+
+  # 3. Database PostgreSQL 16 con Volume Persistente
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zerostack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-zerostack}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zerostack}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zerostack-prod-net
+
+  # 4. Redis Cache e Code per BullMQ
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zerostack-prod-net
+
+  # 5. Caddy Server (Reverse Proxy, SSL Let's Encrypt automatico e on-demand per domini creator)
+  caddy:
+    image: caddy:2.8-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    networks:
+      - zerostack-prod-net
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  zerostack-prod-net:
+    driver: bridge
