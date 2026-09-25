@@ -12,6 +12,7 @@ node_modules/
 out/
 build/
 packages/*/dist/
+*.tsbuildinfo
 
 # Expo / React Native
 .expo/
