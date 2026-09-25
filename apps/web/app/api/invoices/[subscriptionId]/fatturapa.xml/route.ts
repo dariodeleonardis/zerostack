@@ -26,6 +26,7 @@ export async function GET(
       nazione: "IT"
     },
     cessionario: {
+      isCompany: true,
       ragioneSocialeOIntestatario: "Studio Tecnico Rossi",
       codiceFiscale: "RSSMRA85M01H501Z",
       partitaIva: "09876543210",

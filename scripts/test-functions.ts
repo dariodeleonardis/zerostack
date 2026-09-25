@@ -147,7 +147,7 @@ async function runAllFunctionTests() {
 
   try {
     const htmlNewsletter = await renderEmail(
-      React.createElement(NewsletterEmail, {
+      React.createElement(NewsletterEmail as any, {
         publicationName: "Tech & Futuro Italia",
         postTitle: "L'evoluzione dell'IA",
         authorName: "Dario De Leonardis",
@@ -156,7 +156,7 @@ async function runAllFunctionTests() {
         postUrl: "https://zerostack.it/p/tech-italia/post-1",
         hasPaywall: true,
         unsubscribeUrl: "https://zerostack.it/unsubscribe"
-      })
+      }) as any
     );
     assert(
       htmlNewsletter.includes("Tech &amp; Futuro Italia") || htmlNewsletter.includes("Tech & Futuro Italia"),
@@ -173,11 +173,11 @@ async function runAllFunctionTests() {
 
   try {
     const htmlWelcome = await renderEmail(
-      React.createElement(WelcomeEmail, {
+      React.createElement(WelcomeEmail as any, {
         publicationName: "Tech & Futuro Italia",
         subscriberName: "Mario",
         confirmUrl: "https://zerostack.it/confirm"
-      })
+      }) as any
     );
     assert(htmlWelcome.includes("Double Opt-in"), "Template Welcome Double Opt-in compila in HTML");
   } catch (err: any) {
@@ -186,7 +186,7 @@ async function runAllFunctionTests() {
 
   try {
     const htmlReceipt = await renderEmail(
-      React.createElement(SubscriptionConfirmationEmail, {
+      React.createElement(SubscriptionConfirmationEmail as any, {
         publicationName: "Tech & Futuro Italia",
         tierName: "Abbonato Premium",
         amountFormatted: "7,00 €",
@@ -195,7 +195,7 @@ async function runAllFunctionTests() {
         codiceFiscaleOiva: "RSSMRA85M01H501Z",
         sdiPec: "M5UXCR1",
         portalUrl: "https://zerostack.it/account/billing"
-      })
+      }) as any
     );
     assert(htmlReceipt.includes("M5UXCR1"), "Template Ricevuta Fiscale contiene dati SDI/PEC");
   } catch (err: any) {

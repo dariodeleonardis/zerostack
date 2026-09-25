@@ -2,6 +2,30 @@ import * as fs from "fs";
 import * as path from "path";
 import { prisma } from "../packages/database/src/index";
 
+export function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 /**
  * Script di migrazione per importare iscritti e articoli esportati da Substack in ZeroStack
  * Utilizzo: npx ts-node scripts/import-substack.ts <slug-pubblicazione> <percorso-file-csv>
@@ -31,30 +55,6 @@ async function importSubstack() {
   const fileContent = fs.readFileSync(csvFilePath, "utf-8");
   const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
   const header = lines[0].split(",");
-
-export function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (char === ',' && !insideQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
 
   console.log(`📄 Trovate ${lines.length - 1} righe nel file export di Substack.`);
 

@@ -9,6 +9,7 @@ export type PostStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
 export type BillingInterval = "MONTH" | "YEAR" | "ONE_TIME";
 
 export interface ItalianBillingDetails {
+  isCompany: boolean;
   ragioneSocialeOIntestatario: string;
   codiceFiscale: string;
   partitaIva?: string;
