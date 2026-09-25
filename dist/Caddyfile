@@ -1,17 +1,17 @@
 {
-    # SSL On-demand per domini personalizzati illimitati dei creator (gratuito)
+    # SSL On-demand per domini personalizzati e sottodomini creator automatici (*.zerostack.it)
     on_demand_tls {
         ask http://web:3000/api/domains/check
     }
 }
 
-# Dominio principale di produzione
-{$APP_DOMAIN:zerostack.it} {
+# Dominio principale di produzione e alias www
+{$APP_DOMAIN:zerostack.it}, www.{$APP_DOMAIN:zerostack.it} {
     encode gzip zstd
     reverse_proxy web:3000
 }
 
-# Gestione dinamica per tutti i sottodomini e domini personalizzati puntati via CNAME
+# Gestione dinamica HTTPS con certificati automatici per tutti i sottodomini e CNAME
 :443 {
     tls {
         on_demand

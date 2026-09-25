@@ -41,9 +41,10 @@ sudo bash harden-vps.sh
    sudo bash deploy.sh
    ```
 
-3. **Punta il tuo dominio**:
-   * Crea un record DNS di tipo **A** puntando il tuo dominio (es. `zerostack.it`) all'IP pubblico del VPS.
-   * Caddy rileverà il dominio ed emetterà il certificato SSL HTTPS Let's Encrypt in automatico in pochi secondi.
+3. **Punta il tuo dominio & Configura i Sottodomini Wildcard**:
+   * **Record A (Principale)**: crea un record DNS di tipo `A` con host `@` puntando `zerostack.it` all'IP pubblico del VPS.
+   * **Record A (Wildcard Sottodomini)**: crea un record DNS di tipo `A` con host `*` puntando `*.zerostack.it` all'IP pubblico del VPS.
+   * Caddy rileverà sia il dominio principale che qualsiasi nuovo sottodominio utente (`nomeautore.zerostack.it`) emettendo certificati SSL Let's Encrypt in automatico On-Demand.
 
 ---
 

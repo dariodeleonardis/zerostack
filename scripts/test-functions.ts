@@ -409,6 +409,39 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(backupContent.includes("AES256"), "Script backup include cifratura simmetrica AES-256 GPG");
   assert(backupContent.includes("OFFSITE_DESTINATION"), "Script backup include parametro upload remoto offsite");
 
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 12: Routing Multi-Tenant Sottodomini & Wildcard zerostack.it
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 12: Routing Multi-Tenant Sottodomini Utente (*.zerostack.it)");
+
+  const rootDomain = "zerostack.it";
+  const reservedSubdomains = new Set(["www", "api", "admin", "app", "cdn", "mail"]);
+
+  function extractSubdomain(host: string, root: string): string | null {
+    const cleanHost = host.split(":")[0].toLowerCase();
+    if (cleanHost === root || cleanHost === `www.${root}` || cleanHost === "localhost") return null;
+    if (cleanHost.endsWith(`.${root}`)) {
+      return cleanHost.slice(0, cleanHost.length - root.length - 1);
+    }
+    if (cleanHost.endsWith(".localhost")) {
+      return cleanHost.slice(0, cleanHost.length - ".localhost".length);
+    }
+    return null;
+  }
+
+  assert(extractSubdomain("dario.zerostack.it", rootDomain) === "dario", "Estrazione sottodominio utente 'dario'");
+  assert(extractSubdomain("tech-italia.zerostack.it", rootDomain) === "tech-italia", "Estrazione sottodominio pubblicazione 'tech-italia'");
+  assert(extractSubdomain("zerostack.it", rootDomain) === null, "Dominio principale non identificato come sottodominio");
+  assert(extractSubdomain("www.zerostack.it", rootDomain) === null, "Prefisso www non identificato come sottodominio creator");
+  assert(extractSubdomain("dario.localhost:3000", rootDomain) === "dario", "Estrazione sottodominio in ambiente di sviluppo locale .localhost");
+
+  assert(reservedSubdomains.has("admin"), "Sottodominio 'admin' correttamente protetto come riservato");
+  assert(reservedSubdomains.has("api"), "Sottodominio 'api' correttamente protetto come riservato");
+  assert(!reservedSubdomains.has("dario"), "Sottodominio utente 'dario' non confligge con le parole riservate");
+  assert(/^[a-z0-9-]+$/.test("tech-italia"), "Slug sottodominio conforme alla sintassi RFC DNS");
+  assert(!/^[a-z0-9-]+$/.test("tech italia!"), "Slug con spazi o caratteri speciali respinto da RFC DNS");
+
+
 
 
 

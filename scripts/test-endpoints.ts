@@ -11,7 +11,7 @@ async function testLiveEndpoints() {
     try {
       const res = await fetch(`${baseUrl}${path}`, options);
       const text = await res.text();
-      const statusOk = res.status >= 200 && res.status < 400;
+      const statusOk = validator ? true : (res.status >= 200 && res.status < 400);
       const customOk = validator ? validator(res, text) : true;
 
       if (statusOk && customOk) {
@@ -33,6 +33,7 @@ async function testLiveEndpoints() {
   await check("Feed Lettore (La Tua Posta)", "/inbox");
   await check("Timeline Note & Dispacci", "/notes");
   await check("Catalogo Podcast", "/podcasts");
+  await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
   await check("Lettore Articolo con Paywall", "/p/tech-italia/alternativa-italiana-a-substack");
   await check("Schermata Checkout Fiscale IT", "/checkout/premium-monthly");
 
@@ -69,9 +70,24 @@ async function testLiveEndpoints() {
     return text.includes("itunes:author") && text.includes("SoundHelix-Song-1.mp3");
   });
 
-  // 5.3 Caddy SSL Domain Verification
+  // 5.3 Caddy SSL Domain Verification (zerostack.it & *.zerostack.it)
   await check("Verifica Dominio SSL Caddy (localhost)", "/api/domains/check?domain=localhost", undefined, (res, text) => {
     return text.trim() === "OK";
+  });
+  await check("Verifica Dominio Principale (zerostack.it)", "/api/domains/check?domain=zerostack.it", undefined, (res, text) => {
+    return res.status === 200 && text.trim() === "OK";
+  });
+  await check("Verifica Sottodominio Pubblicazione (tech-italia.zerostack.it)", "/api/domains/check?domain=tech-italia.zerostack.it", undefined, (res, text) => {
+    return res.status === 200 && text.trim() === "OK";
+  });
+  await check("Verifica Sottodominio Utente (dario.zerostack.it)", "/api/domains/check?domain=dario.zerostack.it", undefined, (res, text) => {
+    return res.status === 200 && text.trim() === "OK";
+  });
+  await check("Rifiuto Sottodominio Riservato di Sistema (admin.zerostack.it)", "/api/domains/check?domain=admin.zerostack.it", undefined, (res, text) => {
+    return res.status === 403;
+  });
+  await check("Rifiuto Sottodominio Sconosciuto", "/api/domains/check?domain=sconosciuto9999.zerostack.it", undefined, (res, text) => {
+    return res.status === 403;
   });
 
   // 5.4 Invio Newsletter API
