@@ -111,6 +111,57 @@ async function testLiveEndpoints() {
     return !!isPdf && hasPdfHeader;
   });
 
+  // 5.7 Download FatturaPA XML v1.2
+  await check("Download FatturaPA XML per SDI", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res, text) => {
+    return text.includes('versione="FPR12"') && text.includes("<FatturaElettronica");
+  });
+
+  // 5.8 Donazione e Micro-pagamento Satispay
+  await check("Satispay Micro-donation API", "/api/donations/satispay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amountEur: 2.5,
+      publicationSlug: "tech-italia"
+    })
+  }, (res, text) => {
+    return text.includes('"success":true') && text.includes("satispay://pay");
+  });
+
+  // 5.9 RFC 7033 WebFinger Fediverse Discovery
+  await check("WebFinger RFC 7033 Discovery", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res, text) => {
+    return text.includes("application/activity+json") && text.includes("tech-italia");
+  });
+
+  // 5.10 ActivityPub Actor W3C JSON-LD
+  await check("ActivityPub Actor Profile", "/api/activitypub/users/tech-italia", undefined, (res, text) => {
+    return text.includes("activitystreams") && text.includes('"type":"Person"');
+  });
+
+  // 5.11 Telemetria Analitiche Privacy-First (GDPR)
+  await check("Raccolta Analitiche Zero-Cookie", "/api/analytics/collect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: "/p/tech-italia/test",
+      publicationSlug: "tech-italia"
+    })
+  }, (res, text) => {
+    return text.includes('"success":true') && text.includes('"visitorHash"');
+  });
+
+  // 5.12 Trascrizione Podcast & Sottotitoli WebVTT
+  await check("Trascrizione Podcast API", "/api/podcasts/transcribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      audioUrl: "https://zerostack.it/sample.mp3"
+    })
+  }, (res, text) => {
+    return text.includes('"success":true') && text.includes("WEBVTT");
+  });
+
+
   console.log("\n========================================================");
   console.log(`📊 RISULTATO TEST LIVE ENDPOINTS: ${passed}/${passed + failed} SUPERATI`);
   if (failed === 0) {

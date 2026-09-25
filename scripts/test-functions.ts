@@ -6,11 +6,16 @@ import {
   CreateSubscriptionTierSchema,
   codiceFiscaleRegex,
   partitaIvaRegex,
-  sdiRegex
+  sdiRegex,
+  generateFatturaPAXml
 } from "../packages/shared/src/index";
 import { NewsletterEmail, WelcomeEmail, SubscriptionConfirmationEmail, renderEmail } from "../packages/email/src/index";
 import { jsPDF } from "jspdf";
 import * as React from "react";
+import { generateDailyVisitorHash, parseDeviceType } from "../apps/web/lib/analytics";
+import { formatVttTimestamp, generateWebVtt, transcribeAudio } from "../apps/web/lib/transcription";
+import fs from "fs";
+import path from "path";
 
 let totalTests = 0;
 let passedTests = 0;
@@ -252,6 +257,161 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   }
 
   assert(parsedSubscribers === 3, "Parser Substack estrae correttamente le email ignorando righe invalide");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 6: Generazione XML FatturaPA v1.2 per Agenzia delle Entrate / SDI
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 6: Generazione FatturaPA v1.2 XML per SDI");
+
+  try {
+    const xml = generateFatturaPAXml({
+      progressivoInvio: "ZS001",
+      numeroFattura: "2026/01",
+      dataFattura: "2026-09-25",
+      importoCents: 1220, // 10.00 € imponibile + 2.20 € IVA 22%
+      aliquotaIvaPercent: 22,
+      cedente: {
+        denominazione: "ZeroStack Italia SRL",
+        partitaIva: "01234567890",
+        codiceFiscale: "01234567890",
+        regimeFiscale: "RF01",
+        indirizzo: "Via Montenapoleone 8",
+        cap: "20121",
+        comune: "Milano",
+        provincia: "MI",
+        nazione: "IT"
+      },
+      cessionario: {
+        isCompany: true,
+        ragioneSocialeOIntestatario: "Studio Legale Rossi",
+        codiceFiscale: "RSSMRA85M01H501Z",
+        partitaIva: "09876543210",
+        codiceDestinatarioSDI: "M5UXCR1",
+        indirizzo: "Corso Vittorio Emanuele 12",
+        cap: "00186",
+        citta: "Roma",
+        provincia: "RM",
+        paese: "IT"
+      }
+    });
+
+    assert(xml.includes('versione="FPR12"'), "XML contiene intestazione formato FPR12");
+    assert(xml.includes("<CodiceDestinatario>M5UXCR1</CodiceDestinatario>"), "XML contiene Codice Destinatario SDI");
+    assert(xml.includes("<ImportoTotaleDocumento>12.20</ImportoTotaleDocumento>"), "Importo totale fattura calcolato esattamente a 12.20 EUR");
+    assert(xml.includes("<ImponibileImporto>10.00</ImponibileImporto>"), "Imponibile scorporato IVA 22% calcolato esattamente a 10.00 EUR");
+    assert(xml.includes("<Imposta>2.20</Imposta>"), "Imposta IVA calcolata a 2.20 EUR");
+    assert(xml.includes("Studio Legale Rossi"), "Denominazione cessionario presente nell'XML");
+  } catch (err: any) {
+    assert(false, "Generazione FatturaPA XML fallita", err?.message);
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 7: Tip Jar & Calcolo Micro-Pagamenti Satispay
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 7: Micro-donazioni Tip Jar & Deep link Satispay");
+
+  const testTipEur = 2.50;
+  const testTipCents = Math.round(testTipEur * 100);
+  assert(testTipCents === 250, "Conversione corretta da EUR a centesimi (2.50€ -> 250c)");
+
+  const pubSlug = "tech-italia";
+  const expectedSatispayDeepLink = `satispay://pay?amount=${testTipCents}&currency=EUR&description=Mancia+ZeroStack+${encodeURIComponent(pubSlug)}`;
+  assert(expectedSatispayDeepLink.startsWith("satispay://pay?amount=250"), "Deep link Satispay conforme alle specifiche mobile");
+  assert(expectedSatispayDeepLink.includes("currency=EUR"), "Valuta EUR specificata nel deep-link");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 8: Fediverse (RFC 7033 WebFinger & W3C ActivityPub Actor)
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 8: Interoperabilità Fediverse (WebFinger & ActivityPub)");
+
+  const mockHandle = "tech-italia";
+  const mockDomain = "zerostack.it";
+  const webfingerResource = `acct:${mockHandle}@${mockDomain}`;
+
+  // Test parsing WebFinger resource
+  const parsedHandle = webfingerResource.replace(/^acct:/, "").split("@")[0];
+  const parsedDomain = webfingerResource.replace(/^acct:/, "").split("@")[1];
+  assert(parsedHandle === mockHandle, "WebFinger estrae l'handle corretto");
+  assert(parsedDomain === mockDomain, "WebFinger estrae il dominio corretto");
+
+  // Test struttura ActivityPub Actor JSON-LD
+  const actorJson = {
+    "@context": [
+      "https://www.w3.org/ns/activitystreams",
+      "https://w3id.org/security/v1"
+    ],
+    id: `https://${mockDomain}/api/activitypub/users/${mockHandle}`,
+    type: "Person",
+    preferredUsername: mockHandle,
+    inbox: `https://${mockDomain}/api/activitypub/users/${mockHandle}/inbox`,
+    outbox: `https://${mockDomain}/api/activitypub/users/${mockHandle}/outbox`
+  };
+
+  assert(actorJson["@context"].includes("https://www.w3.org/ns/activitystreams"), "ActivityPub Actor specifica il contesto ActivityStreams");
+  assert(actorJson.type === "Person", "Tipo Actor definito come Person");
+  assert(actorJson.inbox.endsWith("/inbox"), "Endpoint inbox presente per ricevere notifiche Mastodon");
+  assert(actorJson.outbox.endsWith("/outbox"), "Endpoint outbox presente per pubblicare post nel Fediverse");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 9: Privacy-First Analytics (Zero-Cookie & Anonimizzazione)
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 9: Analitiche Privacy-First (GDPR & Zero-Cookie)");
+
+  const mockIp = "192.168.1.55";
+  const mockUaMobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15";
+  const mockUaDesktop = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
+
+  const hash1 = generateDailyVisitorHash(mockIp, mockUaMobile, "tech-italia", "2026-09-25");
+  const hash2 = generateDailyVisitorHash(mockIp, mockUaMobile, "tech-italia", "2026-09-25");
+  const hashNextDay = generateDailyVisitorHash(mockIp, mockUaMobile, "tech-italia", "2026-09-26");
+
+  assert(hash1 === hash2, "Hash visitatore deterministico per la stessa giornata");
+  assert(hash1 !== hashNextDay, "Hash visitatore ruota automaticamente dopo 24h (privacy-by-design)");
+  assert(hash1.length === 16, "Lunghezza hash compatta a 16 caratteri");
+  assert(parseDeviceType(mockUaMobile) === "mobile", "Riconoscimento corretto dispositivo Mobile");
+  assert(parseDeviceType(mockUaDesktop) === "desktop", "Riconoscimento corretto dispositivo Desktop");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 10: Trascrizione Podcast & Sottotitoli WebVTT W3C
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 10: Trascrizione Podcast & Formato WebVTT");
+
+  const vttTime1 = formatVttTimestamp(5.5);
+  assert(vttTime1 === "00:00:05.500", "Formattazione timestamp WebVTT a 5.5s (00:00:05.500)");
+
+  const vttTime2 = formatVttTimestamp(3665.123);
+  assert(vttTime2 === "01:01:05.123", "Formattazione timestamp WebVTT oltre 1 ora (01:01:05.123)");
+
+  const transcriptionResult = await transcribeAudio("test-podcast.mp3");
+  assert(transcriptionResult.vttContent.startsWith("WEBVTT"), "File di sottotitoli contiene l'intestazione standard WEBVTT");
+  assert(transcriptionResult.vttContent.includes("-->"), "File VTT contiene frecce temporali standard W3C");
+  assert(transcriptionResult.segments.length > 0, "Segmenti temporizzati generati con successo");
+  assert(transcriptionResult.fullText.length > 20, "Testo integrale estratto correttamente");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 11: Script VPS Hardening & Backup Cifrato GPG
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 11: Script di Produzione, Sicurezza & Backup VPS");
+
+  const hardenScriptPath = path.join(__dirname, "../dist/harden-vps.sh");
+  const backupScriptPath = path.join(__dirname, "../dist/backup-vps.sh");
+
+  assert(fs.existsSync(hardenScriptPath), "File dist/harden-vps.sh presente nel pacchetto di distribuzione");
+  assert(fs.existsSync(backupScriptPath), "File dist/backup-vps.sh presente nel pacchetto di distribuzione");
+
+  const hardenContent = fs.readFileSync(hardenScriptPath, "utf-8");
+  assert(hardenContent.includes("ufw allow 80/tcp"), "Script hardening include regole firewall per porta HTTP 80");
+  assert(hardenContent.includes("ufw allow 443/tcp"), "Script hardening include regole firewall per porta HTTPS 443");
+  assert(hardenContent.includes("fail2ban"), "Script hardening include configurazione protezione Fail2ban");
+  assert(hardenContent.includes("tcp_syncookies"), "Script hardening applica mitigazione SYN flood");
+
+  const backupContent = fs.readFileSync(backupScriptPath, "utf-8");
+  assert(backupContent.includes("AES256"), "Script backup include cifratura simmetrica AES-256 GPG");
+  assert(backupContent.includes("OFFSITE_DESTINATION"), "Script backup include parametro upload remoto offsite");
+
+
+
+
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

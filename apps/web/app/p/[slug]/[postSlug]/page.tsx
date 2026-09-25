@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { PaywallGate } from "../../../../components/PaywallGate";
+import { TipJar } from "../../../../components/TipJar";
 import { Heart, MessageSquare, Share2, Bookmark, ArrowLeft, Check } from "lucide-react";
 
 export default function ArticleReaderPage({
@@ -14,9 +15,11 @@ export default function ArticleReaderPage({
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isArticleUnlocked, setIsArticleUnlocked] = useState(false);
 
   // Mock simulato di stato utente: false = lettore non abbonato (vede il paywall)
   const isPaidSubscriber = false;
+  const hasAccess = isPaidSubscriber || isArticleUnlocked;
 
   const articleTitle = "Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack";
   const publicationName = "Tech & Futuro Italia";
@@ -110,14 +113,24 @@ export default function ArticleReaderPage({
         </p>
       </div>
 
-      {/* BLOCCO PAYWALL SE L'UTENTE NON È ABBONATO */}
-      {!isPaidSubscriber ? (
-        <PaywallGate
-          publicationName={publicationName}
-          tierName="Abbonato Premium"
-          monthlyPriceEur={7}
-          tierId="premium-monthly"
-        />
+      {/* BLOCCO PAYWALL SE L'UTENTE NON HA ACCESSO */}
+      {!hasAccess ? (
+        <>
+          <PaywallGate
+            publicationName={publicationName}
+            tierName="Abbonato Premium"
+            monthlyPriceEur={7}
+            tierId="premium-monthly"
+          />
+          <TipJar
+            creatorName={authorName}
+            publicationSlug={params.slug}
+            articleSlug={params.postSlug}
+            allowPayPerArticle={true}
+            payPerArticlePriceEur={1.50}
+            onArticleUnlocked={() => setIsArticleUnlocked(true)}
+          />
+        </>
       ) : (
         <div className="prose prose-lg mt-6 max-w-none text-gray-800 leading-relaxed font-serif">
           <hr className="my-8" />
@@ -125,6 +138,12 @@ export default function ArticleReaderPage({
           <p>
             Quando invii 10.000 email tramite Substack, condividi gli indirizzi IP di invio con migliaia di altri autori sconosciuti. Con ZeroStack puoi collegare Brevo o Resend con il tuo dominio verificato DKIM, SPF e DMARC, garantendo che le tue comunicazioni non finiscano mai nello spam.
           </p>
+          <TipJar
+            creatorName={authorName}
+            publicationSlug={params.slug}
+            articleSlug={params.postSlug}
+            allowPayPerArticle={false}
+          />
         </div>
       )}
 
