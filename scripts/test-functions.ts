@@ -20,6 +20,9 @@ import { jsPDF } from "jspdf";
 import * as React from "react";
 import { generateDailyVisitorHash, parseDeviceType } from "../apps/web/lib/analytics";
 import { formatVttTimestamp, generateWebVtt, transcribeAudio } from "../apps/web/lib/transcription";
+import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../apps/web/lib/posts";
+import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
+import { createHmac } from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -479,6 +482,40 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
 
 
 
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 14: Paywall, HTML degli articoli e webhook Stripe
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 14: Paywall, HTML degli articoli e webhook Stripe");
+
+  const paywalled = splitAtPaywall('<p>Gratis</p><hr class="paywall-divider" data-paywall="true" /><p>Riservato</p>');
+  assert(paywalled.hasDivider && paywalled.preview === "<p>Gratis</p>" && paywalled.rest === "<p>Riservato</p>", "Testo diviso al divisore del paywall");
+  const noDivider = splitAtPaywall("<p>Tutto</p>");
+  assert(!noDivider.hasDivider && noDivider.preview === "" && noDivider.rest === "<p>Tutto</p>", "Senza divisore l'anteprima è vuota: niente testo riservato esposto");
+
+  assert(canReadFullPost("FREE", { isMember: false, hasPaidSubscription: false }), "Post gratuito leggibile da tutti");
+  assert(!canReadFullPost("PAID_SUBSCRIBERS", { isMember: false, hasPaidSubscription: false }), "Post a pagamento chiuso a chi non è abbonato");
+  assert(canReadFullPost("PAID_SUBSCRIBERS", { isMember: false, hasPaidSubscription: true }), "Post a pagamento aperto agli abbonati paganti");
+  assert(canReadFullPost("TIER_SPECIFIC", { isMember: true, hasPaidSubscription: false }), "La redazione legge sempre i propri post");
+
+  const now = new Date("2026-09-28T12:00:00Z");
+  assert(isSubscriptionActive({ status: "ACTIVE", isPaid: true, currentPeriodEnd: null }, now), "Abbonamento pagato attivo riconosciuto");
+  assert(!isSubscriptionActive({ status: "ACTIVE", isPaid: false, currentPeriodEnd: null }, now), "Iscrizione gratuita non apre il paywall");
+  assert(!isSubscriptionActive({ status: "CANCELED", isPaid: true, currentPeriodEnd: null }, now), "Abbonamento disdetto non apre il paywall");
+  assert(!isSubscriptionActive({ status: "ACTIVE", isPaid: true, currentPeriodEnd: new Date("2026-09-01") }, now), "Abbonamento scaduto non apre il paywall");
+
+  const dirty = sanitizePostHtml('<h2>Titolo</h2><p onclick="x()">Testo <a href="javascript:alert(1)">link</a></p><img src="x" onerror="alert(1)"><script>alert(1)</script>');
+  assert(dirty.includes("<h2>Titolo</h2>") && dirty.includes("<a>link</a>"), "Sanificazione conserva la formattazione");
+  assert(!/script|onerror|onclick|javascript:/i.test(dirty), "Sanificazione toglie script, gestori di eventi e link javascript:");
+
+  const whSecret = "whsec_test";
+  const whBody = '{"type":"checkout.session.completed"}';
+  const whTs = 1_790_000_000;
+  const whSig = createHmac("sha256", whSecret).update(`${whTs}.${whBody}`).digest("hex");
+  assert(verifyStripeSignature(whBody, `t=${whTs},v1=${whSig}`, whSecret, 300, whTs + 10), "Firma Stripe valida accettata");
+  assert(!verifyStripeSignature(whBody + " ", `t=${whTs},v1=${whSig}`, whSecret, 300, whTs + 10), "Corpo alterato respinto");
+  assert(!verifyStripeSignature(whBody, `t=${whTs},v1=${whSig}`, whSecret, 300, whTs + 1000), "Firma troppo vecchia respinta (replay)");
+  assert(!verifyStripeSignature(whBody, null, whSecret), "Header di firma mancante respinto");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

@@ -1,6 +1,7 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { prisma } from "@zerostack/database";
 
 // Password con scrypt della libreria standard di Node: niente dipendenze native da compilare su Alpine.
@@ -65,6 +66,19 @@ export async function getCurrentUser() {
   });
   if (!session || session.expiresAt < new Date()) return null;
   return session.user;
+}
+
+export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+/** Per layout e pagine server: senza sessione si va al login, poi si torna a `nextPath`. */
+export async function requireUser(nextPath: string): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  return user;
+}
+
+export function isPlatformAdmin(user: { role: string }): boolean {
+  return user.role === "ADMIN" || user.role === "SUPERADMIN";
 }
 
 export async function destroySession(): Promise<void> {

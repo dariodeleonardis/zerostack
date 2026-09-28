@@ -1,6 +1,24 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@zerostack/database";
+import { getCurrentUser, isSameOriginJson } from "../../../../lib/auth";
 
 export async function POST(req: Request) {
+  if (!isSameOriginJson(req)) {
+    return NextResponse.json({ error: "Richiesta non valida" }, { status: 400 });
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Accedi per inviare una newsletter" }, { status: 401 });
+  }
+  // Scrive alle liste solo chi fa parte della redazione di almeno una pubblicazione.
+  const membership = await prisma.publicationMember.findFirst({
+    where: { userId: user.id, role: { in: ["OWNER", "EDITOR"] } },
+    select: { id: true }
+  });
+  if (!membership) {
+    return NextResponse.json({ error: "Non hai una pubblicazione da cui inviare" }, { status: 403 });
+  }
+
   try {
     const body = await req.json();
     const { title, subtitle, contentHtml, hasPaywall, sendEmail } = body;

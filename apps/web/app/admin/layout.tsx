@@ -1,8 +1,16 @@
 import React from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ShieldAlert, Users, Layers, DollarSign, Settings, ArrowLeft, BarChart3 } from "lucide-react";
+import { isPlatformAdmin, requireUser } from "../../lib/auth";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Chi non è amministratore non deve nemmeno sapere che il pannello esiste: 404, non 403.
+  const user = await requireUser("/admin");
+  if (!isPlatformAdmin(user)) notFound();
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar SuperAdmin & Staff */}

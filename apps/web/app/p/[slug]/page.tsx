@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@zerostack/database";
 import { PublicationView } from "./PublicationView";
+import { publicationWhere } from "../../../lib/publications";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,8 @@ interface PublicationPageProps {
   };
 }
 
-// Il middleware porta qui sia slug.zerostack.it (params.slug = "slug") sia i domini
-// personalizzati (params.slug = "newsletter.mario.it"): questi valgono solo se verificati.
 async function findPublication(slugOrDomain: string) {
-  const key = decodeURIComponent(slugOrDomain).toLowerCase();
-  const where = key.includes(".") ? { customDomain: key, isDomainVerified: true } : { slug: key };
+  const where = publicationWhere(slugOrDomain);
   return prisma.publication.findFirst({
     where,
     select: {

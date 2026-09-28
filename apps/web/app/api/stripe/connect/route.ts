@@ -1,8 +1,26 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@zerostack/database";
+import { getCurrentUser, isSameOriginJson } from "../../../../lib/auth";
 
 export async function POST(req: Request) {
+  if (!isSameOriginJson(req)) {
+    return NextResponse.json({ error: "Richiesta non valida" }, { status: 400 });
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Accedi per collegare Stripe" }, { status: 401 });
+  }
+
   try {
     const { publicationId, returnUrl } = await req.json();
+
+    // I pagamenti di una pubblicazione li collega solo chi la possiede.
+    const owned = typeof publicationId === "string"
+      ? await prisma.publicationMember.findFirst({ where: { publicationId, userId: user.id, role: "OWNER" }, select: { id: true } })
+      : null;
+    if (!owned) {
+      return NextResponse.json({ error: "Pubblicazione non trovata" }, { status: 404 });
+    }
 
     // Logica di avvio onboarding Stripe Connect Express per il creator:
     // In produzione crea l'account Stripe Connect se non esiste già:

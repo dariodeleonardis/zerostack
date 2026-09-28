@@ -27,6 +27,9 @@ async function testLiveEndpoints() {
     }
   }
 
+  // Le aree riservate, visitate senza sessione, rimandano al login dal server.
+  const toLogin = (res: Response) => res.status === 307 && (res.headers.get("location") ?? "").includes("/login?next=");
+
   // 1. Pagine Web Pubbliche
   console.log("📌 1. Test Pagine Portale Pubblico & Lettori:");
   await check("Homepage ZeroStack", "/");
@@ -34,28 +37,30 @@ async function testLiveEndpoints() {
   await check("Timeline Note & Dispacci", "/notes");
   await check("Catalogo Podcast", "/podcasts");
   await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
-  await check("Lettore Articolo con Paywall", "/p/tech-italia/alternativa-italiana-a-substack");
+  await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>
+    res.status === 200 && text.includes("Sovranità dei dati") && !text.includes("paywall-divider"));
+  await check("Articolo inesistente -> 404", "/p/tech-italia/articolo-che-non-esiste", undefined, (res) => res.status === 404);
   await check("Schermata Checkout Fiscale IT", "/checkout/premium-monthly");
 
   // 2. Pannello Creator & Switcher
   console.log("\n📌 2. Test Studio Creator & Gestione Multi-Tenant:");
-  await check("Studio Creator Dashboard", "/studio");
-  await check("Editor Nuovo Post / Newsletter", "/studio/posts/new");
-  await check("Monetizzazione Stripe Connect & Tiers", "/studio/monetization");
-  await check("Creazione Nuova Pubblicazione", "/studio/publications/new");
-  await check("Squadra & Collaboratori", "/studio/team");
+  await check("Studio Creator Dashboard senza sessione -> login", "/studio", { redirect: "manual" }, toLogin);
+  await check("Editor Nuovo Post / Newsletter senza sessione -> login", "/studio/posts/new", { redirect: "manual" }, toLogin);
+  await check("Monetizzazione Stripe Connect & Tiers senza sessione -> login", "/studio/monetization", { redirect: "manual" }, toLogin);
+  await check("Creazione Nuova Pubblicazione senza sessione -> login", "/studio/publications/new", { redirect: "manual" }, toLogin);
+  await check("Squadra & Collaboratori senza sessione -> login", "/studio/team", { redirect: "manual" }, toLogin);
 
   // 3. Pannello SuperAdmin & Staff
   console.log("\n📌 3. Test Pannello SuperAdmin & Moderazione Staff:");
-  await check("SuperAdmin Dashboard Globale", "/admin");
-  await check("Gestione Utenti & Ruoli", "/admin/users");
-  await check("Moderazione Pubblicazioni & Domini", "/admin/publications");
-  await check("Impostazioni Piattaforma & Stripe", "/admin/settings");
+  await check("SuperAdmin Dashboard Globale senza sessione -> login", "/admin", { redirect: "manual" }, toLogin);
+  await check("Gestione Utenti & Ruoli senza sessione -> login", "/admin/users", { redirect: "manual" }, toLogin);
+  await check("Moderazione Pubblicazioni & Domini senza sessione -> login", "/admin/publications", { redirect: "manual" }, toLogin);
+  await check("Impostazioni Piattaforma & Stripe senza sessione -> login", "/admin/settings", { redirect: "manual" }, toLogin);
 
   // 4. Profilo & Abbonamenti Utente
   console.log("\n📌 4. Test Area Personale Utente:");
-  await check("Modifica Profilo Autore", "/account/profile");
-  await check("Gestione Abbonamenti & Ricevute", "/account/subscriptions");
+  await check("Modifica Profilo Autore senza sessione -> login", "/account/profile", { redirect: "manual" }, toLogin);
+  await check("Gestione Abbonamenti & Ricevute senza sessione -> login", "/account/subscriptions", { redirect: "manual" }, toLogin);
 
   // 5. API Endpoints
   console.log("\n📌 5. Test API Endpoints, RSS, PDF & Webhooks:");
@@ -93,7 +98,7 @@ async function testLiveEndpoints() {
   });
 
   // 5.4 Invio Newsletter API
-  await check("Invio Newsletter Batch API", "/api/newsletter/send", {
+  await check("Invio Newsletter senza sessione -> 401", "/api/newsletter/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -101,8 +106,9 @@ async function testLiveEndpoints() {
       contentHtml: "<p>Contenuto inviato dal test live.</p>",
       sendEmail: true
     })
-  }, (res, text) => {
-    return text.includes('"success":true');
+  }, (res) => {
+    // Senza sessione nessuno può scrivere alle liste.
+    return res.status === 401;
   });
 
   // 5.5 Checkout Stripe API
@@ -145,6 +151,18 @@ async function testLiveEndpoints() {
   }, (res, text) => {
     return text.includes('"success":true') && text.includes("satispay://pay");
   });
+
+  await check("Satispay importo non numerico -> 400", "/api/donations/satispay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amountEur: "abc" })
+  }, (res) => res.status === 400);
+
+  await check("Stripe Connect senza sessione -> 401", "/api/stripe/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ publicationId: "x" })
+  }, (res) => res.status === 401);
 
   // 5.9 RFC 7033 WebFinger Fediverse Discovery
   await check("WebFinger RFC 7033 Discovery", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res, text) => {

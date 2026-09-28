@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@zerostack/database";
+import { verifyStripeSignature } from "../../../../lib/stripe-signature";
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
     const sig = req.headers.get("stripe-signature");
 
-    console.log("[ZeroStack Webhook] Ricevuto evento Stripe con firma:", sig?.substring(0, 15));
+    // Senza verifica chiunque potrebbe inventarsi un "checkout.session.completed".
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === "production") {
+        console.error("[ZeroStack Webhook] STRIPE_WEBHOOK_SECRET assente: evento rifiutato");
+        return NextResponse.json({ error: "Webhook non configurato" }, { status: 503 });
+      }
+      console.warn("[ZeroStack Webhook] STRIPE_WEBHOOK_SECRET assente: firma non verificata (solo sviluppo)");
+    } else if (!verifyStripeSignature(rawBody, sig, secret)) {
+      return NextResponse.json({ error: "Firma non valida" }, { status: 400 });
+    }
 
-    // Parsing e verifica evento (in produzione: stripe.webhooks.constructEvent(rawBody, sig, secret))
     const event = JSON.parse(rawBody || "{}");
 
     switch (event.type) {

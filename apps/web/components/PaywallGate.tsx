@@ -8,6 +8,7 @@ interface PaywallGateProps {
   publicationName: string;
   tierName?: string;
   monthlyPriceEur?: number;
+  intervalLabel?: string;
   tierId: string;
   benefits?: string[];
 }
@@ -16,6 +17,7 @@ export const PaywallGate: React.FC<PaywallGateProps> = ({
   publicationName = "Tech & Futuro Italia",
   tierName = "Abbonato Premium",
   monthlyPriceEur = 7,
+  intervalLabel = "/ mese",
   tierId = "demo-tier",
   benefits = [
     "Accesso completo a tutti gli articoli e archivi",
@@ -48,7 +50,7 @@ export const PaywallGate: React.FC<PaywallGateProps> = ({
             </div>
             <div className="text-right">
               <span className="text-3xl font-extrabold text-gray-900">{monthlyPriceEur}€</span>
-              <span className="text-xs text-gray-500"> / mese</span>
+              <span className="text-xs text-gray-500"> {intervalLabel}</span>
             </div>
           </div>
 
@@ -66,7 +68,7 @@ export const PaywallGate: React.FC<PaywallGateProps> = ({
               href={`/checkout/${tierId}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700"
             >
-              Abbonati ora a {monthlyPriceEur}€/mese
+              Abbonati ora a {monthlyPriceEur}€ {intervalLabel}
             </Link>
           </div>
         </div>
