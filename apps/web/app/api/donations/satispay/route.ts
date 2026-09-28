@@ -5,12 +5,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { amountEur, publicationSlug, articleSlug } = body;
 
-    if (!amountEur || amountEur <= 0) {
+    // Amount in cents (es. 2.00 € = 200 cents). Stringhe non numeriche davano NaN nel deep link.
+    const amountCents = Math.round(Number(amountEur) * 100);
+    if (!Number.isFinite(amountCents) || amountCents < 1 || amountCents > 100_000) {
       return NextResponse.json({ error: "Importo non valido" }, { status: 400 });
     }
-
-    // Amount in cents (es. 2.00 € = 200 cents)
-    const amountCents = Math.round(Number(amountEur) * 100);
 
     // In produzione: integrazione ufficiale Satispay API v1 (Online Shop)
     // Satispay AuthServices: POST https://authservices.satispay.com/g_business/v1/charges

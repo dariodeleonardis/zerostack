@@ -4,7 +4,11 @@ import { generateDailyVisitorHash, parseDeviceType } from "../../../../lib/analy
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { path = "/", referrer = "", publicationSlug = "default" } = body;
+    // Il corpo arriva dal browser: campi non stringa facevano esplodere .slice() con un 500.
+    const str = (value: unknown, fallback: string) => (typeof value === "string" ? value : fallback);
+    const path = str(body?.path, "/").slice(0, 512);
+    const referrer = str(body?.referrer, "");
+    const publicationSlug = str(body?.publicationSlug, "default").slice(0, 253);
 
     // Recupera IP anonimizzato e user agent dagli header HTTP
     const forwarded = req.headers.get("x-forwarded-for");

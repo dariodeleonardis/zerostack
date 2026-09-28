@@ -6,9 +6,10 @@ export const config = {
      * Intercetta tutte le richieste tranne:
      * - api routes
      * - _next static files and chunks
+     * - .well-known (WebFinger del Fediverse, verifiche ACME): deve rispondere anche sui sottodomini
      * - file con estensione (.ico, .png, .jpg, .svg, .css, .js, .xml, .txt)
      */
-    "/((?!api/|_next/|_static/|[\\w-]+\\.\\w+).*)"
+    "/((?!api/|_next/|_static/|\\.well-known/|[\\w-]+\\.\\w+).*)"
   ]
 };
 
