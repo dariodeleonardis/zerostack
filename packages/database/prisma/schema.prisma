@@ -83,6 +83,21 @@ model User {
   bookmarks          Bookmark[]
   subscriptions      Subscription[]
   billingDetails     ItalianBillingInfo[]
+  sessions           Session[]
+}
+
+// Sessioni di login: nel cookie viaggia un token casuale, qui solo il suo SHA-256.
+// Chi legge il database non può impersonare nessuno; il logout cancella la riga.
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Publication {

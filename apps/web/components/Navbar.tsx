@@ -61,6 +61,12 @@ export const Navbar: React.FC = () => {
             SuperAdmin
           </Link>
           <Link
+            href="/login"
+            className="text-xs font-semibold text-gray-700 transition hover:text-gray-900"
+          >
+            Accedi
+          </Link>
+          <Link
             href="/studio"
             className="text-xs font-semibold text-gray-700 transition hover:text-gray-900"
           >

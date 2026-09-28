@@ -1,4 +1,18 @@
 import { z } from "zod";
+import { SlugSchema } from "./slugs";
+
+export const RegisterSchema = z.object({
+  name: z.string().trim().min(2, "Inserisci il tuo nome").max(80, "Nome massimo 80 caratteri"),
+  email: z.string().trim().toLowerCase().email("Indirizzo email non valido").max(254),
+  // Il nome utente vive nello stesso spazio dei sottodomini: nessuna pubblicazione di altri potrà usarlo
+  handle: SlugSchema,
+  password: z.string().min(10, "La password deve avere almeno 10 caratteri").max(200, "Password troppo lunga")
+});
+
+export const LoginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Indirizzo email non valido").max(254),
+  password: z.string().min(1, "Inserisci la password").max(200)
+});
 
 // Validazione Codice Fiscale Italiano (16 caratteri alfanumerici)
 export const codiceFiscaleRegex = /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-EHLMPR-T][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/i;
@@ -30,9 +44,11 @@ export const ItalianBillingSchema = z.object({
 });
 
 export const CreatePublicationSchema = z.object({
-  name: z.string().min(3, "Il nome della pubblicazione deve avere almeno 3 caratteri"),
-  slug: z.string().min(3).max(40).regex(/^[a-z0-9-]+$/, "Lo slug può contenere solo lettere minuscole, numeri e trattini"),
-  description: z.string().max(250, "Descrizione massima 250 caratteri").optional(),
+  name: z.string().trim().min(3, "Il nome della pubblicazione deve avere almeno 3 caratteri").max(80, "Nome massimo 80 caratteri"),
+  // Lo slug diventa il sottodominio (slug.zerostack.it): stesse regole di /api/domains/check
+  slug: SlugSchema,
+  description: z.string().trim().max(250, "Descrizione massima 250 caratteri").optional(),
+  primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Colore non valido").optional(),
   customDomain: z.string().optional().refine((val) => !val || /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(val), {
     message: "Dominio personalizzato non valido (es. newsletter.tuonome.it)"
   })

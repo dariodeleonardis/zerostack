@@ -1,0 +1,34 @@
+# ==============================================================================
+# ZeroStack - blocchi da aggiungere al Caddyfile del proxy di Coolify
+# ==============================================================================
+# Sul server: /data/coolify/proxy/caddy/dynamic/Caddyfile
+# (in Coolify: Servers -> localhost -> Proxy -> Configuration), poi riavviare il proxy.
+#
+# Il dominio principale (zerostack.it, www) lo gestisce Coolify dal campo Domains.
+# Qui c'è tutto il resto: nomeautore.zerostack.it e i domini personalizzati degli autori.
+# Caddy emette il certificato al primo accesso, solo se /api/domains/check risponde 200:
+# senza la domanda chiunque potrebbe puntare un dominio qui e farci chiedere certificati
+# a Let's Encrypt fino a esaurire i limiti.
+#
+# zerostack-web si risolve perché Coolify collega il proxy alla rete della risorsa.
+# ==============================================================================
+
+{
+	on_demand_tls {
+		ask http://zerostack-web:3000/api/domains/check
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	encode gzip zstd
+	reverse_proxy zerostack-web:3000
+}
+
+# Chi arriva in http su un sottodominio o dominio personalizzato va in https.
+# Le verifiche ACME sulla porta 80 le gestisce Caddy prima di questo blocco.
+http:// {
+	redir https://{host}{uri} permanent
+}

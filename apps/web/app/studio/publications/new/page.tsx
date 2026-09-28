@@ -1,39 +1,152 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, Check, Globe } from "lucide-react";
+import { ArrowLeft, Sparkles, Check, Globe, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
+import { slugify } from "@zerostack/shared";
+
+type SlugState =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "available"; url: string }
+  | { status: "unavailable"; message: string };
+
+type FieldErrors = Partial<Record<"name" | "slug" | "description" | "customDomain" | "primaryColor", string[]>>;
 
 export default function NewPublicationPage() {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [rootDomain, setRootDomain] = useState("zerostack.it");
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugState, setSlugState] = useState<SlugState>({ status: "idle" });
   const [description, setDescription] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0066FF");
   const [customDomain, setCustomDomain] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<FieldErrors>({});
+  const [created, setCreated] = useState<{ name: string; url: string } | null>(null);
+
+  // Serve un account: chi non ha fatto l'accesso va al login e poi torna qui.
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (data.rootDomain) setRootDomain(data.rootDomain);
+        if (res.status === 401) {
+          router.replace("/login?next=/studio/publications/new");
+          return;
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => setAuthChecked(true));
+  }, [router]);
+
+  // Disponibilità dello slug mentre si scrive (con una breve attesa per non chiedere a ogni tasto).
+  useEffect(() => {
+    if (!slug) {
+      setSlugState({ status: "idle" });
+      return;
+    }
+    setSlugState({ status: "checking" });
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/publications/slug-check?slug=${encodeURIComponent(slug)}`, { signal: controller.signal })
+        .then((res) => res.json())
+        .then((data) =>
+          setSlugState(data.available ? { status: "available", url: data.url } : { status: "unavailable", message: data.message })
+        )
+        .catch(() => {
+          if (!controller.signal.aborted) setSlugState({ status: "idle" });
+        });
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [slug]);
 
   const handleNameChange = (val: string) => {
     setName(val);
-    setSlug(
-      val
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "")
-    );
+    if (!slugTouched) setSlug(slugify(val));
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !slug.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    setError(null);
+    setFields({});
+    try {
+      const res = await fetch("/api/publications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          slug,
+          description: description || undefined,
+          primaryColor,
+          customDomain: customDomain || undefined
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        router.replace("/login?next=/studio/publications/new");
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error ?? "Creazione non riuscita");
+        setFields(data.fields ?? {});
+        return;
+      }
+      setCreated({ name: data.publication.name, url: data.publication.url });
+    } catch {
+      setError("Connessione non riuscita. Riprova.");
+    } finally {
       setIsSubmitting(false);
-      router.push("/studio");
-    }, 1000);
+    }
   };
+
+  const fieldError = (key: keyof FieldErrors) =>
+    fields[key]?.[0] ? <p className="mt-1 text-[11px] font-semibold text-rose-600">{fields[key]?.[0]}</p> : null;
+
+  if (created) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <div className="flex items-center gap-2 text-emerald-800">
+            <Check className="h-5 w-5" />
+            <h1 className="text-xl font-black">«{created.name}» è online</h1>
+          </div>
+          <p className="mt-2 text-sm text-emerald-900">
+            Il suo indirizzo è{" "}
+            <a href={created.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline">
+              {created.url.replace("https://", "")} <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </p>
+          <p className="mt-1 text-xs text-emerald-800">
+            Alla prima visita il certificato HTTPS viene creato in automatico: può volerci qualche secondo.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Link href="/studio/posts/new" className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700">
+            Scrivi il primo articolo
+          </Link>
+          <Link href="/studio" className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50">
+            Vai allo Studio
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authChecked) {
+    return <p className="max-w-2xl mx-auto py-12 text-center text-xs text-gray-400">Caricamento...</p>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -51,8 +164,9 @@ export default function NewPublicationPage() {
 
       <form onSubmit={handleCreate} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div>
-          <label className="block text-xs font-bold text-gray-700">Nome della Pubblicazione</label>
+          <label htmlFor="name" className="block text-xs font-bold text-gray-700">Nome della Pubblicazione</label>
           <input
+            id="name"
             type="text"
             placeholder="Es. Cronache di Design & AI"
             value={name}
@@ -60,38 +174,63 @@ export default function NewPublicationPage() {
             className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             required
           />
+          {fieldError("name")}
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700">Indirizzo Web (Slug)</label>
-          <div className="mt-1 flex items-center rounded-xl border border-gray-200 px-3 py-2 text-xs bg-gray-50">
-            <span className="text-gray-400">zerostack.it/p/</span>
+          <label htmlFor="slug" className="block text-xs font-bold text-gray-700">Indirizzo della tua newsletter</label>
+          <div className="mt-1 flex items-center rounded-xl border border-gray-200 px-3 py-2 text-sm bg-gray-50">
+            <span className="text-gray-400">https://</span>
             <input
+              id="slug"
               type="text"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              className="flex-1 bg-transparent font-bold text-gray-900 focus:outline-none"
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value.toLowerCase());
+              }}
+              className="min-w-0 flex-1 bg-transparent text-right font-bold text-gray-900 focus:outline-none"
+              aria-describedby="slug-status"
               required
             />
+            <span className="text-gray-400">.{rootDomain}</span>
           </div>
+          <p id="slug-status" aria-live="polite" className="mt-1 min-h-[16px] text-[11px] font-semibold">
+            {slugState.status === "checking" && <span className="text-gray-400">Controllo in corso...</span>}
+            {slugState.status === "available" && (
+              <span className="inline-flex items-center gap-1 text-emerald-600">
+                <Check className="h-3 w-3" /> Disponibile: {slugState.url.replace("https://", "")}
+              </span>
+            )}
+            {slugState.status === "unavailable" && (
+              <span className="inline-flex items-center gap-1 text-rose-600">
+                <X className="h-3 w-3" /> {slugState.message}
+              </span>
+            )}
+          </p>
+          {fieldError("slug")}
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700">Descrizione Breve / Tagline</label>
+          <label htmlFor="description" className="block text-xs font-bold text-gray-700">Descrizione Breve / Tagline</label>
           <textarea
+            id="description"
             placeholder="Spiega ai lettori di cosa parlerai e perché dovrebbero iscriversi..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
+            maxLength={250}
             className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
           />
+          {fieldError("description")}
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700">Dominio Personalizzato (Opzionale)</label>
+          <label htmlFor="customDomain" className="block text-xs font-bold text-gray-700">Dominio Personalizzato (Opzionale)</label>
           <div className="mt-1 flex items-center gap-2">
             <Globe className="h-4 w-4 text-gray-400" />
             <input
+              id="customDomain"
               type="text"
               placeholder="Es. newsletter.tuobrand.it"
               value={customDomain}
@@ -100,12 +239,13 @@ export default function NewPublicationPage() {
             />
           </div>
           <p className="mt-1 text-[11px] text-gray-400">
-            I certificati SSL sono emessi in automatico e gratuitamente dal server Caddy.
+            Il dominio si attiva dopo la verifica. Intanto la newsletter è raggiungibile al suo indirizzo .{rootDomain}.
           </p>
+          {fieldError("customDomain")}
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700">Colore Primario del Brand</label>
+          <span className="block text-xs font-bold text-gray-700">Colore Primario del Brand</span>
           <div className="mt-2 flex items-center gap-3">
             {["#0066FF", "#7E22CE", "#059669", "#DC2626", "#D97706", "#111827"].map((color) => (
               <button
@@ -113,6 +253,8 @@ export default function NewPublicationPage() {
                 key={color}
                 onClick={() => setPrimaryColor(color)}
                 style={{ backgroundColor: color }}
+                aria-label={`Colore ${color}`}
+                aria-pressed={primaryColor === color}
                 className={`h-7 w-7 rounded-full transition ${
                   primaryColor === color ? "ring-2 ring-offset-2 ring-gray-900" : ""
                 }`}
@@ -121,10 +263,16 @@ export default function NewPublicationPage() {
           </div>
         </div>
 
+        {error && (
+          <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {error}
+          </p>
+        )}
+
         <div className="pt-4 border-t border-gray-100 flex justify-end">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || slugState.status === "unavailable"}
             className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4" />

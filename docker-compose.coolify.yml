@@ -1,0 +1,91 @@
+# ==============================================================================
+# ZeroStack - Stack per Coolify (build pack "Docker Compose", repo da GitHub)
+# ==============================================================================
+# In Coolify: Base Directory "/", Docker Compose Location "/docker-compose.coolify.yml".
+# Dominio del servizio zerostack-web, nel pannello:
+#   https://zerostack.it:3000,https://www.zerostack.it:3000
+# I sottodomini degli autori e i loro domini personalizzati NON passano da qui:
+# li serve il blocco on demand nel Caddyfile del proxy (dist/coolify-proxy.Caddyfile),
+# che chiede a /api/domains/check prima di emettere ogni certificato.
+#
+# Password e segreti li genera Coolify (SERVICE_HEX_*): non vanno scritti da nessuna parte.
+# Il worker (docker/Dockerfile.worker) non c'è: oggi stampa una riga ed esce, e con
+# restart: always andrebbe in un ciclo di riavvii. Si aggiunge quando la coda esiste.
+# ==============================================================================
+
+services:
+  # Schema del database: gira a ogni deploy e poi esce. Se fallisce, il web non parte
+  # (niente "|| true": un sito senza tabelle deve fermare il deploy, non passare in silenzio).
+  zerostack-migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    working_dir: /app/packages/database
+    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+    restart: "no"
+    exclude_from_hc: true
+    environment:
+      - DATABASE_URL=postgresql://zerostack:${SERVICE_HEX_32_POSTGRES}@zerostack-postgres:5432/zerostack?schema=public
+    depends_on:
+      zerostack-postgres:
+        condition: service_healthy
+
+  zerostack-web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://zerostack:${SERVICE_HEX_32_POSTGRES}@zerostack-postgres:5432/zerostack?schema=public
+      - REDIS_URL=redis://zerostack-redis:6379
+      - APP_DOMAIN=${APP_DOMAIN:-zerostack.it}
+      - NEXT_PUBLIC_ROOT_DOMAIN=${APP_DOMAIN:-zerostack.it}
+      - NEXTAUTH_URL=${APP_URL:-https://zerostack.it}
+      - NEXTAUTH_SECRET=${SERVICE_HEX_64_NEXTAUTH}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:3000/api/domains/check?domain=zerostack.it' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    depends_on:
+      zerostack-migrate:
+        condition: service_completed_successfully
+      zerostack-redis:
+        condition: service_healthy
+
+  zerostack-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=zerostack
+      - POSTGRES_PASSWORD=${SERVICE_HEX_32_POSTGRES}
+      - POSTGRES_DB=zerostack
+    volumes:
+      - zerostack-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zerostack -d zerostack"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zerostack-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - zerostack-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zerostack-pgdata:
+  zerostack-redisdata:

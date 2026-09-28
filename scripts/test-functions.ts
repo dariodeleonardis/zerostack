@@ -7,7 +7,13 @@ import {
   codiceFiscaleRegex,
   partitaIvaRegex,
   sdiRegex,
-  generateFatturaPAXml
+  generateFatturaPAXml,
+  RegisterSchema,
+  LoginSchema,
+  SlugSchema,
+  slugProblem,
+  slugify,
+  RESERVED_SUBDOMAINS
 } from "../packages/shared/src/index";
 import { NewsletterEmail, WelcomeEmail, SubscriptionConfirmationEmail, renderEmail } from "../packages/email/src/index";
 import { jsPDF } from "jspdf";
@@ -415,7 +421,6 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   console.log("\n📌 GRUPPO 12: Routing Multi-Tenant Sottodomini Utente (*.zerostack.it)");
 
   const rootDomain = "zerostack.it";
-  const reservedSubdomains = new Set(["www", "api", "admin", "app", "cdn", "mail"]);
 
   function extractSubdomain(host: string, root: string): string | null {
     const cleanHost = host.split(":")[0].toLowerCase();
@@ -435,11 +440,40 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(extractSubdomain("www.zerostack.it", rootDomain) === null, "Prefisso www non identificato come sottodominio creator");
   assert(extractSubdomain("dario.localhost:3000", rootDomain) === "dario", "Estrazione sottodominio in ambiente di sviluppo locale .localhost");
 
-  assert(reservedSubdomains.has("admin"), "Sottodominio 'admin' correttamente protetto come riservato");
-  assert(reservedSubdomains.has("api"), "Sottodominio 'api' correttamente protetto come riservato");
-  assert(!reservedSubdomains.has("dario"), "Sottodominio utente 'dario' non confligge con le parole riservate");
-  assert(/^[a-z0-9-]+$/.test("tech-italia"), "Slug sottodominio conforme alla sintassi RFC DNS");
-  assert(!/^[a-z0-9-]+$/.test("tech italia!"), "Slug con spazi o caratteri speciali respinto da RFC DNS");
+  // Le regole vere, condivise da registrazione, creazione pubblicazione e /api/domains/check
+  assert(slugProblem("admin") === "reserved", "Sottodominio 'admin' correttamente protetto come riservato");
+  assert(slugProblem("api") === "reserved", "Sottodominio 'api' correttamente protetto come riservato");
+  assert(slugProblem("coolify") === "reserved", "Sottodominio 'coolify' (pannello del server) riservato");
+  assert(slugProblem("dario") === null, "Sottodominio utente 'dario' non confligge con le parole riservate");
+  assert(slugProblem("tech-italia") === null, "Slug sottodominio conforme alla sintassi RFC DNS");
+  assert(slugProblem("tech italia!") === "format", "Slug con spazi o caratteri speciali respinto da RFC DNS");
+  assert(slugProblem("-dario") === "format" && slugProblem("dario-") === "format", "Slug con trattino in testa o in coda respinto (etichetta DNS non valida)");
+  assert(slugProblem("xn--dario") === "format", "Slug con doppio trattino respinto (prefisso punycode xn--)");
+  assert(slugProblem("ab") === "format" && slugProblem("a".repeat(41)) === "format", "Slug fuori dai limiti 3-40 caratteri respinto");
+  assert(slugProblem("Dario") === "format", "Slug con maiuscole respinto (lo schema le converte prima)");
+  assert(SlugSchema.safeParse(" Dario ").success && SlugSchema.parse(" Dario ") === "dario", "SlugSchema normalizza spazi e maiuscole");
+  assert(!SlugSchema.safeParse("www").success, "SlugSchema rifiuta i nomi riservati");
+  assert(RESERVED_SUBDOMAINS.has("www") && RESERVED_SUBDOMAINS.has("mail"), "Lista riservata condivisa contiene www e mail");
+
+  assert(slugify("Cronache di Design & AI") === "cronache-di-design-ai", "slugify: nome in slug");
+  assert(slugify("Perché è così") === "perche-e-cosi", "slugify: accenti italiani tolti");
+  assert(slugify("  --Ciao--  ") === "ciao", "slugify: niente trattini in testa o in coda");
+  assert(slugify("a".repeat(39) + " bcd").length <= 40 && !slugify("a".repeat(39) + " bcd").endsWith("-"), "slugify: taglio a 40 caratteri senza trattino finale");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 13: Registrazione e accesso
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 13: Registrazione e accesso");
+
+  const validRegistration = RegisterSchema.safeParse({ name: "Dario", email: " Dario@Example.IT ", handle: "Dario", password: "password-lunga" });
+  assert(validRegistration.success, "Registrazione valida accettata");
+  assert(validRegistration.success && validRegistration.data.email === "dario@example.it", "Email normalizzata in minuscolo");
+  assert(validRegistration.success && validRegistration.data.handle === "dario", "Nome utente normalizzato in minuscolo");
+  assert(!RegisterSchema.safeParse({ name: "Dario", email: "dario@example.it", handle: "dario", password: "corta" }).success, "Password sotto i 10 caratteri respinta");
+  assert(!RegisterSchema.safeParse({ name: "Dario", email: "dario@example.it", handle: "admin", password: "password-lunga" }).success, "Nome utente riservato respinto");
+  assert(!LoginSchema.safeParse({ email: "non-una-email", password: "x" }).success, "Login con email non valida respinto");
+  assert(!CreatePublicationSchema.safeParse({ name: "Tech Italia", slug: "www" }).success, "Pubblicazione con slug riservato respinta");
+  assert(!CreatePublicationSchema.safeParse({ name: "Tech Italia", slug: "tech-italia", primaryColor: "rosso" }).success, "Colore non esadecimale respinto");
 
 
 

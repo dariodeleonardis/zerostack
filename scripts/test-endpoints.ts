@@ -80,8 +80,10 @@ async function testLiveEndpoints() {
   await check("Verifica Sottodominio Pubblicazione (tech-italia.zerostack.it)", "/api/domains/check?domain=tech-italia.zerostack.it", undefined, (res, text) => {
     return res.status === 200 && text.trim() === "OK";
   });
-  await check("Verifica Sottodominio Utente (dario.zerostack.it)", "/api/domains/check?domain=dario.zerostack.it", undefined, (res, text) => {
-    return res.status === 200 && text.trim() === "OK";
+  // "dario" nel seed è un nome utente, non lo slug di una pubblicazione: la pagina darebbe 404,
+  // quindi niente certificato (sprecherebbe la quota settimanale di Let's Encrypt).
+  await check("Rifiuto Sottodominio di un Utente senza Pubblicazione (dario.zerostack.it)", "/api/domains/check?domain=dario.zerostack.it", undefined, (res, text) => {
+    return res.status === 403;
   });
   await check("Rifiuto Sottodominio Riservato di Sistema (admin.zerostack.it)", "/api/domains/check?domain=admin.zerostack.it", undefined, (res, text) => {
     return res.status === 403;

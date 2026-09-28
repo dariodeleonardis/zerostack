@@ -1,0 +1,97 @@
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { cookies } from "next/headers";
+import { prisma } from "@zerostack/database";
+
+// Password con scrypt della libreria standard di Node: niente dipendenze native da compilare su Alpine.
+const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, keylen: number, options: object) => Promise<Buffer>;
+const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 };
+
+export const SESSION_COOKIE = "zs_session";
+const SESSION_DAYS = 30;
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16);
+  const hash = await scryptAsync(password, salt, SCRYPT.keylen, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p });
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64")}$${hash.toString("base64")}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const parts = stored.split("$");
+  // Formato sconosciuto (per esempio le password finte del seed): nessun accesso.
+  if (parts.length !== 6 || parts[0] !== "scrypt") return false;
+  const [, n, r, p, saltB64, hashB64] = parts;
+  const expected = Buffer.from(hashB64, "base64");
+  if (expected.length !== SCRYPT.keylen) return false;
+  const actual = await scryptAsync(password, Buffer.from(saltB64, "base64"), expected.length, {
+    N: Number(n),
+    r: Number(r),
+    p: Number(p)
+  });
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+// Hash calcolato una volta: il login con un'email inesistente impiega lo stesso tempo di uno vero,
+// così dai tempi di risposta non si capisce quali email sono registrate.
+let dummyHash: Promise<string> | null = null;
+export function passwordHashForTiming(): Promise<string> {
+  dummyHash ??= hashPassword(randomBytes(16).toString("hex"));
+  return dummyHash;
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export async function createSession(userId: string): Promise<void> {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  await prisma.session.create({ data: { tokenHash: sha256(token), userId, expiresAt } });
+  cookies().set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: expiresAt
+  });
+}
+
+export async function getCurrentUser() {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const session = await prisma.session.findUnique({
+    where: { tokenHash: sha256(token) },
+    include: { user: { select: { id: true, name: true, email: true, handle: true, role: true } } }
+  });
+  if (!session || session.expiresAt < new Date()) return null;
+  return session.user;
+}
+
+export async function destroySession(): Promise<void> {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  if (token) {
+    await prisma.session.deleteMany({ where: { tokenHash: sha256(token) } });
+  }
+  cookies().delete(SESSION_COOKIE);
+}
+
+/**
+ * Difesa CSRF per le API che cambiano dati: solo JSON e, se il browser dichiara l'origine,
+ * deve essere lo stesso host. Un form di un altro sito non può inviare JSON senza preflight CORS,
+ * e il cookie SameSite=Lax non parte con le POST da altri siti.
+ */
+export function isSameOriginJson(req: Request): boolean {
+  if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return false;
+  const origin = req.headers.get("origin");
+  if (!origin) return true;
+  try {
+    return new URL(origin).host === req.headers.get("host");
+  } catch {
+    return false;
+  }
+}
+
+export function clientIp(req: Request): string {
+  // Dietro Caddy l'IP vero arriva in X-Forwarded-For (primo valore).
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "sconosciuto";
+}
