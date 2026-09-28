@@ -1,5 +1,7 @@
 # Multi-stage production build for ZeroStack Web
 FROM node:20-alpine AS base
+# Prisma su Alpine carica il motore solo se c'è OpenSSL (senza, ogni query fallisce)
+RUN apk add --no-cache openssl
 
 # Stage 1: Dependencies
 FROM base AS deps

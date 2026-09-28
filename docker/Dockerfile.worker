@@ -1,5 +1,7 @@
 # Background worker for BullMQ email queue processing
 FROM node:20-alpine AS base
+# Prisma su Alpine carica il motore solo se c'è OpenSSL (senza, anche db push fallisce)
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 COPY package*.json turbo.json ./
