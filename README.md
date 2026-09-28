@@ -32,6 +32,7 @@
 zerostack/
 ├── apps/
 │   ├── web/                    # Next.js 15 App Router (Studio Creator, Reader, Checkout, API)
+│   ├── worker/                 # Invio newsletter e uscita dei post programmati (coda nel database)
 │   └── mobile/                 # App Mobile Dedicata Expo / React Native (Feed, Note, Podcasts)
 ├── packages/
 │   ├── database/               # PostgreSQL + Schema Prisma con dati di seed italiani
@@ -82,6 +83,29 @@ npm run android   # Per emulatore o dispositivo Android
 npm run ios       # Per simulatore iOS (su macOS)
 npm run web       # Per testare l'app come Progressive Web App (PWA)
 ```
+
+---
+
+## 📬 Newsletter: scrittura, iscrizioni e invio
+
+Il giro completo funziona così:
+
+1. **Scrittura** – in `/studio/posts/new` l'editor (TipTap) salva bozze, programma l'uscita o pubblica subito. Il pulsante *Inserisci paywall* mette il divisore: sopra lo leggono tutti, sotto solo gli abbonati paganti (e la redazione).
+2. **Iscrizione con doppia conferma** – il modulo della pagina pubblica chiama `POST /api/subscribe`, che spedisce subito l'email con il link di conferma (valido 7 giorni). Solo chi conferma diventa `ACTIVE`.
+3. **Invio** – pubblicare con *Invia per email* crea una campagna. Il **worker** (`apps/worker`) la prende dal database e spedisce a ogni iscritto attivo, al ritmo di `EMAIL_RATE_PER_SECOND`. Ogni destinatario ha una riga `EmailDelivery`: se il worker si ferma, riparte da dove era e nessuno riceve due copie. Il worker pubblica anche i post programmati arrivati alla loro ora.
+4. **Disiscrizione** – ogni email ha il link in fondo e gli header `List-Unsubscribe` / `List-Unsubscribe-Post` per la disiscrizione a un clic dai client di posta (richiesta da Gmail e Yahoo per gli invii in massa).
+
+Configurazione (uguale per web e worker):
+
+| Variabile | Valore |
+|---|---|
+| `EMAIL_PROVIDER` | `brevo`, `resend`, `smtp` oppure `log` (nessun invio, solo registro: il default) |
+| `BREVO_API_KEY` / `RESEND_API_KEY` / `SMTP_*` | Credenziali del provider scelto |
+| `EMAIL_FROM` | Mittente di piattaforma, su un dominio verificato presso il provider (SPF, DKIM, DMARC). Il nome visualizzato è quello della pubblicazione |
+| `APP_URL` | Indirizzo pubblico della piattaforma: serve per i link di conferma e disiscrizione |
+| `EMAIL_RATE_PER_SECOND` | Ritmo di invio del worker (default 10) |
+
+In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email in un file JSON, e `npm run once --workspace=@zerostack/worker` fa un solo giro del worker. Il test end to end `scripts/test-newsletter.mjs` usa proprio questo.
 
 ---
 

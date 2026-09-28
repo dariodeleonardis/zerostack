@@ -1,0 +1,20 @@
+{
+  "name": "@zerostack/worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Invio delle newsletter e uscita dei post programmati, con il database come coda",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "once": "tsx src/index.ts --once"
+  },
+  "dependencies": {
+    "@zerostack/database": "*",
+    "@zerostack/email": "*",
+    "@zerostack/shared": "*",
+    "tsx": "^4.19.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}

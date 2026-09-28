@@ -1,4 +1,4 @@
-# Background worker for BullMQ email queue processing
+# Worker: newsletter e post programmati (coda nel database). Serve anche da immagine per prisma db push.
 FROM node:20-alpine AS base
 # Prisma su Alpine carica il motore solo se c'è OpenSSL (senza, anche db push fallisce)
 RUN apk add --no-cache openssl
@@ -8,6 +8,7 @@ COPY package*.json turbo.json ./
 COPY packages/shared ./packages/shared
 COPY packages/database ./packages/database
 COPY packages/email ./packages/email
+COPY apps/worker ./apps/worker
 
 RUN npm install
 
@@ -15,4 +16,4 @@ WORKDIR /app/packages/database
 RUN npx prisma generate
 
 WORKDIR /app
-CMD ["node", "-e", "console.log('[ZeroStack Background Worker] In ascolto code BullMQ email & analytics...')"]
+CMD ["npm", "run", "start", "--workspace=@zerostack/worker"]

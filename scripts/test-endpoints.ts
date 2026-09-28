@@ -97,19 +97,12 @@ async function testLiveEndpoints() {
     return res.status === 403;
   });
 
-  // 5.4 Invio Newsletter API
-  await check("Invio Newsletter senza sessione -> 401", "/api/newsletter/send", {
+  // 5.4 Salvataggio post dallo studio: senza sessione niente
+  await check("Salvataggio post senza sessione -> 401", "/api/posts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: "Test Live Newsletter",
-      contentHtml: "<p>Contenuto inviato dal test live.</p>",
-      sendEmail: true
-    })
-  }, (res) => {
-    // Senza sessione nessuno può scrivere alle liste.
-    return res.status === 401;
-  });
+    body: JSON.stringify({ publicationId: "00000000-0000-0000-0000-000000000000", title: "x", contentHtml: "<p>x</p>", action: "draft" })
+  }, (res) => res.status === 401);
 
   // 5.5 Checkout Stripe API
   await check("Stripe Checkout Session API", "/api/checkout/stripe", {

@@ -224,6 +224,8 @@ model Post {
   commentsCount   Int         @default(0)
   publishedAt     DateTime?
   scheduledAt     DateTime?
+  // Per i post programmati: all'uscita il worker crea anche la campagna email.
+  emailOnPublish  Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -314,18 +316,30 @@ model Bookmark {
 }
 
 model NewsletterSubscriber {
-  id            String   @id @default(uuid())
-  publicationId String
-  email         String
-  name          String?
-  status        String   @default("ACTIVE") // ACTIVE, UNSUBSCRIBED, BOUNCED
-  isDoubleOptIn Boolean  @default(true)
-  source        String   @default("WEB") // WEB, IMPORT_SUBSTACK, API
-  createdAt     DateTime @default(now())
+  id               String    @id @default(uuid())
+  publicationId    String
+  email            String
+  name             String?
+  status           String    @default("PENDING") // PENDING (in attesa di conferma), ACTIVE, UNSUBSCRIBED, BOUNCED
+  isDoubleOptIn    Boolean   @default(true)
+  source           String    @default("WEB") // WEB, IMPORT_SUBSTACK, API
+  // Doppia conferma: nel database solo l'hash del token spedito per email (indicizzato sotto).
+  confirmTokenHash String?
+  confirmSentAt    DateTime?
+  confirmedAt      DateTime?
+  // Token casuale per il link di disiscrizione presente in ogni email. Indice e non @unique:
+  // un vincolo nuovo su una tabella già piena fermerebbe il `prisma db push` del deploy.
+  unsubscribeToken String    @default(dbgenerated("gen_random_uuid()"))
+  unsubscribedAt   DateTime?
+  createdAt        DateTime  @default(now())
 
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  publication      Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  deliveries       EmailDelivery[]
 
   @@unique([publicationId, email])
+  @@index([publicationId, status])
+  @@index([unsubscribeToken])
+  @@index([confirmTokenHash])
 }
 
 model EmailCampaign {
@@ -335,11 +349,36 @@ model EmailCampaign {
   subject         String
   status          CampaignStatus @default(PENDING)
   recipientsCount Int            @default(0)
+  sentCount       Int            @default(0)
+  failedCount     Int            @default(0)
   opensCount      Int            @default(0)
   clicksCount     Int            @default(0)
+  lastError       String?
+  startedAt       DateTime?
   sentAt          DateTime?
   createdAt       DateTime       @default(now())
 
-  publication     Publication    @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  publication     Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  post            Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  deliveries      EmailDelivery[]
+
+  // Nessun @unique su postId (fermerebbe il db push del deploy): l'invio singolo lo garantisce
+  // il passaggio atomico del post a PUBLISHED, l'unico momento in cui nasce la campagna.
+  @@index([status])
+  @@index([postId])
+}
+
+// Una riga per destinatario: se il worker si ferma a metà, riparte senza rispedire a nessuno.
+model EmailDelivery {
+  id           String   @id @default(uuid())
+  campaignId   String
+  subscriberId String
+  status       String   // SENT, FAILED
+  error        String?
+  createdAt    DateTime @default(now())
+
+  campaign     EmailCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, subscriberId])
 }

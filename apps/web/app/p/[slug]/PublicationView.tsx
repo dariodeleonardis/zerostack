@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Rss,
@@ -15,6 +15,7 @@ import {
 import { TipJar } from "../../../components/TipJar";
 
 export interface PublicationViewProps {
+  publicationId: string;
   slug: string;
   name: string;
   description: string | null;
@@ -41,6 +42,7 @@ export interface PublicationViewProps {
 }
 
 export function PublicationView({
+  publicationId,
   slug,
   name,
   description,
@@ -52,12 +54,37 @@ export function PublicationView({
 }: PublicationViewProps) {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribeState, setSubscribeState] = useState<"idle" | "sending" | "error">("idle");
+  const [subscribeMessage, setSubscribeMessage] = useState("");
+  const [justConfirmed, setJustConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  // Arrivo dal link di conferma dell'email: /?iscrizione=confermata
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("iscrizione") === "confermata") setJustConfirmed(true);
+  }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && email.includes("@")) {
+    setSubscribeState("sending");
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicationId, email })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubscribeState("error");
+        setSubscribeMessage(data.error ?? "Iscrizione non riuscita. Riprova.");
+        return;
+      }
+      setSubscribeMessage(data.message ?? "Controlla la tua email per confermare l'iscrizione.");
       setIsSubscribed(true);
+      setSubscribeState("idle");
+    } catch {
+      setSubscribeState("error");
+      setSubscribeMessage("Connessione non riuscita. Riprova.");
     }
   };
 
@@ -139,10 +166,15 @@ export function PublicationView({
 
           {/* Sottoscrizione Newsletter Rapida */}
           <div className="mt-6 rounded-xl bg-blue-50/60 p-4 border border-blue-100">
-            {isSubscribed ? (
+            {justConfirmed ? (
+              <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <span>Iscrizione confermata: riceverai i prossimi articoli via email.</span>
+              </div>
+            ) : isSubscribed ? (
               <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
                 <Check className="h-5 w-5 text-emerald-600" />
-                <span>Ti abbiamo inviato un'email di conferma (Double Opt-in)! Controlla la tua casella di posta.</span>
+                <span>{subscribeMessage}</span>
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
@@ -156,13 +188,15 @@ export function PublicationView({
                 />
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition"
+                  disabled={subscribeState === "sending"}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-60"
                 >
                   <Mail className="h-4 w-4" />
-                  <span>Iscriviti Gratis</span>
+                  <span>{subscribeState === "sending" ? "Invio..." : "Iscriviti Gratis"}</span>
                 </button>
               </form>
             )}
+            {subscribeState === "error" && <p className="mt-2 text-xs font-semibold text-rose-600">{subscribeMessage}</p>}
           </div>
         </div>
 

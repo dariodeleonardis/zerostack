@@ -8,3 +8,5 @@ export * from "./SubscriptionConfirmationEmail";
 export async function renderEmail(component: React.ReactElement): Promise<string> {
   return render(component);
 }
+export * from "./transport";
+export * from "./messages";

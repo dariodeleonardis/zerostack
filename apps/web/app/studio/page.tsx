@@ -1,153 +1,171 @@
 import React from "react";
 import Link from "next/link";
-import { PenSquare, Users, DollarSign, MailCheck, Globe, ShieldCheck, ArrowUpRight, TrendingUp } from "lucide-react";
+import { PenSquare, Users, MailCheck, Clock, CreditCard, ArrowUpRight, Pencil } from "lucide-react";
+import { prisma } from "@zerostack/database";
+import { publicationBaseUrl } from "@zerostack/shared";
+import { requireUser } from "../../lib/auth";
 
-export default function StudioDashboard() {
-  const mrr = 994;
-  const substackYearlyFee = (mrr * 12 * 0.1).toFixed(2);
+export const dynamic = "force-dynamic";
+
+const STATUS_BADGE = {
+  DRAFT: { label: "Bozza", className: "bg-gray-100 text-gray-700" },
+  SCHEDULED: { label: "Programmato", className: "bg-amber-100 text-amber-800" },
+  PUBLISHED: { label: "Pubblicato", className: "bg-emerald-100 text-emerald-800" },
+  ARCHIVED: { label: "Archiviato", className: "bg-gray-100 text-gray-500" }
+} as const;
+
+const CAMPAIGN_LABEL: Record<string, string> = {
+  PENDING: "email in coda",
+  PROCESSING: "email in invio",
+  SENT: "email inviate",
+  FAILED: "invio interrotto"
+};
+
+function KpiCard({ label, value, hint, icon }: { label: string; value: string; hint: string; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between text-gray-500">
+        <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
+        {icon}
+      </div>
+      <div className="mt-3 text-3xl font-black text-gray-900">{value}</div>
+      <p className="mt-1 text-xs text-gray-400">{hint}</p>
+    </div>
+  );
+}
+
+export default async function StudioDashboard() {
+  const user = await requireUser("/studio");
+  const memberships = await prisma.publicationMember.findMany({
+    where: { userId: user.id },
+    select: { publication: { select: { id: true, name: true, slug: true, customDomain: true, isDomainVerified: true } } }
+  });
+  const publications = memberships.map((m) => m.publication);
+  const publicationIds = publications.map((p) => p.id);
+
+  if (publications.length === 0) {
+    return (
+      <div className="mx-auto max-w-xl py-16 text-center">
+        <h1 className="text-2xl font-black text-gray-900">Benvenuto nello studio</h1>
+        <p className="mt-2 text-sm text-gray-600">Crea la tua pubblicazione: avrà un indirizzo tutto suo e una lista di iscritti.</p>
+        <Link href="/studio/publications/new" className="mt-6 inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+          Crea la pubblicazione
+        </Link>
+      </div>
+    );
+  }
+
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [activeSubscribers, pendingSubscribers, paidSubscriptions, emailsSent, posts] = await Promise.all([
+    prisma.newsletterSubscriber.count({ where: { publicationId: { in: publicationIds }, status: "ACTIVE" } }),
+    prisma.newsletterSubscriber.count({ where: { publicationId: { in: publicationIds }, status: "PENDING" } }),
+    prisma.subscription.count({ where: { publicationId: { in: publicationIds }, isPaid: true, status: { in: ["ACTIVE", "TRIALING"] } } }),
+    prisma.emailDelivery.count({ where: { status: "SENT", createdAt: { gte: monthAgo }, campaign: { publicationId: { in: publicationIds } } } }),
+    prisma.post.findMany({
+      where: { publicationId: { in: publicationIds }, format: { not: "NOTE" } },
+      orderBy: { updatedAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        publishedAt: true,
+        scheduledAt: true,
+        updatedAt: true,
+        publicationId: true,
+        campaigns: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, sentCount: true, recipientsCount: true } }
+      }
+    })
+  ]);
+
+  const byId = new Map(publications.map((p) => [p.id, p]));
+  const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const number = new Intl.NumberFormat("it-IT");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Studio Header */}
       <div className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-gray-900">Pannello Creator</h1>
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-              Tech & Futuro Italia
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Monitora iscritti, ricavi ricorrenti, metriche newsletter e configurazioni VPS.
-          </p>
+          <h1 className="text-3xl font-black text-gray-900">Pannello Creator</h1>
+          <p className="mt-1 text-sm text-gray-500">{publications.map((p) => p.name).join(" · ")}</p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/studio/posts/new"
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition"
-          >
-            <PenSquare className="h-4 w-4" />
-            Nuovo Post o Newsletter
-          </Link>
-        </div>
+        <Link
+          href="/studio/posts/new"
+          className="flex items-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+        >
+          <PenSquare className="h-4 w-4" />
+          Nuovo post
+        </Link>
       </div>
 
-      {/* Substack Savings Alert Banner */}
-      <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-black text-lg">
-              0%
-            </div>
-            <div>
-              <p className="text-sm font-bold text-emerald-950">
-                Risparmio rispetto a Substack: +{substackYearlyFee}€ / anno stimati
-              </p>
-              <p className="text-xs text-emerald-800">
-                Substack tratterrebbe il 10% di ogni tuo abbonamento. Su ZeroStack il 100% dei ricavi resta tuo!
-              </p>
-            </div>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/10 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300/40">
-            <ShieldCheck className="h-4 w-4" /> Self-Hosted su VPS
-          </span>
-        </div>
-      </div>
-
-      {/* Analytics KPI Cards */}
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Iscritti Totali */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-medium uppercase tracking-wider">Iscritti Totali</span>
-            <Users className="h-4 w-4 text-blue-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">1.840</span>
-            <span className="flex items-center text-xs font-bold text-emerald-600">
-              <TrendingUp className="h-3 w-3 mr-0.5" /> +14% mese
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">142 abbonati paganti (7,7% conv.)</p>
-        </div>
-
-        {/* Ricavi Ricorrenti (MRR) */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-medium uppercase tracking-wider">MRR (Ricavo Mensile)</span>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">{mrr}€</span>
-            <span className="text-xs font-bold text-gray-500">/ mese</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">11.928€/anno ARR stimato</p>
-        </div>
-
-        {/* Tasso di Apertura Newsletter */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-medium uppercase tracking-wider">Open Rate Medio</span>
-            <MailCheck className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">48,2%</span>
-            <span className="text-xs font-semibold text-purple-600">Ottimo</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">Provider: Brevo (DKIM verificato)</p>
-        </div>
-
-        {/* Dominio e Hosting */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-medium uppercase tracking-wider">Dominio & SSL</span>
-            <Globe className="h-4 w-4 text-amber-600" />
-          </div>
-          <div className="mt-3">
-            <span className="text-sm font-bold text-gray-900">tech.tuodominio.it</span>
-            <p className="text-xs text-emerald-600 font-semibold mt-1">✓ SSL Let's Encrypt Attivo</p>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">Gratuito con Caddy Reverse Proxy</p>
-        </div>
+        <KpiCard label="Iscritti attivi" value={number.format(activeSubscribers)} hint="Hanno confermato l'email" icon={<Users className="h-4 w-4 text-blue-600" />} />
+        <KpiCard label="In attesa" value={number.format(pendingSubscribers)} hint="Non hanno ancora confermato" icon={<Clock className="h-4 w-4 text-amber-600" />} />
+        <KpiCard label="Abbonati paganti" value={number.format(paidSubscriptions)} hint="Abbonamenti attivi" icon={<CreditCard className="h-4 w-4 text-emerald-600" />} />
+        <KpiCard label="Email inviate" value={number.format(emailsSent)} hint="Ultimi 30 giorni" icon={<MailCheck className="h-4 w-4 text-purple-600" />} />
       </div>
 
-      {/* Post recenti e Campagne */}
       <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <h2 className="text-lg font-bold text-gray-900">I tuoi ultimi post</h2>
+          <h2 className="text-lg font-bold text-gray-900">I tuoi post</h2>
           <Link href="/studio/posts/new" className="text-xs font-semibold text-blue-600 hover:underline">
             + Scrivi nuovo
           </Link>
         </div>
 
-        <div className="mt-4 divide-y divide-gray-100">
-          <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                  Pubblicato
-                </span>
-                <span className="text-xs text-gray-400">25 Settembre 2026</span>
-              </div>
-              <h3 className="mt-1 font-bold text-gray-900">
-                Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack
-              </h3>
-              <p className="text-xs text-gray-500">
-                1.420 visualizzazioni &bull; 88 mi piace &bull; 1.840 email inviate (49% apertura)
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Link
-                href="/p/tech-italia/alternativa-italiana-a-substack"
-                className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                Vedi <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+        {posts.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">Ancora nessun post. Il primo è a un clic.</p>
+        ) : (
+          <div className="mt-2 divide-y divide-gray-100">
+            {posts.map((post) => {
+              const badge = STATUS_BADGE[post.status];
+              const campaign = post.campaigns[0];
+              const publication = byId.get(post.publicationId)!;
+              const when =
+                post.status === "PUBLISHED" && post.publishedAt
+                  ? `Uscito il ${dateFormat.format(post.publishedAt)}`
+                  : post.status === "SCHEDULED" && post.scheduledAt
+                    ? `Esce il ${dateFormat.format(post.scheduledAt)}`
+                    : `Modificato il ${dateFormat.format(post.updatedAt)}`;
+              return (
+                <div key={post.id} className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${badge.className}`}>{badge.label}</span>
+                      <span className="text-xs text-gray-400">{when}</span>
+                      {publications.length > 1 && <span className="text-xs text-gray-400">· {publication.name}</span>}
+                    </div>
+                    <h3 className="mt-1 truncate font-bold text-gray-900">{post.title}</h3>
+                    {campaign && (
+                      <p className="text-xs text-gray-500">
+                        {CAMPAIGN_LABEL[campaign.status] ?? campaign.status}: {number.format(campaign.sentCount)} su {number.format(campaign.recipientsCount)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Link
+                      href={`/studio/posts/${post.id}`}
+                      className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Modifica
+                    </Link>
+                    {post.status === "PUBLISHED" && (
+                      <a
+                        href={`${publicationBaseUrl(publication)}/${post.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        Vedi <ArrowUpRight className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -60,6 +60,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
 
   return (
     <PublicationView
+      publicationId={publication.id}
       slug={publication.slug}
       name={publication.name}
       description={publication.description}

@@ -23,6 +23,8 @@ import { formatVttTimestamp, generateWebVtt, transcribeAudio } from "../apps/web
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../apps/web/lib/posts";
 import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
 import { createHmac } from "crypto";
+import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv } from "../packages/shared/src/index";
+import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender } from "../packages/email/src/index";
 import fs from "fs";
 import path from "path";
 
@@ -516,6 +518,55 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(!verifyStripeSignature(whBody + " ", `t=${whTs},v1=${whSig}`, whSecret, 300, whTs + 10), "Corpo alterato respinto");
   assert(!verifyStripeSignature(whBody, `t=${whTs},v1=${whSig}`, whSecret, 300, whTs + 1000), "Firma troppo vecchia respinta (replay)");
   assert(!verifyStripeSignature(whBody, null, whSecret), "Header di firma mancante respinto");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 15: Editor, iscrizioni e costruzione delle newsletter
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 15: Editor, iscrizioni e costruzione delle newsletter");
+
+  const pubId = "7b0c6a1e-2f4d-4c7a-9d3e-1a2b3c4d5e6f";
+  assert(SavePostSchema.safeParse({ publicationId: pubId, title: "Bozza", contentHtml: "", action: "draft" }).success, "Bozza vuota accettata");
+  assert(!SavePostSchema.safeParse({ publicationId: pubId, title: "Pubblico", contentHtml: "<p></p>", action: "publish" }).success, "Pubblicazione senza testo respinta");
+  assert(!SavePostSchema.safeParse({ publicationId: pubId, title: "Dopo", contentHtml: "<p>x</p>", action: "schedule" }).success, "Programmazione senza data respinta");
+  assert(
+    SavePostSchema.safeParse({ publicationId: pubId, title: "Dopo", contentHtml: "<p>x</p>", action: "schedule", scheduledAt: new Date(Date.now() + 3600_000).toISOString() }).success,
+    "Programmazione futura accettata"
+  );
+  assert(!SavePostSchema.safeParse({ publicationId: pubId, title: "x", contentHtml: "<p>x</p>", action: "publish", access: "TUTTI" }).success, "Livello di accesso sconosciuto respinto");
+  const subscribe = SubscribeSchema.safeParse({ publicationId: pubId, email: "  Lettore@Example.IT " });
+  assert(subscribe.success && subscribe.data.email === "lettore@example.it", "Email di iscrizione normalizzata");
+
+  const env = { APP_DOMAIN: "zerostack.it" };
+  assert(publicationBaseUrl({ slug: "dario" }, env) === "https://dario.zerostack.it", "URL pubblicazione sul sottodominio");
+  assert(publicationBaseUrl({ slug: "dario", customDomain: "news.dario.it", isDomainVerified: false }, env) === "https://dario.zerostack.it", "Dominio non verificato ignorato");
+  assert(publicationBaseUrl({ slug: "dario", customDomain: "news.dario.it", isDomainVerified: true }, env) === "https://news.dario.it", "Dominio verificato usato");
+  assert(platformUrlFromEnv({ APP_URL: "https://zerostack.it/" }) === "https://zerostack.it", "APP_URL senza barra finale");
+  assert(platformSender("Lettere", { APP_DOMAIN: "zerostack.it" }).email === "newsletter@zerostack.it", "Mittente di piattaforma dal dominio");
+
+  const newsletter = buildNewsletterEmail({
+    to: "lettore@example.it",
+    publication: { name: "Lettere", primaryColor: "#123456", replyTo: "redazione@lettere.it" },
+    post: { title: "Numero uno", subtitle: "Sotto", authorName: "Dario", publishedAt: new Date("2026-09-28T10:00:00Z") },
+    contentHtml: "<p>Ciao lettori</p>",
+    hasPaywall: true,
+    postUrl: "https://lettere.zerostack.it/numero-uno",
+    unsubscribeUrl: "https://zerostack.it/api/unsubscribe?token=abc",
+    oneClickUrl: "https://zerostack.it/api/unsubscribe?token=abc"
+  });
+  assert(newsletter.subject === "Numero uno" && newsletter.replyTo === "redazione@lettere.it", "Oggetto e risposta alla redazione");
+  assert(newsletter.headers?.["List-Unsubscribe"] === "<https://zerostack.it/api/unsubscribe?token=abc>", "Header List-Unsubscribe");
+  assert(newsletter.html.includes("Ciao lettori") && newsletter.html.includes("Sblocca"), "HTML con testo e invito ad abbonarsi");
+  assert(Boolean(newsletter.text?.includes("Ciao lettori")), "Versione solo testo generata");
+
+  const confirmationMail = buildConfirmationEmail({ to: "a@b.it", publication: { name: "Lettere" }, confirmUrl: "https://zerostack.it/api/subscribe/confirm?token=xyz" });
+  assert(confirmationMail.html.includes("token=xyz") && Boolean(confirmationMail.text?.includes("token=xyz")), "Email di conferma con il link");
+
+  let unknownProvider = false;
+  try { createTransportFromEnv({ EMAIL_PROVIDER: "piccione" }); } catch { unknownProvider = true; }
+  let missingKey = false;
+  try { createTransportFromEnv({ EMAIL_PROVIDER: "brevo" }); } catch { missingKey = true; }
+  assert(unknownProvider && missingKey, "Provider sconosciuto o senza chiave: errore all'avvio, non a metà invio");
+  assert(createTransportFromEnv({}).name === "log", "Senza configurazione le email vanno nel log, non partono");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

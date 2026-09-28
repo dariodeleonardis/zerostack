@@ -38,3 +38,21 @@ hr.paywall-divider::after {
   border-radius: 9999px;
   border: 1px solid #e5e7eb;
 }
+
+/* Editor dello studio (TipTap) */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #9ca3af;
+}
+
+.ProseMirror hr.paywall-divider {
+  cursor: pointer;
+}
+
+.ProseMirror hr.paywall-divider.ProseMirror-selectednode {
+  outline: 2px solid #9333ea;
+  outline-offset: 6px;
+}

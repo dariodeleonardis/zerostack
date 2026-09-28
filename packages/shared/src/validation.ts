@@ -82,3 +82,37 @@ export const CreateSubscriptionTierSchema = z.object({
   interval: z.enum(["MONTH", "YEAR", "ONE_TIME"]),
   benefits: z.array(z.string()).min(1, "Inserisci almeno un vantaggio per gli abbonati")
 });
+
+// Salvataggio dall'editor dello studio: bozza, programmazione o pubblicazione immediata.
+export const SavePostSchema = z
+  .object({
+    publicationId: z.string().uuid("Scegli una pubblicazione"),
+    title: z.string().trim().min(2, "Il titolo è obbligatorio").max(200, "Titolo massimo 200 caratteri"),
+    subtitle: z.string().trim().max(300, "Sottotitolo massimo 300 caratteri").optional(),
+    contentHtml: z.string().max(500_000, "Il testo è troppo lungo"),
+    access: z.enum(["FREE", "PAID_SUBSCRIBERS"]).default("FREE"),
+    action: z.enum(["draft", "schedule", "publish"]),
+    scheduledAt: z.string().datetime({ offset: true }).optional(),
+    sendEmail: z.boolean().default(true)
+  })
+  .superRefine((data, ctx) => {
+    const text = data.contentHtml.replace(/<[^>]+>/g, "").trim();
+    if (data.action !== "draft" && text.length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["contentHtml"], message: "Il contenuto non può essere vuoto" });
+    }
+    if (data.action === "schedule") {
+      if (!data.scheduledAt) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scheduledAt"], message: "Scegli data e ora di uscita" });
+      } else if (new Date(data.scheduledAt).getTime() <= Date.now()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scheduledAt"], message: "La data di uscita deve essere nel futuro" });
+      }
+    }
+  });
+
+export type SavePostInput = z.infer<typeof SavePostSchema>;
+
+export const SubscribeSchema = z.object({
+  publicationId: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email("Indirizzo email non valido").max(254),
+  name: z.string().trim().max(80).optional()
+});

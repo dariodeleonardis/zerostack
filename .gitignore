@@ -47,3 +47,4 @@ docker/caddy_config/
 # OS files
 .DS_Store
 Thumbs.db
+dump.rdb
