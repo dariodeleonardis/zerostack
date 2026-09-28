@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { slugify } from "@zerostack/shared";
+import { safeNext } from "../../lib/safe-next";
 
 type FieldErrors = Partial<Record<"name" | "email" | "handle" | "password", string[]>>;
 
@@ -41,7 +42,8 @@ export default function RegisterPage() {
         setFields(data.fields ?? {});
         return;
       }
-      router.push("/studio/publications/new");
+      // Chi arriva da un checkout torna lì; chi si registra da zero va a creare la sua pubblicazione.
+      router.push(safeNext(new URLSearchParams(window.location.search).get("next"), "/studio/publications/new"));
       router.refresh();
     } catch {
       setError("Connessione non riuscita. Riprova.");

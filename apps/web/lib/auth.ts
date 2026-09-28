@@ -1,8 +1,9 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@zerostack/database";
+import { rootDomainFromEnv } from "@zerostack/shared";
 
 // Password con scrypt della libreria standard di Node: niente dipendenze native da compilare su Alpine.
 const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, keylen: number, options: object) => Promise<Buffer>;
@@ -44,6 +45,22 @@ function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * Dominio del cookie di sessione: `.zerostack.it` quando si accede dalla piattaforma, così la sessione
+ * vale anche su slug.zerostack.it e un abbonato vede gli articoli completi sul sottodominio.
+ * Su localhost o su un dominio personalizzato il cookie resta legato all'host.
+ */
+export function sessionCookieDomain(host: string | null, rootDomain: string): string | undefined {
+  const hostname = (host ?? "").split(":")[0].toLowerCase();
+  if (!rootDomain.includes(".") || rootDomain === "localhost") return undefined;
+  if (hostname === rootDomain || hostname.endsWith(`.${rootDomain}`)) return `.${rootDomain}`;
+  return undefined;
+}
+
+function cookieDomain(): string | undefined {
+  return sessionCookieDomain(headers().get("host"), rootDomainFromEnv());
+}
+
 export async function createSession(userId: string): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
@@ -53,6 +70,7 @@ export async function createSession(userId: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
+    domain: cookieDomain(),
     expires: expiresAt
   });
 }
@@ -86,7 +104,11 @@ export async function destroySession(): Promise<void> {
   if (token) {
     await prisma.session.deleteMany({ where: { tokenHash: sha256(token) } });
   }
-  cookies().delete(SESSION_COOKIE);
+  // Next tiene un solo Set-Cookie per nome: si cancella la versione con cui il cookie è stato creato.
+  // Un eventuale cookie vecchio legato all'host resta, ma la sessione nel database non esiste più.
+  const domain = cookieDomain();
+  if (domain) cookies().set(SESSION_COOKIE, "", { path: "/", domain, maxAge: 0 });
+  else cookies().delete(SESSION_COOKIE);
 }
 
 /**

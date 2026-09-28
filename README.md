@@ -45,7 +45,7 @@ zerostack/
 │   └── Caddyfile               # Reverse proxy con emissione SSL automatica
 └── scripts/
     ├── deploy.sh               # Installatore e gestore aggiornamenti 1-click per VPS
-    └── import-substack.ts      # Strumento di migrazione 1-click da export CSV di Substack
+    └── import-substack.ts      # Import da riga di comando dell'export di Substack (ZIP o CSV)
 ```
 
 ---
@@ -111,19 +111,32 @@ In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email i
 
 ## 🔄 Migrazione 1-Click da Substack
 
-Se hai già una pubblicazione su Substack, esporta l'archivio dalle impostazioni di Substack e importa gli iscritti in ZeroStack con un singolo comando:
+Su Substack apri *Impostazioni → Esporta* e scarica lo ZIP. Poi, in ZeroStack, *Studio → Importa da Substack* e carica il file:
 
-```bash
-npx ts-node scripts/import-substack.ts tech-italia ./subscribers.csv
-```
+- **iscritti**: arrivano già attivi (avevano confermato su Substack), senza email di conferma. Chi su Substack non riceveva più email viene saltato; chi si era disiscritto da ZeroStack resta disiscritto;
+- **articoli**: pubblicati con la data originale, bozze come bozze, e il paywall di Substack diventa il divisore di ZeroStack. L'import non spedisce nessuna newsletter;
+- si può ripetere: niente doppioni.
+
+Gli abbonati a pagamento di Substack vengono importati come iscritti: il loro abbonamento resta su Substack finché non si abbonano sul tuo nuovo piano, e il resoconto dell'import dice quanti sono.
+
+Da riga di comando: `npx tsx scripts/import-substack.ts <slug-pubblicazione> <export.zip | iscritti.csv>`.
 
 ---
 
-## 🔐 Configurazione Fiscale Italiana & Pagamenti (Stripe)
+## 💳 Abbonamenti a pagamento (Stripe Connect)
 
-1. Apri il file `.env` sul tuo VPS.
-2. Inserisci le tue credenziali **Stripe** (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`).
-3. Quando un lettore si abbona selezionando "Azienda / P.IVA", il sistema valida il **Codice Fiscale**, la **Partita IVA** (11 cifre) e raccoglie il **Codice Destinatario SDI** (7 caratteri) o l'indirizzo **PEC**, salvandoli per la fatturazione elettronica.
+Ogni pubblicazione incassa sul **proprio** conto Stripe (Connect Express, pagamenti diretti): ZeroStack non trattiene nulla, restano solo le commissioni di Stripe.
+
+**Una volta, per la piattaforma:**
+
+1. Su Stripe attiva **Connect** e copia la chiave segreta in `STRIPE_SECRET_KEY`.
+2. In *Sviluppatori → Webhook* aggiungi l'endpoint `https://<tuo-dominio>/api/stripe/webhook` **in ascolto degli eventi dei conti collegati** con: `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Il suo segreto va in `STRIPE_CONNECT_WEBHOOK_SECRET` (se usi un endpoint unico, in `STRIPE_WEBHOOK_SECRET`). Senza segreto il webhook rifiuta tutto.
+
+**Per ogni autore**, in *Studio → Monetizzazione*: *Collega Stripe* (procedura guidata di Stripe: dati, documento, IBAN), poi *Nuovo livello* (mensile, annuale o una tantum). Il prezzo su Stripe viene creato alla prima vendita.
+
+**Per il lettore**: dal paywall o dalla pagina della pubblicazione si arriva al checkout su `zerostack.it/checkout/...` (serve un account), si inseriscono facoltativamente i dati per la fattura (codice fiscale, P.IVA, SDI o PEC, validati e salvati) e si paga sulla pagina di Stripe: carta, Apple/Google Pay, SEPA. L'abbonamento si attiva quando arriva il webhook; da *I miei abbonamenti* si disdice (a fine periodo) o si riattiva. Chi paga diventa anche iscritto alla newsletter e la riceve completa.
+
+La sessione vale su `zerostack.it` e su tutti i sottodomini `*.zerostack.it`, quindi un abbonato legge gli articoli completi anche sul sottodominio della pubblicazione. Sui domini personalizzati la sessione non arriva: lì gli articoli a pagamento si leggono dall'indirizzo `slug.zerostack.it`.
 
 ---
 

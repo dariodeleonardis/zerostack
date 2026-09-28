@@ -21,6 +21,7 @@
     "bullmq": "^5.14.0",
     "clsx": "^2.1.1",
     "feed": "^4.2.2",
+    "fflate": "^0.8.3",
     "ioredis": "^5.4.1",
     "isomorphic-dompurify": "^2.15.0",
     "jspdf": "^2.5.2",

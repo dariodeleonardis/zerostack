@@ -16,6 +16,7 @@ import { TipJar } from "../../../components/TipJar";
 
 export interface PublicationViewProps {
   publicationId: string;
+  checkoutBaseUrl: string;
   slug: string;
   name: string;
   description: string | null;
@@ -43,6 +44,7 @@ export interface PublicationViewProps {
 
 export function PublicationView({
   publicationId,
+  checkoutBaseUrl,
   slug,
   name,
   description,
@@ -306,7 +308,7 @@ export function PublicationView({
 
                   <div className="mt-6">
                     <Link
-                      href={`/checkout/${tier.id}`}
+                      href={`${checkoutBaseUrl}/checkout/${tier.id}`}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition"
                     >
                       Abbonati a {tier.price} {tier.interval}

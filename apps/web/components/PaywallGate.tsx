@@ -10,6 +10,8 @@ interface PaywallGateProps {
   monthlyPriceEur?: number;
   intervalLabel?: string;
   tierId: string;
+  /** Indirizzo assoluto del checkout sulla piattaforma (dai sottodomini il relativo non basta). */
+  checkoutHref?: string;
   benefits?: string[];
 }
 
@@ -19,6 +21,7 @@ export const PaywallGate: React.FC<PaywallGateProps> = ({
   monthlyPriceEur = 7,
   intervalLabel = "/ mese",
   tierId = "demo-tier",
+  checkoutHref,
   benefits = [
     "Accesso completo a tutti gli articoli e archivi",
     "Podcast privato riservato agli abbonati",
@@ -65,7 +68,7 @@ export const PaywallGate: React.FC<PaywallGateProps> = ({
 
           <div className="mt-6">
             <Link
-              href={`/checkout/${tierId}`}
+              href={checkoutHref ?? `/checkout/${tierId}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700"
             >
               Abbonati ora a {monthlyPriceEur}€ {intervalLabel}

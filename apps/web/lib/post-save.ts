@@ -17,7 +17,7 @@ async function uniquePostSlug(publicationId: string, title: string, excludePostI
   return `${base}-${Date.now()}`;
 }
 
-function excerptFrom(html: string): string | null {
+export function excerptFrom(html: string): string | null {
   const { preview, rest, hasDivider } = splitAtPaywall(html);
   const text = (hasDivider ? preview : rest).replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
   if (!text) return null;

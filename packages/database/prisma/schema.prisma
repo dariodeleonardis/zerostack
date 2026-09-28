@@ -115,6 +115,8 @@ model Publication {
   
   // Impostazioni integrazione pagamenti & email (indipendenza del creator)
   stripeAccountId        String?
+  // Aggiornato dal webhook account.updated: finché è false il checkout resta chiuso.
+  stripeChargesEnabled   Boolean  @default(false)
   emailProvider          String   @default("SMTP") // "BREVO" | "RESEND" | "POSTMARK" | "SMTP"
   smtpHost               String?
   smtpPort               Int?     @default(587)
@@ -174,6 +176,7 @@ model Subscription {
   stripeSubscriptionId String?
   stripeCustomerId     String?
   currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
   isPaid               Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
@@ -182,6 +185,9 @@ model Subscription {
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier                 Tier?               @relation(fields: [tierId], references: [id])
   billingInfo          ItalianBillingInfo?
+
+  @@index([stripeSubscriptionId])
+  @@index([userId, publicationId])
 }
 
 model ItalianBillingInfo {

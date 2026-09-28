@@ -2,15 +2,11 @@
 
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
+import { safeNext } from "../../lib/safe-next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 // Solo percorsi interni: "//altro-sito.it" o "https://..." porterebbero l'utente fuori dopo il login.
-function safeNext(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return "/studio";
-  return value;
-}
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,7 +30,7 @@ function LoginForm() {
         setError(data.error ?? "Accesso non riuscito");
         return;
       }
-      router.push(safeNext(searchParams.get("next")));
+      router.push(safeNext(searchParams.get("next"), "/studio"));
       router.refresh();
     } catch {
       setError("Connessione non riuscita. Riprova.");

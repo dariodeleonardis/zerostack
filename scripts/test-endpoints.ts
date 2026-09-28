@@ -40,7 +40,7 @@ async function testLiveEndpoints() {
   await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>
     res.status === 200 && text.includes("Sovranità dei dati") && !text.includes("paywall-divider"));
   await check("Articolo inesistente -> 404", "/p/tech-italia/articolo-che-non-esiste", undefined, (res) => res.status === 404);
-  await check("Schermata Checkout Fiscale IT", "/checkout/premium-monthly");
+  await check("Checkout di un piano inesistente -> 404", "/checkout/premium-monthly", undefined, (res) => res.status === 404);
 
   // 2. Pannello Creator & Switcher
   console.log("\n📌 2. Test Studio Creator & Gestione Multi-Tenant:");
@@ -105,21 +105,17 @@ async function testLiveEndpoints() {
   }, (res) => res.status === 401);
 
   // 5.5 Checkout Stripe API
-  await check("Stripe Checkout Session API", "/api/checkout/stripe", {
+  await check("Checkout Stripe senza sessione -> 401", "/api/checkout/stripe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tierId: "premium-monthly",
-      paymentMethod: "card",
-      fiscalData: {
-        isCompany: false,
-        ragioneSocialeOIntestatario: "Mario Rossi",
-        codiceFiscale: "RSSMRA85M01H501Z"
-      }
-    })
-  }, (res, text) => {
-    return text.includes('"success":true');
-  });
+    body: JSON.stringify({ tierId: "premium-monthly" })
+  }, (res) => res.status === 401);
+
+  await check("Webhook Stripe senza firma respinto", "/api/stripe/webhook", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "checkout.session.completed" })
+  }, (res) => res.status === 400 || res.status === 503);
 
   // 5.6 Generazione Ricevuta Fiscale PDF Stream
   await check("Download Ricevuta Fiscale PDF", "/api/receipts/pdf/sub_test_live_99", undefined, (res, text) => {

@@ -1,125 +1,73 @@
-"use client";
+import React from "react";
+import { prisma } from "@zerostack/database";
+import { isSubscriptionActive, publicationBaseUrl } from "@zerostack/shared";
+import { requireUser } from "../../../lib/auth";
+import { SubscriptionActions } from "./SubscriptionActions";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { CreditCard, ShieldCheck, CheckCircle2, XCircle, ArrowLeft, Download, AlertCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-interface UserSubscription {
-  id: string;
-  publicationName: string;
-  publicationSlug: string;
-  tierName: string;
-  priceFormatted: string;
-  interval: string;
-  nextRenewal: string;
-  status: "ATTIVO" | "DISDETTO";
-  fiscalReceiptAvailable: boolean;
-}
+const INTERVAL_LABEL = { MONTH: "al mese", YEAR: "all'anno", ONE_TIME: "una tantum" } as const;
 
-const mockUserSubscriptions: UserSubscription[] = [
-  {
-    id: "sub-101",
-    publicationName: "Tech & Futuro Italia",
-    publicationSlug: "tech-italia",
-    tierName: "Abbonato Premium",
-    priceFormatted: "7,00 €",
-    interval: "al mese",
-    nextRenewal: "25 Ottobre 2026",
-    status: "ATTIVO",
-    fiscalReceiptAvailable: true
-  },
-  {
-    id: "sub-102",
-    publicationName: "Caffè Finanziario",
-    publicationSlug: "caffe-finanza",
-    tierName: "Sostenitore Mensile",
-    priceFormatted: "5,00 €",
-    interval: "al mese",
-    nextRenewal: "18 Ottobre 2026",
-    status: "ATTIVO",
-    fiscalReceiptAvailable: true
-  }
-];
-
-export default function SubscriptionsManagerPage() {
-  const [subscriptions, setSubscriptions] = useState<UserSubscription[]>(mockUserSubscriptions);
-
-  const handleCancelSubscription = (id: string) => {
-    if (confirm("Vuoi davvero disdire questo abbonamento? Manterrai l'accesso fino alla fine del periodo già pagato.")) {
-      setSubscriptions(
-        subscriptions.map((s) => (s.id === id ? { ...s, status: "DISDETTO" } : s))
-      );
+export default async function AccountSubscriptionsPage() {
+  const user = await requireUser("/account/subscriptions");
+  const subscriptions = await prisma.subscription.findMany({
+    where: { userId: user.id, isPaid: true },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      isPaid: true,
+      currentPeriodEnd: true,
+      cancelAtPeriodEnd: true,
+      stripeSubscriptionId: true,
+      tier: { select: { name: true, priceCents: true, currency: true, interval: true } },
+      publication: { select: { name: true, slug: true, customDomain: true, isDomainVerified: true } }
     }
-  };
+  });
+  const date = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 sm:px-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-gray-200 pb-5">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">I Tuoi Abbonamenti & Fatture</h1>
-          <p className="text-xs text-gray-500">
-            Gestisci le tue iscrizioni a pagamento, scarica le ricevute e controlla i dati fiscali italiani.
-          </p>
-        </div>
-        <Link href="/account/profile" className="text-xs font-semibold text-gray-500 hover:text-gray-900">
-          Modifica Profilo &rarr;
-        </Link>
-      </div>
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <h1 className="text-2xl font-black text-gray-900">I miei abbonamenti</h1>
+      <p className="mt-1 text-sm text-gray-500">Le ricevute di pagamento arrivano via email da Stripe a ogni addebito.</p>
 
-      <div className="space-y-4">
-        {subscriptions.map((sub) => (
-          <div
-            key={sub.id}
-            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900">{sub.publicationName}</h2>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                    sub.status === "ATTIVO"
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {sub.status === "ATTIVO" ? "Attivo" : "Disdetto (fino a scadenza)"}
-                </span>
-              </div>
-
-              <p className="text-xs font-semibold text-gray-600 mt-1">
-                Piano: {sub.tierName} &bull; <span className="font-bold text-gray-900">{sub.priceFormatted}</span> {sub.interval}
-              </p>
-
-              <p className="text-[11px] text-gray-400 mt-1">
-                {sub.status === "ATTIVO" ? `Prossimo rinnovo: ${sub.nextRenewal}` : `Accesso valido fino al: ${sub.nextRenewal}`}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {sub.fiscalReceiptAvailable && (
-                <button
-                  onClick={() => alert("Download ricevuta fiscale conforme Agenzia delle Entrate avviato.")}
-                  className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-                  title="Ricevuta con Codice Fiscale / SDI"
-                >
-                  <Download className="h-3.5 w-3.5 text-blue-600" /> Ricevuta Fiscale
-                </button>
-              )}
-
-              {sub.status === "ATTIVO" ? (
-                <button
-                  onClick={() => handleCancelSubscription(sub.id)}
-                  className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 transition"
-                >
-                  Disdici con 1 clic
-                </button>
-              ) : (
-                <span className="text-xs text-gray-400 italic">Disdetto</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      {subscriptions.length === 0 ? (
+        <p className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">Non hai abbonamenti a pagamento.</p>
+      ) : (
+        <ul className="mt-8 space-y-4">
+          {subscriptions.map((sub) => {
+            const active = isSubscriptionActive(sub);
+            const price = sub.tier
+              ? `${new Intl.NumberFormat("it-IT", { style: "currency", currency: sub.tier.currency }).format(sub.tier.priceCents / 100)} ${INTERVAL_LABEL[sub.tier.interval]}`
+              : "";
+            const detail = !active
+              ? sub.status === "PAST_DUE"
+                ? "Pagamento non riuscito: aggiorna il metodo di pagamento dal link nell'email di Stripe"
+                : "Terminato"
+              : !sub.stripeSubscriptionId
+                ? "Acquisto una tantum, senza scadenza"
+                : sub.cancelAtPeriodEnd && sub.currentPeriodEnd
+                  ? `Disdetto: accesso fino al ${date.format(sub.currentPeriodEnd)}`
+                  : sub.currentPeriodEnd
+                    ? `Si rinnova il ${date.format(sub.currentPeriodEnd)}`
+                    : "Attivo";
+            return (
+              <li key={sub.id} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <a href={publicationBaseUrl(sub.publication)} className="font-bold text-gray-900 hover:underline">
+                    {sub.publication.name}
+                  </a>
+                  <p className="text-xs text-gray-500">
+                    {sub.tier?.name} {price && `· ${price}`}
+                  </p>
+                  <p className={`mt-1 text-xs font-semibold ${active ? "text-emerald-700" : "text-gray-500"}`}>{detail}</p>
+                </div>
+                {active && sub.stripeSubscriptionId && <SubscriptionActions id={sub.id} cancelAtPeriodEnd={sub.cancelAtPeriodEnd} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

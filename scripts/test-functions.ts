@@ -23,7 +23,9 @@ import { formatVttTimestamp, generateWebVtt, transcribeAudio } from "../apps/web
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../apps/web/lib/posts";
 import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
 import { createHmac } from "crypto";
-import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv } from "../packages/shared/src/index";
+import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
+import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
+import { sessionCookieDomain } from "../apps/web/lib/auth";
 import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender } from "../packages/email/src/index";
 import fs from "fs";
 import path from "path";
@@ -567,6 +569,29 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   try { createTransportFromEnv({ EMAIL_PROVIDER: "brevo" }); } catch { missingKey = true; }
   assert(unknownProvider && missingKey, "Provider sconosciuto o senza chiave: errore all'avvio, non a metà invio");
   assert(createTransportFromEnv({}).name === "log", "Senza configurazione le email vanno nel log, non partono");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 16: Pagamenti, sessione sui sottodomini e import da Substack
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 16: Pagamenti, sessione sui sottodomini e import da Substack");
+
+  assert(mapStripeSubscriptionStatus("active") === "ACTIVE" && mapStripeSubscriptionStatus("trialing") === "TRIALING", "Stati Stripe attivi");
+  assert(["past_due", "unpaid", "incomplete", "paused"].every((s) => mapStripeSubscriptionStatus(s) === "PAST_DUE"), "Pagamenti in sospeso non aprono il paywall");
+  assert(mapStripeSubscriptionStatus("canceled") === "CANCELED" && mapStripeSubscriptionStatus("incomplete_expired") === "CANCELED", "Abbonamenti chiusi");
+  assert(eurToCents(7.1) === 710 && eurToCents(6.5) === 650 && eurToCents(0.29) === 29, "Euro in centesimi senza errori di virgola mobile");
+  assert(!TierInputSchema.safeParse({ publicationId: pubId, name: "X", description: "Troppo", priceEur: 5, interval: "MONTH", benefits: [] }).success, "Livello senza vantaggi respinto");
+  assert(!TierInputSchema.safeParse({ publicationId: pubId, name: "Caro", description: "Troppo caro", priceEur: 5000, interval: "MONTH", benefits: ["x"] }).success, "Livello oltre 1000€ respinto");
+
+  assert(sessionCookieDomain("zerostack.it", "zerostack.it") === ".zerostack.it", "Cookie di sessione sul dominio della piattaforma");
+  assert(sessionCookieDomain("dario.zerostack.it:443", "zerostack.it") === ".zerostack.it", "Cookie valido anche per i sottodomini degli autori");
+  assert(sessionCookieDomain("newsletter.mario.it", "zerostack.it") === undefined, "Su un dominio personalizzato il cookie resta dell'host");
+  assert(sessionCookieDomain("localhost:3000", "zerostack.it") === undefined && sessionCookieDomain("localhost", "localhost") === undefined, "In locale nessun dominio sul cookie");
+  assert(sessionCookieDomain("evilzerostack.it", "zerostack.it") === undefined, "Un dominio che finisce con lo stesso nome non riceve il cookie");
+
+  const multiline = parseCsv('a,b\n"uno, due","tre\nquattro"\r\n"con ""virgolette""",x\n');
+  assert(multiline.length === 3 && multiline[1][0] === "uno, due" && multiline[1][1] === "tre\nquattro" && multiline[2][0] === 'con "virgolette"', "CSV con virgole, a capo e virgolette nei campi");
+  assert(parseCsvRecords("\uFEFFEmail,Plan\nx@y.it,paid\n")[0]?.email === "x@y.it", "CSV con BOM e intestazioni maiuscole");
+  assert(convertSubstackPaywall('<p>a</p><div class="paywall-jump" data-component-name="PaywallToDOM"></div><p>b</p>') === '<p>a</p><hr class="paywall-divider" data-paywall="true"><p>b</p>', "Paywall di Substack convertito nel divisore");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

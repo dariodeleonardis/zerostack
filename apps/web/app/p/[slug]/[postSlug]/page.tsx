@@ -10,6 +10,7 @@ import { getCurrentUser } from "../../../../lib/auth";
 import { publicationWhere } from "../../../../lib/publications";
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
 import { ShareButton } from "./ShareButton";
+import { platformUrlFromEnv } from "@zerostack/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -152,6 +153,7 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
           <PaywallGate
             publicationName={publication.name}
             tierId={tier.id}
+            checkoutHref={`${platformUrlFromEnv()}/checkout/${tier.id}`}
             tierName={tier.name}
             monthlyPriceEur={tier.priceCents / 100}
             intervalLabel={INTERVAL_LABEL[tier.interval]}

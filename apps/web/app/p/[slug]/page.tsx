@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma } from "@zerostack/database";
 import { PublicationView } from "./PublicationView";
 import { publicationWhere } from "../../../lib/publications";
+import { platformUrlFromEnv } from "@zerostack/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
   return (
     <PublicationView
       publicationId={publication.id}
+      checkoutBaseUrl={platformUrlFromEnv()}
       slug={publication.slug}
       name={publication.name}
       description={publication.description}
