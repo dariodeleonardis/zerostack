@@ -101,6 +101,51 @@ export function resendTransport(apiKey: string): EmailTransport {
   };
 }
 
+/**
+ * turboSMTP, provider italiano: https://github.com/turboSMTP/developers-hub (docs/transactional.md).
+ * Autenticazione solo con consumerKey/consumerSecret; di default l'infrastruttura europea.
+ * Il tag della pubblicazione viaggia in reference_id, che turboSMTP rimanda nei webhook.
+ */
+export const TURBOSMTP_EU_API = "https://api.eu.turbo-smtp.com/api/v2";
+
+export function turboSmtpTransport(options: { consumerKey: string; consumerSecret: string; apiBase?: string }): EmailTransport {
+  const base = (options.apiBase || TURBOSMTP_EU_API).replace(/\/+$/, "");
+  return {
+    name: "turbosmtp",
+    async send(msg) {
+      const customHeaders: Record<string, string> = { ...(msg.headers ?? {}) };
+      if (msg.replyTo) customHeaders["reply-to"] = msg.replyTo;
+      const res = await fetch(`${base}/mail/send`, {
+        method: "POST",
+        headers: {
+          consumerKey: options.consumerKey,
+          consumerSecret: options.consumerSecret,
+          "content-type": "application/json",
+          accept: "application/json"
+        },
+        body: JSON.stringify({
+          from: formatAddress(msg.from),
+          to: msg.to,
+          subject: msg.subject,
+          content: msg.text,
+          html_content: msg.html,
+          ...(Object.keys(customHeaders).length > 0 ? { custom_headers: customHeaders } : {}),
+          ...(msg.tags?.publication ? { reference_id: `publication:${msg.tags.publication}` } : {})
+        })
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        // 400 "nocredit" o indirizzi non validi, 401 chiavi sbagliate: ritentare non serve. 429 e 5xx sì.
+        const permanent = res.status >= 400 && res.status < 500 && res.status !== 429;
+        throw new EmailSendError(`turboSMTP ${res.status}: ${body.slice(0, 300)}`, permanent);
+      }
+      // mid è un intero a 64 bit: letto come testo per non perdere cifre con i numeri di JavaScript.
+      const mid = /"mid"\s*:\s*"?(\d+)/.exec(body)?.[1];
+      return { messageId: mid };
+    }
+  };
+}
+
 export function smtpTransport(options: { host: string; port: number; user?: string; pass?: string }): EmailTransport {
   const transporter = nodemailer.createTransport({
     host: options.host,
@@ -151,7 +196,7 @@ export function logTransport(dir?: string): EmailTransport {
 }
 
 /**
- * Il provider si sceglie esplicitamente con EMAIL_PROVIDER (brevo | resend | smtp | log):
+ * Il provider si sceglie esplicitamente con EMAIL_PROVIDER (brevo | resend | turbosmtp | smtp | log):
  * dedurlo dalle chiavi presenti manderebbe in produzione i valori segnaposto di .env.example.
  */
 export function createTransportFromEnv(env: NodeJS.ProcessEnv = process.env): EmailTransport {
@@ -163,6 +208,15 @@ export function createTransportFromEnv(env: NodeJS.ProcessEnv = process.env): Em
     case "resend":
       if (!env.RESEND_API_KEY) throw new Error("EMAIL_PROVIDER=resend ma RESEND_API_KEY è vuota");
       return resendTransport(env.RESEND_API_KEY);
+    case "turbosmtp":
+      if (!env.TURBOSMTP_CONSUMER_KEY || !env.TURBOSMTP_CONSUMER_SECRET) {
+        throw new Error("EMAIL_PROVIDER=turbosmtp ma TURBOSMTP_CONSUMER_KEY o TURBOSMTP_CONSUMER_SECRET sono vuoti");
+      }
+      return turboSmtpTransport({
+        consumerKey: env.TURBOSMTP_CONSUMER_KEY,
+        consumerSecret: env.TURBOSMTP_CONSUMER_SECRET,
+        apiBase: env.TURBOSMTP_API_BASE
+      });
     case "smtp":
       if (!env.SMTP_HOST) throw new Error("EMAIL_PROVIDER=smtp ma SMTP_HOST è vuoto");
       return smtpTransport({ host: env.SMTP_HOST, port: Number(env.SMTP_PORT || 587), user: env.SMTP_USER, pass: env.SMTP_PASS });

@@ -99,8 +99,9 @@ Configurazione (uguale per web e worker):
 
 | Variabile | Valore |
 |---|---|
-| `EMAIL_PROVIDER` | `brevo`, `resend`, `smtp` oppure `log` (nessun invio, solo registro: il default) |
-| `BREVO_API_KEY` / `RESEND_API_KEY` / `SMTP_*` | Credenziali del provider scelto |
+| `EMAIL_PROVIDER` | `brevo`, `resend`, `turbosmtp`, `smtp` oppure `log` (nessun invio, solo registro: il default) |
+| `BREVO_API_KEY` / `RESEND_API_KEY` / `TURBOSMTP_CONSUMER_KEY` + `TURBOSMTP_CONSUMER_SECRET` / `SMTP_*` | Credenziali del provider scelto |
+| `TURBOSMTP_API_BASE` | Solo turboSMTP: di default `https://api.eu.turbo-smtp.com/api/v2` (infrastruttura europea) |
 | `EMAIL_FROM` | Mittente di piattaforma, su un dominio verificato presso il provider (SPF, DKIM, DMARC). Il nome visualizzato è quello della pubblicazione |
 | `APP_URL` | Indirizzo pubblico della piattaforma: serve per i link di conferma e disiscrizione |
 | `EMAIL_RATE_PER_SECOND` | Ritmo di invio del worker (default 10) |
@@ -108,6 +109,7 @@ Configurazione (uguale per web e worker):
 **Rimbalzi e segnalazioni di spam.** Un indirizzo che rimbalza in modo definitivo viene fermato su tutte le pubblicazioni; chi segna una newsletter come spam viene disiscritto da quella pubblicazione. Configura il webhook del provider:
 
 - Brevo (*Transactional → Settings → Webhook*): URL `https://<tuo-dominio>/api/email/webhook/brevo?token=<EMAIL_WEBHOOK_TOKEN>`, eventi *Hard bounce*, *Invalid email*, *Spam*;
+- turboSMTP (*Event Webhook* nel pannello): URL `https://<tuo-dominio>/api/email/webhook/turbosmtp?token=<EMAIL_WEBHOOK_TOKEN>`, eventi *Bounced*, *Spam report* e *Unsubscribed*. Le coppie consumerKey/consumerSecret si creano dal pannello o dall'API `user/consumerKeys` di turboSMTP;
 - Resend (*Webhooks*): URL `https://<tuo-dominio>/api/email/webhook/resend`, eventi `email.bounced` ed `email.complained`; il segreto di firma va in `RESEND_WEBHOOK_SECRET`.
 
 In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email in un file JSON, e `npm run once --workspace=@zerostack/worker` fa un solo giro del worker. Il test end to end `scripts/test-newsletter.mjs` usa proprio questo.
@@ -138,9 +140,25 @@ Da riga di comando: `npx tsx scripts/import-substack.ts <slug-pubblicazione> <ex
 
 ---
 
-## 🌐 Dominio personalizzato
+## 🌐 Sottodomini degli autori e dominio personalizzato
 
-Ogni pubblicazione vive su `slug.<tuo-dominio>` e può avere in più un dominio proprio (gratis). In *Studio → Dominio personalizzato* l'autore scrive il dominio e riceve due record da aggiungere nel DNS: un **CNAME** verso `slug.<tuo-dominio>` e un **TXT** `_zerostack.<dominio>` con il valore di verifica. Con *Verifica ora* ZeroStack legge il TXT: solo dopo la verifica Caddy emette il certificato HTTPS e il dominio mostra la pubblicazione. Cambiare dominio fa ripartire la verifica da capo.
+**I sottodomini sono automatici.** Quando un autore crea la pubblicazione `dario`, `dario.zerostack.it` funziona subito: l'autore non fa niente. Serve solo una configurazione della piattaforma, una volta per tutte, nel DNS di `zerostack.it`:
+
+| Tipo | Nome | Valore |
+|---|---|---|
+| A | `zerostack.it` | IP del server |
+| A (o CNAME) | `www` | IP del server (o `zerostack.it`) |
+| A | `*` (wildcard) | IP del server |
+
+Al primo accesso a un sottodominio Caddy chiede a `/api/domains/check` se la pubblicazione esiste e solo allora ottiene il certificato da Let's Encrypt. Per controllare che dominio, wildcard, HTTPS e app siano a posto:
+
+```bash
+bash scripts/check-platform.sh zerostack.it tech-italia
+```
+
+Nota sui volumi: Let's Encrypt emette al massimo 50 certificati a settimana per dominio registrato. Oltre qualche decina di nuove pubblicazioni a settimana conviene un certificato wildcard `*.zerostack.it` (sfida DNS-01, richiede Caddy con il plugin del provider DNS).
+
+**Dominio personalizzato (facoltativo).** Chi vuole può aggiungere un dominio suo (gratis). In *Studio → Dominio personalizzato* l'autore scrive il dominio e riceve due record da aggiungere nel DNS: un **CNAME** verso `slug.<tuo-dominio>` e un **TXT** `_zerostack.<dominio>` con il valore di verifica. Con *Verifica ora* ZeroStack legge il TXT: solo dopo la verifica Caddy emette il certificato HTTPS e il dominio mostra la pubblicazione. Cambiare dominio fa ripartire la verifica da capo.
 
 ## 💳 Abbonamenti a pagamento (Stripe Connect)
 

@@ -26,7 +26,8 @@ import { createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { sessionCookieDomain } from "../apps/web/lib/auth";
-import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender } from "../packages/email/src/index";
+import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
+import http from "http";
 import fs from "fs";
 import path from "path";
 
@@ -592,6 +593,51 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(multiline.length === 3 && multiline[1][0] === "uno, due" && multiline[1][1] === "tre\nquattro" && multiline[2][0] === 'con "virgolette"', "CSV con virgole, a capo e virgolette nei campi");
   assert(parseCsvRecords("\uFEFFEmail,Plan\nx@y.it,paid\n")[0]?.email === "x@y.it", "CSV con BOM e intestazioni maiuscole");
   assert(convertSubstackPaywall('<p>a</p><div class="paywall-jump" data-component-name="PaywallToDOM"></div><p>b</p>') === '<p>a</p><hr class="paywall-divider" data-paywall="true"><p>b</p>', "Paywall di Substack convertito nel divisore");
+
+  // --------------------------------------------------------------------------
+  // TEST GRUPPO 17: Trasporto turboSMTP (contro un server finto)
+  // --------------------------------------------------------------------------
+  console.log("\n📌 GRUPPO 17: Trasporto turboSMTP");
+
+  const turboRequests: Array<{ path: string; headers: http.IncomingHttpHeaders; body: any }> = [];
+  let turboReply = { status: 200, body: '{"message":"OK","mid":1688566310828572700}' };
+  const turboServer = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", (c) => (raw += c));
+    req.on("end", () => {
+      turboRequests.push({ path: req.url ?? "", headers: req.headers, body: JSON.parse(raw || "{}") });
+      res.writeHead(turboReply.status, { "content-type": "application/json" });
+      res.end(turboReply.body);
+    });
+  });
+  await new Promise<void>((resolve) => turboServer.listen(0, "127.0.0.1", () => resolve()));
+  const turboPort = (turboServer.address() as { port: number }).port;
+  const turbo = turboSmtpTransport({ consumerKey: "ck_test", consumerSecret: "cs_test", apiBase: `http://127.0.0.1:${turboPort}/api/v2/` });
+
+  const sent = await turbo.send({ ...newsletter, publicationId: undefined } as any);
+  const turboReq = turboRequests[0];
+  assert(turboReq?.path === "/api/v2/mail/send", "turboSMTP: chiamata a /mail/send");
+  assert(turboReq?.headers.consumerkey === "ck_test" && turboReq?.headers.consumersecret === "cs_test" && !turboReq?.headers.authorization, "turboSMTP: autenticazione con consumerKey/consumerSecret, senza Authorization");
+  assert(turboReq?.body.to === "lettore@example.it" && turboReq?.body.subject === "Numero uno" && turboReq?.body.from === '"Lettere" <newsletter@zerostack.it>', "turboSMTP: mittente, destinatario (stringa) e oggetto");
+  assert(turboReq?.body.html_content?.includes("Ciao lettori") && turboReq?.body.content?.includes("Ciao lettori"), "turboSMTP: versione HTML e solo testo");
+  assert(turboReq?.body.custom_headers?.["List-Unsubscribe"] === "<https://zerostack.it/api/unsubscribe?token=abc>" && turboReq?.body.custom_headers?.["reply-to"] === "redazione@lettere.it", "turboSMTP: List-Unsubscribe e reply-to negli header");
+  assert(sent.messageId === "1688566310828572700", "turboSMTP: mid a 64 bit letto senza perdere cifre", String(sent.messageId));
+
+  await turbo.send({ ...newsletter, tags: { publication: pubId } });
+  assert(turboRequests[1]?.body.reference_id === `publication:${pubId}`, "turboSMTP: la pubblicazione viaggia in reference_id per i webhook");
+
+  turboReply = { status: 401, body: '{"errorCode":3,"message":"Wrong credentials specified"}' };
+  let turbo401: unknown = null;
+  try { await turbo.send(newsletter); } catch (e) { turbo401 = e; }
+  turboReply = { status: 503, body: "{}" };
+  let turbo503: unknown = null;
+  try { await turbo.send(newsletter); } catch (e) { turbo503 = e; }
+  assert(turbo401 instanceof EmailSendError && turbo401.permanent && turbo503 instanceof EmailSendError && !turbo503.permanent, "turboSMTP: chiavi sbagliate = errore definitivo, 503 = si ritenta");
+  turboServer.close();
+
+  let turboMissing = false;
+  try { createTransportFromEnv({ EMAIL_PROVIDER: "turbosmtp", TURBOSMTP_CONSUMER_KEY: "x" }); } catch { turboMissing = true; }
+  assert(turboMissing && createTransportFromEnv({ EMAIL_PROVIDER: "turbosmtp", TURBOSMTP_CONSUMER_KEY: "k", TURBOSMTP_CONSUMER_SECRET: "s" }).name === "turbosmtp", "turboSMTP: si attiva con EMAIL_PROVIDER=turbosmtp e le due chiavi");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

@@ -202,6 +202,22 @@ try {
   assert(forged.status === 400, "Resend: firma sbagliata respinta");
   await call("POST", "/api/email/webhook/resend", { raw: permanent, headers: svix(permanent) });
   assert((await status(email("resend"), publicationId)) === "BOUNCED", "Resend: rimbalzo definitivo registrato");
+
+  // ------------------------------------------------------------------ webhook turboSMTP
+  await addSubscriber(publicationId, email("turbo-bounce"));
+  await addSubscriber(otherPublicationId, email("turbo-bounce"));
+  await addSubscriber(publicationId, email("turbo-spam"));
+  await addSubscriber(otherPublicationId, email("turbo-spam"));
+  const turboBad = await call("POST", "/api/email/webhook/turbosmtp?token=sbagliato", { body: { status: "BOUNCED", email: email("turbo-bounce") } });
+  assert(turboBad.status === 401, "turboSMTP: webhook con token sbagliato respinto");
+  const turboBounce = await call("POST", `/api/email/webhook/turbosmtp?token=${EMAIL_WEBHOOK_TOKEN}`, {
+    body: { id: "1", mid: "5520650288", status: "BOUNCED", email: email("turbo-bounce"), subject: "x", timestamp: 1576711314, reason: { 0: "550", response: "550 5.1.1 User unknown" } }
+  });
+  assert(turboBounce.status === 200 && (await status(email("turbo-bounce"), publicationId)) === "BOUNCED" && (await status(email("turbo-bounce"), otherPublicationId)) === "BOUNCED", "turboSMTP: BOUNCED ferma l'indirizzo ovunque");
+  await call("POST", `/api/email/webhook/turbosmtp?token=${EMAIL_WEBHOOK_TOKEN}`, {
+    body: [{ status: "REPORT", email: email("turbo-spam"), reference_id: `publication:${publicationId}` }, { status: "DEFERRED", email: email("turbo-spam"), reason: "400 try again later", attempt: 2 }]
+  });
+  assert((await status(email("turbo-spam"), publicationId)) === "UNSUBSCRIBED" && (await status(email("turbo-spam"), otherPublicationId)) === "ACTIVE", "turboSMTP: REPORT disiscrive solo dalla pubblicazione in reference_id, DEFERRED ignorato");
 } finally {
   await prisma.$disconnect();
 }
