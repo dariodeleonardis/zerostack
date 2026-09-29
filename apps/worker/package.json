@@ -6,7 +6,8 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "once": "tsx src/index.ts --once"
+    "once": "tsx src/index.ts --once",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@zerostack/database": "*",

@@ -2,6 +2,7 @@ import * as React from "react";
 import { render } from "@react-email/render";
 import { NewsletterEmail } from "./NewsletterEmail";
 import { WelcomeEmail } from "./WelcomeEmail";
+import { PasswordResetEmail } from "./PasswordResetEmail";
 import { platformSender, type OutgoingEmail } from "./transport";
 
 interface PublicationInfo {
@@ -47,6 +48,8 @@ export function buildConfirmationEmail(input: {
  */
 export function buildNewsletterEmail(input: {
   to: string;
+  /** Finisce nei tag del provider: i webhook dei rimbalzi sanno da quale pubblicazione veniva l'email. */
+  publicationId?: string;
   publication: PublicationInfo;
   post: { title: string; subtitle?: string | null; authorName: string; publishedAt: Date };
   contentHtml: string;
@@ -83,6 +86,15 @@ export function buildNewsletterEmail(input: {
     headers: {
       "List-Unsubscribe": `<${input.oneClickUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
-    }
+    },
+    ...(input.publicationId ? { tags: { publication: input.publicationId } } : {})
   };
+}
+
+/** Email per reimpostare la password: mittente della piattaforma, non di una pubblicazione. */
+export function buildPasswordResetEmail(input: { to: string; name?: string | null; resetUrl: string; validMinutes: number }): OutgoingEmail {
+  const { html, text } = renderBoth(
+    React.createElement(PasswordResetEmail, { name: input.name ?? undefined, resetUrl: input.resetUrl, validMinutes: input.validMinutes })
+  );
+  return { from: platformSender("ZeroStack"), to: input.to, subject: "Imposta una nuova password", html, text };
 }

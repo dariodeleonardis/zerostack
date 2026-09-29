@@ -4,6 +4,7 @@ import * as React from "react";
 export * from "./NewsletterEmail";
 export * from "./WelcomeEmail";
 export * from "./SubscriptionConfirmationEmail";
+export * from "./PasswordResetEmail";
 
 export async function renderEmail(component: React.ReactElement): Promise<string> {
   return render(component);

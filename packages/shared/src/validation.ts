@@ -116,3 +116,22 @@ export const SubscribeSchema = z.object({
   email: z.string().trim().toLowerCase().email("Indirizzo email non valido").max(254),
   name: z.string().trim().max(80).optional()
 });
+
+export const PasswordResetRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Indirizzo email non valido").max(254)
+});
+
+export const PasswordResetSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: z.string().min(10, "La password deve avere almeno 10 caratteri").max(200, "Password troppo lunga")
+});
+
+// Dominio personalizzato di una pubblicazione (es. newsletter.mario.it): minuscolo, senza schema né percorso.
+export const CustomDomainSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .transform((v) => v.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/\.$/, ""))
+  .refine((v) => v.length <= 253 && /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(v), {
+    message: "Dominio non valido (es. newsletter.tuonome.it)"
+  });

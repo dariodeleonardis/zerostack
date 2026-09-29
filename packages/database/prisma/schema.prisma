@@ -84,6 +84,7 @@ model User {
   subscriptions      Subscription[]
   billingDetails     ItalianBillingInfo[]
   sessions           Session[]
+  passwordResets     PasswordResetToken[]
 }
 
 // Sessioni di login: nel cookie viaggia un token casuale, qui solo il suo SHA-256.
@@ -100,6 +101,20 @@ model Session {
   @@index([userId])
 }
 
+// Recupero password: nel database solo l'hash del token spedito per email, valido un'ora e una volta sola.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model Publication {
   id                     String   @id @default(uuid())
   ownerId                String
@@ -110,6 +125,8 @@ model Publication {
   coverUrl               String?
   customDomain           String?  @unique
   isDomainVerified       Boolean  @default(false)
+  // Valore del record TXT _zerostack.<dominio> che prova la proprietà del dominio personalizzato.
+  domainVerifyToken      String?
   primaryColor           String   @default("#FF5722")
   fontStyle              String   @default("sans")
   

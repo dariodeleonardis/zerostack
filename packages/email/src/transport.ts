@@ -16,6 +16,8 @@ export interface OutgoingEmail {
   html: string;
   text?: string;
   headers?: Record<string, string>;
+  /** Etichette che il provider rimanda nei webhook (rimbalzi, segnalazioni di spam). */
+  tags?: Record<string, string>;
 }
 
 export interface EmailTransport {
@@ -61,7 +63,9 @@ export function brevoTransport(apiKey: string): EmailTransport {
           subject: msg.subject,
           htmlContent: msg.html,
           textContent: msg.text,
-          headers: msg.headers
+          headers: msg.headers,
+          // Brevo accetta solo stringhe: "chiave:valore".
+          tags: msg.tags ? Object.entries(msg.tags).map(([k, v]) => `${k}:${v}`) : undefined
         })
       });
       if (!res.ok) throw await httpError("Brevo", res);
@@ -86,7 +90,8 @@ export function resendTransport(apiKey: string): EmailTransport {
           subject: msg.subject,
           html: msg.html,
           text: msg.text,
-          headers: msg.headers
+          headers: msg.headers,
+          tags: msg.tags ? Object.entries(msg.tags).map(([name, value]) => ({ name, value })) : undefined
         })
       });
       if (!res.ok) throw await httpError("Resend", res);

@@ -10,6 +10,29 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zerostack
+          POSTGRES_PASSWORD: zerostack
+          POSTGRES_DB: zerostack
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U zerostack -d zerostack"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: [ "6379:6379" ]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://zerostack:zerostack@localhost:5432/zerostack?schema=public
+      REDIS_URL: redis://localhost:6379
+      NEXT_TELEMETRY_DISABLED: 1
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -21,10 +44,24 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
 
     - name: Generate Prisma Client
       run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+    - name: Typecheck
+      run: npm run typecheck
+
+    - name: Database schema and seed data
+      run: |
+        npx prisma db push --skip-generate --schema=packages/database/prisma/schema.prisma
+        npm run db:seed
+
+    - name: Build web app
+      run: npm run build --workspace=@zerostack/web
+
+    - name: End-to-end test suites
+      run: bash scripts/run-e2e.sh
 
     - name: Verify Docker Compose Config
       run: docker compose -f docker/docker-compose.yml config

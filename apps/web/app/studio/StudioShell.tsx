@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { PenSquare, LayoutDashboard, DollarSign, Users, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload } from "lucide-react";
+import { PenSquare, LayoutDashboard, DollarSign, Users, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe } from "lucide-react";
 
 export interface StudioPublication {
   id: string;
@@ -102,6 +102,14 @@ export function StudioShell({
             >
               <DollarSign className="h-4 w-4 text-gray-500" />
               Monetizzazione & Stripe
+            </Link>
+
+            <Link
+              href="/studio/domain"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
+            >
+              <Globe className="h-4 w-4 text-gray-500" />
+              Dominio personalizzato
             </Link>
 
             <Link

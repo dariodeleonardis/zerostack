@@ -172,6 +172,7 @@ export async function processCampaign(
       const unsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribeToken)}`;
       const message = buildNewsletterEmail({
         to: subscriber.email,
+        publicationId: campaign.publicationId,
         publication: pubInfo,
         post: { title: post.title, subtitle: post.subtitle, authorName: post.author.name, publishedAt: post.publishedAt ?? new Date() },
         contentHtml: fullAccess ? fullHtml : teaserHtml,

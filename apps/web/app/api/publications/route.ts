@@ -3,6 +3,7 @@ import { prisma, Prisma } from "@zerostack/database";
 import { CreatePublicationSchema } from "@zerostack/shared";
 import { clientIp, getCurrentUser, isSameOriginJson } from "../../../lib/auth";
 import { allowAttempt } from "../../../lib/rate-limit";
+import { newVerifyToken } from "../../../lib/domains";
 import { checkSlugAvailability, publicationUrl, rootDomain, SLUG_REASON_MESSAGES } from "../../../lib/publications";
 
 export async function POST(req: Request) {
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
           // Il dominio personalizzato resta non verificato: Caddy non emette certificati finché non lo è.
           customDomain,
           isDomainVerified: false,
+          domainVerifyToken: customDomain ? newVerifyToken() : null,
           members: { create: { userId: user.id, role: "OWNER" } }
         },
         select: { id: true, slug: true, name: true }

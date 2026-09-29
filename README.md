@@ -105,9 +105,24 @@ Configurazione (uguale per web e worker):
 | `APP_URL` | Indirizzo pubblico della piattaforma: serve per i link di conferma e disiscrizione |
 | `EMAIL_RATE_PER_SECOND` | Ritmo di invio del worker (default 10) |
 
+**Rimbalzi e segnalazioni di spam.** Un indirizzo che rimbalza in modo definitivo viene fermato su tutte le pubblicazioni; chi segna una newsletter come spam viene disiscritto da quella pubblicazione. Configura il webhook del provider:
+
+- Brevo (*Transactional → Settings → Webhook*): URL `https://<tuo-dominio>/api/email/webhook/brevo?token=<EMAIL_WEBHOOK_TOKEN>`, eventi *Hard bounce*, *Invalid email*, *Spam*;
+- Resend (*Webhooks*): URL `https://<tuo-dominio>/api/email/webhook/resend`, eventi `email.bounced` ed `email.complained`; il segreto di firma va in `RESEND_WEBHOOK_SECRET`.
+
 In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email in un file JSON, e `npm run once --workspace=@zerostack/worker` fa un solo giro del worker. Il test end to end `scripts/test-newsletter.mjs` usa proprio questo.
 
 ---
+
+## 🧪 Test
+
+```bash
+npm run typecheck
+npm run build --workspace=@zerostack/web
+DATABASE_URL=... REDIS_URL=... npm run test:e2e   # avvia il server e fa girare tutte le suite
+```
+
+`scripts/run-e2e.sh` usa un ambiente di prova completo: email su file, Stripe finto (`scripts/lib/stripe-mock.mjs`), DNS finto per la verifica dei domini. La CI di GitHub fa lo stesso su ogni pull request, con Postgres e Redis come servizi.
 
 ## 🔄 Migrazione 1-Click da Substack
 
@@ -122,6 +137,10 @@ Gli abbonati a pagamento di Substack vengono importati come iscritti: il loro ab
 Da riga di comando: `npx tsx scripts/import-substack.ts <slug-pubblicazione> <export.zip | iscritti.csv>`.
 
 ---
+
+## 🌐 Dominio personalizzato
+
+Ogni pubblicazione vive su `slug.<tuo-dominio>` e può avere in più un dominio proprio (gratis). In *Studio → Dominio personalizzato* l'autore scrive il dominio e riceve due record da aggiungere nel DNS: un **CNAME** verso `slug.<tuo-dominio>` e un **TXT** `_zerostack.<dominio>` con il valore di verifica. Con *Verifica ora* ZeroStack legge il TXT: solo dopo la verifica Caddy emette il certificato HTTPS e il dominio mostra la pubblicazione. Cambiare dominio fa ripartire la verifica da capo.
 
 ## 💳 Abbonamenti a pagamento (Stripe Connect)
 

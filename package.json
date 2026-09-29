@@ -14,7 +14,9 @@
     "db:generate": "npm run db:generate --workspace=@zerostack/database",
     "db:push": "npm run db:push --workspace=@zerostack/database",
     "db:seed": "npm run db:seed --workspace=@zerostack/database",
-    "deploy:vps": "bash scripts/deploy.sh"
+    "deploy:vps": "bash scripts/deploy.sh",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:e2e": "bash scripts/run-e2e.sh"
   },
   "dependencies": {
     "next": "^14.2.13",
