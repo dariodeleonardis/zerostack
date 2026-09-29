@@ -56,6 +56,8 @@ export async function POST(req: Request) {
   await prisma.$transaction([
     // Anche le iscrizioni alle newsletter fatte con questo indirizzo.
     prisma.newsletterSubscriber.deleteMany({ where: { email: user.email } }),
+    // Gli incassi restano all'autore (contabilità, fatture da conservare) ma senza legame con l'account.
+    prisma.payment.updateMany({ where: { userId: user.id }, data: { userId: null } }),
     // Il resto (pubblicazioni possedute, articoli, sessioni, file registrati) segue per cascata.
     prisma.user.delete({ where: { id: user.id } })
   ]);

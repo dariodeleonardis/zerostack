@@ -15,7 +15,7 @@
 | Funzionalità | Substack Tradizionale | ZeroStack (Il Tuo Competitor) |
 |---|---|---|
 | **Commissioni Piattaforma** | **10% fisso trattenuto** su tutti gli abbonati | **0% commissioni** (100% dell'incasso va a te via Stripe) |
-| **Fatturazione Elettronica** | Nessun supporto a SDI / PEC / Codice Fiscale | **Dati fiscali italiani**: Codice Fiscale, P.IVA, SDI e PEC raccolti al checkout (l'invio allo SdI è in lavorazione) |
+| **Fatturazione Elettronica** | Nessun supporto a SDI / PEC / Codice Fiscale | **Fatture elettroniche a nome dell'autore**: XML FatturaPA a ogni pagamento (rinnovi compresi), forfettario o ordinario, pronte per lo SdI |
 | **Domini Personalizzati** | Costo una tantum di **$50** per dominio | **Gratuiti e illimitati**: Caddy gestisce SSL Let's Encrypt on-demand |
 | **Email Deliverability** | IP condivisi con milioni di utenti | **Provider indipendente**: Brevo (server UE), Resend o proprio SMTP con DKIM |
 | **Piani & Paywall** | Solo Mensile, Annuale, Fondatore | **Tier personalizzati illimitati**, paywall dinamico a divisore |
@@ -199,13 +199,27 @@ Ogni pubblicazione incassa sul **proprio** conto Stripe (Connect Express, pagame
 **Una volta, per la piattaforma:**
 
 1. Su Stripe attiva **Connect** e copia la chiave segreta in `STRIPE_SECRET_KEY`.
-2. In *Sviluppatori → Webhook* aggiungi l'endpoint `https://<tuo-dominio>/api/stripe/webhook` **in ascolto degli eventi dei conti collegati** con: `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Il suo segreto va in `STRIPE_CONNECT_WEBHOOK_SECRET` (se usi un endpoint unico, in `STRIPE_WEBHOOK_SECRET`). Senza segreto il webhook rifiuta tutto.
+2. In *Sviluppatori → Webhook* aggiungi l'endpoint `https://<tuo-dominio>/api/stripe/webhook` **in ascolto degli eventi dei conti collegati** con: `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` (ogni rata incassata: serve per le fatture). Il suo segreto va in `STRIPE_CONNECT_WEBHOOK_SECRET` (se usi un endpoint unico, in `STRIPE_WEBHOOK_SECRET`). Senza segreto il webhook rifiuta tutto.
 
 **Per ogni autore**, in *Studio → Monetizzazione*: *Collega Stripe* (procedura guidata di Stripe: dati, documento, IBAN), poi *Nuovo livello* (mensile, annuale o una tantum). Il prezzo su Stripe viene creato alla prima vendita.
 
-**Per il lettore**: dal paywall o dalla pagina della pubblicazione si arriva al checkout su `zerostack.it/checkout/...` (serve un account), si inseriscono facoltativamente i dati per la fattura (codice fiscale, P.IVA, SDI o PEC, validati e salvati: la piattaforma non emette ancora fatture, quindi per ora le fa l'autore con il proprio gestionale) e si paga sulla pagina di Stripe: carta, Apple/Google Pay, SEPA. L'abbonamento si attiva quando arriva il webhook; da *I miei abbonamenti* si disdice (a fine periodo) o si riattiva. Chi paga diventa anche iscritto alla newsletter e la riceve completa.
+**Per il lettore**: dal paywall o dalla pagina della pubblicazione si arriva al checkout su `zerostack.it/checkout/...` (serve un account), si inseriscono facoltativamente i dati per la fattura (codice fiscale, P.IVA, SDI o PEC, validati e salvati) e si paga sulla pagina di Stripe: carta, Apple/Google Pay, SEPA. L'abbonamento si attiva quando arriva il webhook; da *I miei abbonamenti* si disdice (a fine periodo) o si riattiva. Chi paga diventa anche iscritto alla newsletter e la riceve completa.
 
 La sessione vale su `zerostack.it` e su tutti i sottodomini `*.zerostack.it`, quindi un abbonato legge gli articoli completi anche sul sottodominio della pubblicazione. Sui domini personalizzati la sessione non arriva: lì gli articoli a pagamento si leggono dall'indirizzo `slug.zerostack.it`.
+
+### Fatture elettroniche
+
+Chi incassa è l'autore (i soldi arrivano sul suo conto Stripe), quindi le fatture sono sue. In *Studio → Fatture elettroniche* inserisce i propri dati fiscali (persona fisica o società, partita IVA, regime forfettario o ordinario, con aliquota 22% o 4% per le testate con ISSN) e attiva la fatturazione. Da lì, ogni volta che un lettore che ha chiesto la fattura al checkout paga una rata o un accesso una tantum, ZeroStack prepara la fattura in formato FatturaPA (FPR12):
+- numerazione progressiva per anno (1/2026, 2/2026, ...), senza buchi né doppioni anche con pagamenti simultanei;
+- prezzi finali IVA inclusa: in ordinario l'imponibile si scorpora; in forfettario niente IVA (natura N2.2, con la dicitura di legge) e bollo virtuale da 2 € sopra 77,47 €;
+- cliente privato (codice fiscale, codice destinatario 0000000 ed eventuale PEC) o azienda (partita IVA e codice destinatario);
+- nome del file secondo le regole dello SdI (`IT<codice fiscale>_<progressivo>.xml`).
+
+Chi non chiede la fattura non la riceve: per i servizi elettronici venduti a privati non è obbligatoria se il cliente non la chiede. Attivando la fatturazione si recuperano gli incassi degli ultimi 12 giorni.
+
+**Trasmissione allo SdI**: per ora la fa l'autore. Scarica l'XML della singola fattura o lo ZIP del mese e lo carica nel suo gestionale o sul portale *Fatture e Corrispettivi* dell'Agenzia delle Entrate, poi la segna come trasmessa. Il collegamento diretto a un intermediario (A-Cube, Openapi, Aruba) si aggiunge sullo stesso flusso quando si sceglie il fornitore. `SDI_ID_TRASMITTENTE` imposta il codice fiscale di chi trasmette, se diverso da quello dell'autore. Gli XML generati sono controllati nei test sullo schema FatturaPA (`scripts/fixtures/fatturapa`).
+
+Le fatture restano anche se il lettore cancella l'account (vanno conservate 10 anni) e compaiono nell'esportazione dei dati dell'autore.
 
 ---
 

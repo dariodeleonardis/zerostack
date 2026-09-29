@@ -59,7 +59,8 @@ for suite in \
   "node scripts/test-import.mjs" \
   "node scripts/test-foundations.mjs" \
   "node scripts/test-launch.mjs" \
-  "node scripts/test-operations.mjs"; do
+  "node scripts/test-operations.mjs" \
+  "node scripts/test-invoicing.mjs"; do
   flush
   echo "::group::$suite"
   if ! $suite; then failed=1; echo "❌ $suite"; fi

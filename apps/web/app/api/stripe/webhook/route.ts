@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { prisma } from "@zerostack/database";
 import { verifyStripeSignature } from "../../../../lib/stripe-signature";
 import { ensurePaidReaderSubscribed, stripe, upsertSubscriptionFromStripe } from "../../../../lib/stripe";
+import { issueInvoice, issuePendingInvoices, recordPayment } from "../../../../lib/invoicing";
 
 // Due endpoint possibili su Stripe (eventi della piattaforma e dei conti collegati): ognuno ha il suo segreto.
 function webhookSecrets(): string[] {
@@ -68,7 +69,71 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session, account: st
   }
 
   await linkBillingInfo(ctx.billingInfoId, ctx.user.id, subscriptionId);
+
+  // Una tantum: l'incasso è la sessione stessa. Gli abbonamenti arrivano con invoice.paid.
+  if (session.mode === "payment" && session.payment_status === "paid" && session.amount_total) {
+    const tier = ctx.tierId ? await prisma.tier.findUnique({ where: { id: ctx.tierId }, select: { name: true } }) : null;
+    await recordPayment({
+      publicationId: ctx.publicationId,
+      subscriptionId,
+      userId: ctx.user.id,
+      stripeObjectId: session.id,
+      amountCents: session.amount_total,
+      currency: session.currency ?? "eur",
+      paidAt: session.created ? new Date(session.created * 1000) : new Date(),
+      description: tier ? `Accesso: ${tier.name}` : "Accesso"
+    });
+  }
+  // I dati per la fattura arrivano con il checkout: anche la prima rata, se registrata prima, ora si fattura.
+  await issuePendingInvoices(subscriptionId);
   await ensurePaidReaderSubscribed(ctx.publicationId, ctx.user.email, ctx.user.name);
+}
+
+/** L'ID dell'abbonamento in una fattura Stripe (le versioni recenti dell'API lo spostano in parent). */
+function invoiceSubscriptionId(inv: Stripe.Invoice): string | null {
+  const legacy = (inv as unknown as { subscription?: string | { id: string } | null }).subscription;
+  if (legacy) return typeof legacy === "string" ? legacy : legacy.id;
+  const parent = (inv as unknown as { parent?: { subscription_details?: { subscription?: string | { id: string } } } }).parent;
+  const sub = parent?.subscription_details?.subscription;
+  return sub ? (typeof sub === "string" ? sub : sub.id) : null;
+}
+
+/** Ogni rata pagata (la prima e i rinnovi): si registra l'incasso e, se richiesta, si emette la fattura. */
+async function onInvoicePaid(inv: Stripe.Invoice, account: string) {
+  if (!account || !inv.amount_paid || inv.amount_paid <= 0) return;
+  const subId = invoiceSubscriptionId(inv);
+  if (!subId) return;
+  let local = await prisma.subscription.findFirst({
+    where: { stripeSubscriptionId: subId, publication: { stripeAccountId: account } },
+    select: { id: true, userId: true, publicationId: true, tier: { select: { name: true } } }
+  });
+  if (!local) {
+    // La rata può arrivare prima dell'abbonamento: lo si crea dai metadati, come in onSubscriptionChanged.
+    const sub = await stripe().subscriptions.retrieve(subId, { stripeAccount: account });
+    const ctx = await trustedContext(sub.metadata as Metadata, account);
+    if (!ctx) return;
+    await upsertSubscriptionFromStripe(sub, { publicationId: ctx.publicationId, userId: ctx.user.id, tierId: ctx.tierId });
+    local = await prisma.subscription.findFirst({
+      where: { stripeSubscriptionId: subId, publicationId: ctx.publicationId },
+      select: { id: true, userId: true, publicationId: true, tier: { select: { name: true } } }
+    });
+    if (!local) return;
+  }
+  const line = inv.lines?.data?.[0];
+  const paidAt = inv.status_transitions?.paid_at ?? inv.created;
+  const paymentId = await recordPayment({
+    publicationId: local.publicationId,
+    subscriptionId: local.id,
+    userId: local.userId,
+    stripeObjectId: inv.id,
+    amountCents: inv.amount_paid,
+    currency: inv.currency ?? "eur",
+    paidAt: new Date(paidAt * 1000),
+    periodStart: line?.period?.start ? new Date(line.period.start * 1000) : null,
+    periodEnd: line?.period?.end ? new Date(line.period.end * 1000) : null,
+    description: local.tier ? `Abbonamento: ${local.tier.name}` : "Abbonamento"
+  });
+  await issueInvoice(paymentId);
 }
 
 async function onSubscriptionChanged(sub: Stripe.Subscription, account: string) {
@@ -118,6 +183,9 @@ export async function POST(req: Request) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded":
         await onCheckoutCompleted(event.data.object as Stripe.Checkout.Session, account);
+        break;
+      case "invoice.paid":
+        await onInvoicePaid(event.data.object as Stripe.Invoice, account);
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":

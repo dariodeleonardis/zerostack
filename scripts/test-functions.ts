@@ -8,6 +8,8 @@ import {
   partitaIvaRegex,
   sdiRegex,
   generateFatturaPAXml,
+  computeTotals,
+  invoiceFileName,
   RegisterSchema,
   LoginSchema,
   SlugSchema,
@@ -277,46 +279,71 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   // --------------------------------------------------------------------------
   console.log("\n📌 GRUPPO 6: Generazione FatturaPA v1.2 XML per SDI");
 
-  try {
-    const xml = generateFatturaPAXml({
-      progressivoInvio: "ZS001",
-      numeroFattura: "2026/01",
-      dataFattura: "2026-09-25",
-      importoCents: 1220, // 10.00 € imponibile + 2.20 € IVA 22%
-      aliquotaIvaPercent: 22,
-      cedente: {
-        denominazione: "ZeroStack Italia SRL",
-        partitaIva: "01234567890",
-        codiceFiscale: "01234567890",
-        regimeFiscale: "RF01",
-        indirizzo: "Via Montenapoleone 8",
-        cap: "20121",
-        comune: "Milano",
-        provincia: "MI",
-        nazione: "IT"
-      },
-      cessionario: {
-        isCompany: true,
-        ragioneSocialeOIntestatario: "Studio Legale Rossi",
-        codiceFiscale: "RSSMRA85M01H501Z",
-        partitaIva: "09876543210",
-        codiceDestinatarioSDI: "M5UXCR1",
-        indirizzo: "Corso Vittorio Emanuele 12",
-        cap: "00186",
-        citta: "Roma",
-        provincia: "RM",
-        paese: "IT"
+  {
+    const xsd = path.join(__dirname, "fixtures/fatturapa/Schema_FPR12.xsd");
+    // Controllo sullo schema ufficiale con xmllint (libxml2): lo stesso che fa lo SdI in ingresso.
+    const validXml = (xml: string): string => {
+      const file = path.join(fs.mkdtempSync(path.join(require("os").tmpdir(), "fpa-")), "f.xml");
+      fs.writeFileSync(file, xml);
+      try {
+        require("child_process").execFileSync("xmllint", ["--noout", "--schema", xsd, file], { stdio: "pipe" });
+        return "";
+      } catch (err: any) {
+        return String(err.stderr ?? err.message).slice(0, 400);
       }
-    });
+    };
+    const cedenteOrdinario = {
+      kind: "COMPANY" as const,
+      denominazione: "Edizioni Rossi & Figli S.r.l.",
+      partitaIva: "01234567890",
+      codiceFiscale: "01234567890",
+      regimeFiscale: "RF01" as const,
+      indirizzo: "Via Montenapoleone",
+      numeroCivico: "8",
+      cap: "20121",
+      comune: "Milano",
+      provincia: "MI",
+      email: "fatture@rossi.it"
+    };
+    const azienda = { denominazione: "Studio Legale Bianchi", partitaIva: "09876543210", codiceFiscale: "09876543210", codiceDestinatario: "M5UXCR1", indirizzo: "Corso Vittorio Emanuele 12", cap: "00186", comune: "Roma", provincia: "RM" };
+    const ordinario = generateFatturaPAXml({ idTrasmittente: "01234567890", progressivo: "0PQRS", numero: "1/2026", data: "2026-09-25", totaleCents: 1220, aliquotaIva: 22, descrizione: "Abbonamento mensile", cedente: cedenteOrdinario, cessionario: azienda });
+    assert(ordinario.includes('versione="FPR12"') && ordinario.includes("<CodiceDestinatario>M5UXCR1</CodiceDestinatario>"), "FatturaPA FPR12 con codice destinatario del cliente");
+    assert(ordinario.includes("<ImponibileImporto>10.00</ImponibileImporto>") && ordinario.includes("<Imposta>2.20</Imposta>") && ordinario.includes("<ImportoTotaleDocumento>12.20</ImportoTotaleDocumento>"), "Regime ordinario: IVA 22% scorporata dal prezzo finale");
+    assert(ordinario.includes("Edizioni Rossi &amp; Figli"), "Caratteri speciali nell'XML resi correttamente");
+    assert(validXml(ordinario) === "", "Fattura in regime ordinario valida sullo schema XSD", validXml(ordinario));
 
-    assert(xml.includes('versione="FPR12"'), "XML contiene intestazione formato FPR12");
-    assert(xml.includes("<CodiceDestinatario>M5UXCR1</CodiceDestinatario>"), "XML contiene Codice Destinatario SDI");
-    assert(xml.includes("<ImportoTotaleDocumento>12.20</ImportoTotaleDocumento>"), "Importo totale fattura calcolato esattamente a 12.20 EUR");
-    assert(xml.includes("<ImponibileImporto>10.00</ImponibileImporto>"), "Imponibile scorporato IVA 22% calcolato esattamente a 10.00 EUR");
-    assert(xml.includes("<Imposta>2.20</Imposta>"), "Imposta IVA calcolata a 2.20 EUR");
-    assert(xml.includes("Studio Legale Rossi"), "Denominazione cessionario presente nell'XML");
-  } catch (err: any) {
-    assert(false, "Generazione FatturaPA XML fallita", err?.message);
+    const odd = computeTotals(650, "RF01", 22);
+    assert(odd.imponibileCents + odd.impostaCents === 650 && odd.imponibileCents === 533, "Scorporo con arrotondamento: imponibile + IVA = totale (6,50 €)");
+    assert(computeTotals(1000, "RF01", 4).imponibileCents === 962, "Aliquota 4% per le testate registrate");
+
+    const forfettario = generateFatturaPAXml({
+      idTrasmittente: "RSSMRA80A01H501U",
+      progressivo: "0PQRT",
+      numero: "2/2026",
+      data: "2026-09-25",
+      totaleCents: 9900,
+      aliquotaIva: 22,
+      descrizione: "Abbonamento annuale “Lettere” – periodo completo",
+      periodo: { inizio: "2026-09-25", fine: "2027-09-24" },
+      cedente: { ...cedenteOrdinario, kind: "PERSON", nome: "Mario", cognome: "Rossi", denominazione: null, codiceFiscale: "RSSMRA80A01H501U", regimeFiscale: "RF19" },
+      cessionario: { denominazione: "Anna Verdi", codiceFiscale: "VRDNNA85M41H501X", pec: "anna@pec.it", indirizzo: "Via Po 3", cap: "10100", comune: "Torino", provincia: "to" }
+    });
+    assert(forfettario.includes("<Natura>N2.2</Natura>") && forfettario.includes("<AliquotaIVA>0.00</AliquotaIVA>") && forfettario.includes("<Imposta>0.00</Imposta>"), "Forfettario: niente IVA, natura N2.2");
+    assert(forfettario.includes("<BolloVirtuale>SI</BolloVirtuale>") && forfettario.includes("<ImportoBollo>2.00</ImportoBollo>"), "Forfettario sopra 77,47 €: bollo virtuale da 2 €");
+    assert(forfettario.includes("<CodiceDestinatario>0000000</CodiceDestinatario>") && forfettario.includes("<PECDestinatario>anna@pec.it</PECDestinatario>"), "Privato: codice 0000000 e PEC se indicata");
+    assert(forfettario.includes("<Nome>Mario</Nome><Cognome>Rossi</Cognome>") && forfettario.includes("<DataInizioPeriodo>2026-09-25</DataInizioPeriodo>"), "Persona fisica con nome e cognome, periodo dell'abbonamento");
+    assert(!forfettario.includes("“") && forfettario.includes("&quot;Lettere&quot; - periodo"), "Virgolette e trattini tipografici convertiti in caratteri ammessi");
+    assert(validXml(forfettario) === "", "Fattura in forfettario valida sullo schema XSD", validXml(forfettario));
+    assert(computeTotals(7747, "RF19", 22).bolloCents === 0, "Niente bollo fino a 77,47 €");
+
+    let rejected = "";
+    try {
+      generateFatturaPAXml({ idTrasmittente: "X", progressivo: "1", numero: "1/2026", data: "2026-09-25", totaleCents: 500, aliquotaIva: 22, descrizione: "x", cedente: { ...cedenteOrdinario, partitaIva: "123" }, cessionario: { ...azienda, cap: "ABC" } });
+    } catch (err: any) {
+      rejected = err.message;
+    }
+    assert(rejected.includes("Partita IVA dell'autore") && rejected.includes("CAP o provincia del cliente"), "Dati sbagliati fermati prima di generare l'XML");
+    assert(invoiceFileName("rssmra80a01h501u", "PQRT") === "ITRSSMRA80A01H501U_0PQRT.xml", "Nome del file secondo le regole dello SdI");
   }
 
   // --------------------------------------------------------------------------

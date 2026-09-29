@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Accedi prima" }, { status: 401 });
 
-  const [account, publications, posts, subscriptions, billing, newsletters, comments, media] = await Promise.all([
+  const [account, publications, posts, subscriptions, billing, newsletters, comments, media, payments] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { id: true, email: true, name: true, handle: true, bio: true, avatarUrl: true, role: true, emailVerified: true, createdAt: true }
@@ -21,7 +21,9 @@ export async function GET() {
         members: { where: { userId: user.id }, select: { role: true } },
         tiers: { select: { name: true, priceCents: true, currency: true, interval: true, isActive: true } },
         // Gli iscritti di una pubblicazione sono dati dell'autore che la possiede: esportati solo a lui.
-        subscribers: { where: { publication: { ownerId: user.id } }, select: { email: true, name: true, status: true, source: true, createdAt: true, confirmedAt: true } }
+        subscribers: { where: { publication: { ownerId: user.id } }, select: { email: true, name: true, status: true, source: true, createdAt: true, confirmedAt: true } },
+        // Le fatture emesse vanno conservate 10 anni: nell'esportazione c'è anche l'XML.
+        invoices: { where: { publication: { ownerId: user.id } }, select: { label: true, fileName: true, totalCents: true, taxCents: true, buyerName: true, status: true, createdAt: true, xml: true } }
       }
     }),
     prisma.post.findMany({
@@ -41,11 +43,15 @@ export async function GET() {
       select: { status: true, createdAt: true, confirmedAt: true, publication: { select: { name: true, slug: true } } }
     }),
     prisma.comment.findMany({ where: { authorId: user.id }, select: { content: true, createdAt: true, postId: true } }),
-    prisma.media.findMany({ where: { ownerId: user.id }, select: { url: true, kind: true, size: true, createdAt: true } })
+    prisma.media.findMany({ where: { ownerId: user.id }, select: { url: true, kind: true, size: true, createdAt: true } }),
+    prisma.payment.findMany({
+      where: { userId: user.id },
+      select: { amountCents: true, currency: true, paidAt: true, description: true, publication: { select: { name: true } }, invoice: { select: { label: true } } }
+    })
   ]);
 
   const body = JSON.stringify(
-    { exportedAt: new Date().toISOString(), account, publications, posts, subscriptions, billing, newsletters, comments, media },
+    { exportedAt: new Date().toISOString(), account, publications, posts, subscriptions, billing, payments, newsletters, comments, media },
     null,
     2
   );

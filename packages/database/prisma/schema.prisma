@@ -189,6 +189,9 @@ model Publication {
   subscribers            NewsletterSubscriber[]
   subscriptions          Subscription[]
   emailCampaigns         EmailCampaign[]
+  fiscalProfile          FiscalProfile?
+  payments               Payment[]
+  invoices               Invoice[]
 }
 
 model PublicationMember {
@@ -238,6 +241,7 @@ model Subscription {
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier                 Tier?               @relation(fields: [tierId], references: [id])
   billingInfo          ItalianBillingInfo?
+  payments             Payment[]
 
   @@index([stripeSubscriptionId])
   @@index([userId, publicationId])
@@ -448,4 +452,92 @@ model SystemStatus {
   ok        Boolean  @default(true)
   detail    String?
   updatedAt DateTime @updatedAt
+}
+
+// Dati fiscali di chi incassa (l'autore): servono per emettere le fatture elettroniche a suo nome.
+model FiscalProfile {
+  id             String   @id @default(uuid())
+  publicationId  String   @unique
+  enabled        Boolean  @default(false)
+  // PERSON (ditta individuale, professionista) | COMPANY
+  kind           String   @default("PERSON")
+  denominazione  String?
+  nome           String?
+  cognome        String?
+  partitaIva     String
+  codiceFiscale  String
+  // RF01 ordinario | RF19 forfettario
+  regimeFiscale  String   @default("RF19")
+  // Solo regime ordinario: 22, oppure 4 per le testate con ISSN
+  aliquotaIva    Int      @default(22)
+  indirizzo      String
+  numeroCivico   String?
+  cap            String
+  comune         String
+  provincia      String
+  email          String?
+  // Numerazione: riparte da 1 ogni anno
+  numberingYear  Int      @default(0)
+  nextNumber     Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  publication    Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+}
+
+// Ogni incasso andato a buon fine (prima rata, rinnovi, pagamenti una tantum), come lo registra Stripe.
+model Payment {
+  id             String    @id @default(uuid())
+  publicationId  String
+  subscriptionId String?
+  userId         String?
+  // ID della fattura Stripe (rinnovi) o della sessione di checkout (una tantum): evita i doppioni
+  stripeObjectId String    @unique
+  amountCents    Int
+  currency       String    @default("eur")
+  paidAt         DateTime
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  description    String
+  createdAt      DateTime  @default(now())
+
+  publication    Publication   @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  invoice        Invoice?
+
+  @@index([publicationId, paidAt])
+  @@index([subscriptionId])
+}
+
+enum InvoiceStatus {
+  READY
+  SENT
+  ERROR
+}
+
+// Fattura elettronica (XML FatturaPA) emessa dall'autore al lettore che ha chiesto la fattura.
+// Va conservata 10 anni: resta anche se il lettore cancella l'account.
+model Invoice {
+  id             String        @id @default(uuid())
+  publicationId  String
+  paymentId      String        @unique
+  year           Int
+  number         Int
+  label          String
+  progressivo    String
+  fileName       String
+  xml            String
+  totalCents     Int
+  taxCents       Int
+  buyerName      String
+  status         InvoiceStatus @default(READY)
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  publication    Publication   @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  payment        Payment       @relation(fields: [paymentId], references: [id], onDelete: NoAction)
+
+  @@unique([publicationId, year, number])
+  @@index([publicationId, createdAt])
 }

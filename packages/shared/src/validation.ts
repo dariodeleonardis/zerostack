@@ -43,6 +43,35 @@ export const ItalianBillingSchema = z.object({
   paese: z.literal("IT").default("IT")
 });
 
+/** Dati fiscali dell'autore per emettere le fatture elettroniche a suo nome. */
+export const FiscalProfileSchema = z
+  .object({
+    enabled: z.boolean(),
+    kind: z.enum(["PERSON", "COMPANY"]),
+    denominazione: z.string().trim().max(80).optional().or(z.literal("")),
+    nome: z.string().trim().max(60).optional().or(z.literal("")),
+    cognome: z.string().trim().max(60).optional().or(z.literal("")),
+    partitaIva: z.string().trim().regex(partitaIvaRegex, "La partita IVA deve avere 11 cifre"),
+    codiceFiscale: z
+      .string()
+      .trim()
+      .refine((v) => codiceFiscaleRegex.test(v) || partitaIvaRegex.test(v), "Codice fiscale non valido"),
+    regimeFiscale: z.enum(["RF01", "RF19"]),
+    aliquotaIva: z.union([z.literal(22), z.literal(4)]).default(22),
+    indirizzo: z.string().trim().min(3, "Indirizzo obbligatorio").max(60),
+    numeroCivico: z.string().trim().max(8).optional().or(z.literal("")),
+    cap: z.string().trim().regex(/^[0-9]{5}$/, "CAP non valido (5 cifre)"),
+    comune: z.string().trim().min(2, "Comune obbligatorio").max(60),
+    provincia: z.string().trim().regex(/^[A-Za-z]{2}$/, "Provincia di 2 lettere (es. RM)"),
+    email: z.string().trim().email("Email non valida").max(256).optional().or(z.literal(""))
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === "COMPANY" && !v.denominazione) ctx.addIssue({ code: "custom", path: ["denominazione"], message: "Ragione sociale obbligatoria" });
+    if (v.kind === "PERSON" && (!v.nome || !v.cognome)) ctx.addIssue({ code: "custom", path: ["nome"], message: "Nome e cognome obbligatori" });
+  });
+
+export type FiscalProfileInput = z.infer<typeof FiscalProfileSchema>;
+
 export const CreatePublicationSchema = z.object({
   name: z.string().trim().min(3, "Il nome della pubblicazione deve avere almeno 3 caratteri").max(80, "Nome massimo 80 caratteri"),
   // Lo slug diventa il sottodominio (slug.zerostack.it): stesse regole di /api/domains/check

@@ -46,11 +46,11 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    # pg_dump e pg_restore della stessa versione del server, per il test dei backup
+    # pg_dump/pg_restore della stessa versione del server (backup) e xmllint (schema FatturaPA)
     - name: PostgreSQL 16 client
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y -qq postgresql-client-16
+        sudo apt-get install -y -qq postgresql-client-16 libxml2-utils
         echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
 
     - name: Generate Prisma Client
