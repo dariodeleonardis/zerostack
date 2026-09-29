@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import { NewsletterEmail } from "./NewsletterEmail";
 import { WelcomeEmail } from "./WelcomeEmail";
 import { PasswordResetEmail } from "./PasswordResetEmail";
+import { VerifyEmail } from "./VerifyEmail";
 import { platformSender, type OutgoingEmail } from "./transport";
 
 interface PublicationInfo {
@@ -97,4 +98,10 @@ export function buildPasswordResetEmail(input: { to: string; name?: string | nul
     React.createElement(PasswordResetEmail, { name: input.name ?? undefined, resetUrl: input.resetUrl, validMinutes: input.validMinutes })
   );
   return { from: platformSender("ZeroStack"), to: input.to, subject: "Imposta una nuova password", html, text };
+}
+
+/** Conferma dell'indirizzo dopo la registrazione. */
+export function buildVerifyEmail(input: { to: string; name?: string | null; verifyUrl: string }): OutgoingEmail {
+  const { html, text } = renderBoth(React.createElement(VerifyEmail, { name: input.name ?? undefined, verifyUrl: input.verifyUrl }));
+  return { from: platformSender("ZeroStack"), to: input.to, subject: "Conferma il tuo indirizzo email", html, text };
 }

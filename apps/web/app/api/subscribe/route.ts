@@ -26,9 +26,9 @@ export async function POST(req: Request) {
 
   const publication = await prisma.publication.findUnique({
     where: { id: publicationId },
-    select: { id: true, name: true, primaryColor: true, fromEmail: true }
+    select: { id: true, name: true, primaryColor: true, fromEmail: true, suspendedAt: true }
   });
-  if (!publication) {
+  if (!publication || publication.suspendedAt) {
     return NextResponse.json({ error: "Pubblicazione non trovata" }, { status: 404 });
   }
 

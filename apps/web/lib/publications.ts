@@ -15,7 +15,8 @@ export function publicationUrl(slug: string): string {
  */
 export function publicationWhere(slugOrDomain: string) {
   const key = decodeURIComponent(slugOrDomain).toLowerCase();
-  return key.includes(".") ? { customDomain: key, isDomainVerified: true } : { slug: key };
+  // Le pubblicazioni sospese dall'amministrazione spariscono da pagine e feed.
+  return key.includes(".") ? { customDomain: key, isDomainVerified: true, suspendedAt: null } : { slug: key, suspendedAt: null };
 }
 
 export type SlugAvailability =

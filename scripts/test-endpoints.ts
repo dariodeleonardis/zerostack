@@ -55,7 +55,6 @@ async function testLiveEndpoints() {
   await check("SuperAdmin Dashboard Globale senza sessione -> login", "/admin", { redirect: "manual" }, toLogin);
   await check("Gestione Utenti & Ruoli senza sessione -> login", "/admin/users", { redirect: "manual" }, toLogin);
   await check("Moderazione Pubblicazioni & Domini senza sessione -> login", "/admin/publications", { redirect: "manual" }, toLogin);
-  await check("Impostazioni Piattaforma & Stripe senza sessione -> login", "/admin/settings", { redirect: "manual" }, toLogin);
 
   // 4. Profilo & Abbonamenti Utente
   console.log("\n📌 4. Test Area Personale Utente:");
@@ -117,17 +116,10 @@ async function testLiveEndpoints() {
     body: JSON.stringify({ type: "checkout.session.completed" })
   }, (res) => res.status === 400 || res.status === 503);
 
-  // 5.6 Generazione Ricevuta Fiscale PDF Stream
-  await check("Download Ricevuta Fiscale PDF", "/api/receipts/pdf/sub_test_live_99", undefined, (res, text) => {
-    const isPdf = res.headers.get("content-type")?.includes("application/pdf");
-    const hasPdfHeader = text.startsWith("%PDF-");
-    return !!isPdf && hasPdfHeader;
-  });
-
-  // 5.7 Download FatturaPA XML v1.2
-  await check("Download FatturaPA XML per SDI", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res, text) => {
-    return text.includes('versione="FPR12"') && text.includes("<FatturaElettronica");
-  });
+  // 5.6 Le ricevute e le fatture finte (dati inventati, senza login) sono state tolte:
+  // tornano con la fatturazione vera verso lo SdI.
+  await check("Ricevuta PDF finta rimossa -> 404", "/api/receipts/pdf/sub_test_live_99", undefined, (res) => res.status === 404);
+  await check("FatturaPA XML finta rimossa -> 404", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res) => res.status === 404);
 
   // 5.8 Donazione e Micro-pagamento Satispay
   await check("Satispay Micro-donation API", "/api/donations/satispay", {

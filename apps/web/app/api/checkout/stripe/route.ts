@@ -26,14 +26,14 @@ export async function POST(req: Request) {
   const tier = tierId
     ? await prisma.tier.findFirst({
         where: { id: tierId, isActive: true },
-        select: { id: true, interval: true, publicationId: true, publication: { select: { id: true, stripeAccountId: true, stripeChargesEnabled: true } } }
+        select: { id: true, interval: true, publicationId: true, publication: { select: { id: true, stripeAccountId: true, stripeChargesEnabled: true, suspendedAt: true } } }
       })
     : null;
   if (!tier) {
     return NextResponse.json({ error: "Piano non trovato" }, { status: 404 });
   }
   const { publication } = tier;
-  if (!publication.stripeAccountId || !publication.stripeChargesEnabled) {
+  if (!publication.stripeAccountId || !publication.stripeChargesEnabled || publication.suspendedAt) {
     return NextResponse.json({ error: "Questa pubblicazione non accetta ancora pagamenti" }, { status: 409 });
   }
 

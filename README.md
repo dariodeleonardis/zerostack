@@ -15,7 +15,7 @@
 | Funzionalità | Substack Tradizionale | ZeroStack (Il Tuo Competitor) |
 |---|---|---|
 | **Commissioni Piattaforma** | **10% fisso trattenuto** su tutti gli abbonati | **0% commissioni** (100% dell'incasso va a te via Stripe) |
-| **Fatturazione Elettronica** | Nessun supporto a SDI / PEC / Codice Fiscale | **Nativa per l'Italia**: campi Codice Fiscale, P.IVA, SDI a 7 caratteri e PEC |
+| **Fatturazione Elettronica** | Nessun supporto a SDI / PEC / Codice Fiscale | **Dati fiscali italiani**: Codice Fiscale, P.IVA, SDI e PEC raccolti al checkout (l'invio allo SdI è in lavorazione) |
 | **Domini Personalizzati** | Costo una tantum di **$50** per dominio | **Gratuiti e illimitati**: Caddy gestisce SSL Let's Encrypt on-demand |
 | **Email Deliverability** | IP condivisi con milioni di utenti | **Provider indipendente**: Brevo (server UE), Resend o proprio SMTP con DKIM |
 | **Piani & Paywall** | Solo Mensile, Annuale, Fondatore | **Tier personalizzati illimitati**, paywall dinamico a divisore |
@@ -116,6 +116,16 @@ In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email i
 
 ---
 
+## 🛡️ Account, file caricati, privacy e amministrazione
+
+- **Verifica email**: alla registrazione parte un link di conferma (valido 48 ore). Finché l'indirizzo non è confermato si scrive e si pubblica, ma non si mandano newsletter né si collega Stripe; il banner nello Studio permette di rinviare il link. Gli account creati prima di questa versione risultano non confermati: basta usare *Rinvia il link* (oppure impostare `emailVerified` a mano nel database).
+- **File caricati** (immagini nel testo, copertine, audio dei podcast): il tipo si riconosce dai primi byte, SVG e HTML sono rifiutati; immagini fino a 10 MB, audio fino a 150 MB. Con `STORAGE_DRIVER=local` (predefinito) i file finiscono in `UPLOAD_DIR` (nei container `/data/uploads`, su un volume) e si servono da `/api/media/...`; con `STORAGE_DRIVER=s3` vanno su qualsiasi storage compatibile S3 (Cloudflare R2, Scaleway, AWS, MinIO) con `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` ed eventualmente `S3_ENDPOINT`, `S3_REGION`, `S3_FORCE_PATH_STYLE`.
+- **Profilo e GDPR**: in *Account → Profilo* si cambiano nome, bio e password, si scaricano tutti i propri dati in JSON e si cancella l'account (password + scrivere `ELIMINA`). La cancellazione chiude gli abbonamenti Stripe del lettore, toglie le iscrizioni alle newsletter e i file caricati; chi ha abbonati paganti deve prima gestirli.
+- **Pagine legali**: `/privacy`, `/termini`, `/cookie`, raggiungibili anche dai sottodomini. I dati del titolare arrivano da `LEGAL_ENTITY_NAME`, `LEGAL_VAT_NUMBER`, `LEGAL_ADDRESS`, `LEGAL_CONTACT_EMAIL`, `LEGAL_UPDATED_AT`: finché mancano la pagina mostra "[da completare]". Il testo è una base: va fatto rivedere da un legale prima del lancio.
+- **Pannello admin** (`/admin`, solo ADMIN e SUPERADMIN): numeri della piattaforma e controllo della configurazione, ricerca utenti e pubblicazioni, sospensione (un utente sospeso viene disconnesso e non entra più; una pubblicazione sospesa sparisce da pagina, feed, dominio e invii). Solo un SUPERADMIN cambia i ruoli.
+
+---
+
 ## 🧪 Test
 
 ```bash
@@ -171,7 +181,7 @@ Ogni pubblicazione incassa sul **proprio** conto Stripe (Connect Express, pagame
 
 **Per ogni autore**, in *Studio → Monetizzazione*: *Collega Stripe* (procedura guidata di Stripe: dati, documento, IBAN), poi *Nuovo livello* (mensile, annuale o una tantum). Il prezzo su Stripe viene creato alla prima vendita.
 
-**Per il lettore**: dal paywall o dalla pagina della pubblicazione si arriva al checkout su `zerostack.it/checkout/...` (serve un account), si inseriscono facoltativamente i dati per la fattura (codice fiscale, P.IVA, SDI o PEC, validati e salvati) e si paga sulla pagina di Stripe: carta, Apple/Google Pay, SEPA. L'abbonamento si attiva quando arriva il webhook; da *I miei abbonamenti* si disdice (a fine periodo) o si riattiva. Chi paga diventa anche iscritto alla newsletter e la riceve completa.
+**Per il lettore**: dal paywall o dalla pagina della pubblicazione si arriva al checkout su `zerostack.it/checkout/...` (serve un account), si inseriscono facoltativamente i dati per la fattura (codice fiscale, P.IVA, SDI o PEC, validati e salvati: la piattaforma non emette ancora fatture, quindi per ora le fa l'autore con il proprio gestionale) e si paga sulla pagina di Stripe: carta, Apple/Google Pay, SEPA. L'abbonamento si attiva quando arriva il webhook; da *I miei abbonamenti* si disdice (a fine periodo) o si riattiva. Chi paga diventa anche iscritto alla newsletter e la riceve completa.
 
 La sessione vale su `zerostack.it` e su tutti i sottodomini `*.zerostack.it`, quindi un abbonato legge gli articoli completi anche sul sottodominio della pubblicazione. Sui domini personalizzati la sessione non arriva: lì gli articoli a pagamento si leggono dall'indirizzo `slug.zerostack.it`.
 

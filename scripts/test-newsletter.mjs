@@ -6,6 +6,7 @@
 import { readdir, readFile, rm } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { confirmEmail } from "./lib/test-auth.mjs";
 import { fileURLToPath } from "node:url";
 
 const BASE = process.env.ZS_BASE_URL || "http://localhost:3000";
@@ -55,6 +56,8 @@ async function register(label) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: `Test ${label}`, email: `${label}-${run}@example.it`, handle: `${label}-${run}`, password: "password-molto-lunga" })
   });
+  // Chi invia newsletter o collega Stripe deve aver confermato l'email.
+  if (process.env.EMAIL_LOG_DIR) await confirmEmail(BASE, process.env.EMAIL_LOG_DIR, `${label}-${run}@example.it`);
   return res.headers.get("set-cookie")?.split(";")[0];
 }
 
@@ -110,7 +113,7 @@ assert(again.status === 200 && (await mailsTo(reader)).length === 1, "Iscriversi
 // Anche l'autore si iscrive: è della redazione, quindi riceverà il testo completo.
 const authorEmail = `autore-${run}@example.it`;
 await call("POST", "/api/subscribe", { body: { publicationId, email: authorEmail } });
-const authorConfirm = (await mailsTo(authorEmail))[0]?.text.match(/https?:\/\/\S+\/api\/subscribe\/confirm\?token=[\w-]+/)?.[0];
+const authorConfirm = (await mailsTo(authorEmail)).find((m) => /iscrizione/.test(m.subject))?.text.match(/https?:\/\/\S+\/api\/subscribe\/confirm\?token=[\w-]+/)?.[0];
 await call("GET", authorConfirm);
 
 const badEmail = await call("POST", "/api/subscribe", { body: { publicationId, email: "non-una-email" } });

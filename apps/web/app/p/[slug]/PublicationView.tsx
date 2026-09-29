@@ -199,6 +199,12 @@ export function PublicationView({
               </form>
             )}
             {subscribeState === "error" && <p className="mt-2 text-xs font-semibold text-rose-600">{subscribeMessage}</p>}
+            {!isSubscribed && !justConfirmed && (
+              <p className="mt-2 text-[11px] text-gray-500">
+                Riceverai un&apos;email di conferma. Puoi disiscriverti con un clic da ogni newsletter.{" "}
+                <a href={`${checkoutBaseUrl}/privacy`} className="underline">Privacy</a>
+              </p>
+            )}
           </div>
         </div>
 

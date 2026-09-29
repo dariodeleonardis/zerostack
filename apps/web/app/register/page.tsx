@@ -131,6 +131,11 @@ export default function RegisterPage() {
           </p>
         )}
 
+        <p className="text-[11px] leading-relaxed text-gray-500">
+          Creando l&apos;account accetti i <Link href="/termini" className="underline">Termini di servizio</Link> e dichiari di aver letto
+          l&apos;<Link href="/privacy" className="underline">Informativa privacy</Link>.
+        </p>
+
         <button
           type="submit"
           disabled={isSubmitting}

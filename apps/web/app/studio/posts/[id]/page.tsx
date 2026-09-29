@@ -24,6 +24,8 @@ export default async function EditPostPage({ params }: { params: { id: string } 
       status: true,
       scheduledAt: true,
       emailOnPublish: true,
+      coverImageUrl: true,
+      podcastEpisode: { select: { audioUrl: true, durationSeconds: true } },
       publication: { select: { slug: true, customDomain: true, isDomainVerified: true } },
       campaigns: {
         orderBy: { createdAt: "desc" },
@@ -49,7 +51,9 @@ export default async function EditPostPage({ params }: { params: { id: string } 
         scheduledAt: post.scheduledAt?.toISOString() ?? null,
         emailOnPublish: post.emailOnPublish,
         url: `${publicationBaseUrl(post.publication)}/${post.slug}`,
-        campaign: post.campaigns[0] ?? null
+        campaign: post.campaigns[0] ?? null,
+        coverImageUrl: post.coverImageUrl,
+        podcast: post.podcastEpisode
       }}
     />
   );

@@ -31,7 +31,7 @@ export const defaultOptions = (env: NodeJS.ProcessEnv = process.env): WorkerOpti
 /** Pubblica i post programmati arrivati alla loro ora (e ne crea la campagna, se chiesto). */
 export async function publishDueScheduledPosts(prisma: PrismaClient, options: WorkerOptions, now = new Date()): Promise<number> {
   const due = await prisma.post.findMany({
-    where: { status: "SCHEDULED", scheduledAt: { lte: now } },
+    where: { status: "SCHEDULED", scheduledAt: { lte: now }, publication: { suspendedAt: null } },
     select: { id: true, title: true, emailOnPublish: true },
     take: 50
   });
@@ -51,7 +51,9 @@ export async function claimNextCampaign(prisma: PrismaClient, options: WorkerOpt
   const staleBefore = new Date(Date.now() - options.staleAfterMs);
   const candidates = await prisma.emailCampaign.findMany({
     where: {
-      OR: [{ status: "PENDING" }, { status: "PROCESSING", startedAt: { lt: staleBefore } }]
+      OR: [{ status: "PENDING" }, { status: "PROCESSING", startedAt: { lt: staleBefore } }],
+      // Le pubblicazioni sospese non spediscono: la campagna resta in coda finché non vengono riattivate.
+      publication: { suspendedAt: null }
     },
     orderBy: { createdAt: "asc" },
     select: { id: true, status: true, startedAt: true },

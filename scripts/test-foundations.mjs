@@ -88,7 +88,7 @@ try {
   assert(unknown.status === 200 && known.status === 200 && unknown.json?.message === known.json?.message, "Stessa risposta per email registrate e sconosciute");
   assert((await mailsTo(email("nessuno"))).length === 0, "A un indirizzo sconosciuto non parte nulla");
 
-  const [resetMail] = await mailsTo(email("autrice"));
+  const resetMail = (await mailsTo(email("autrice"))).find((m) => m.subject === "Imposta una nuova password");
   const resetUrl = resetMail?.text.match(/https?:\/\/\S+\/reset-password\?token=[\w-]+/)?.[0];
   assert(Boolean(resetUrl) && resetMail.subject === "Imposta una nuova password", "Arriva l'email con il link di recupero");
   const token = resetUrl ? new URL(resetUrl).searchParams.get("token") : "";

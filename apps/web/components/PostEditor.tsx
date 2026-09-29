@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { audioDuration, uploadFile } from "./upload";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EditorContent, Node, useEditor, type Editor } from "@tiptap/react";
@@ -25,7 +26,9 @@ import {
   Calendar,
   Mail,
   Check,
-  ExternalLink
+  ExternalLink,
+  Mic,
+  Trash2
 } from "lucide-react";
 
 // Il divisore del paywall: nel testo salvato diventa <hr class="paywall-divider" data-paywall="true">,
@@ -58,6 +61,8 @@ export interface EditorPost {
   emailOnPublish: boolean;
   url: string;
   campaign: { status: string; sentCount: number; recipientsCount: number } | null;
+  coverImageUrl: string | null;
+  podcast: { audioUrl: string; durationSeconds: number } | null;
 }
 
 type Action = "draft" | "schedule" | "publish";
@@ -108,9 +113,20 @@ function Toolbar({ editor }: { editor: Editor }) {
     else editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
   };
 
-  const addImage = () => {
-    const url = window.prompt("Indirizzo dell'immagine (https://...)");
-    if (url && /^https:\/\//i.test(url.trim())) editor.chain().focus().setImage({ src: url.trim() }).run();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const addImage = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const media = await uploadFile(file, "image");
+      editor.chain().focus().setImage({ src: media.url, alt: file.name.replace(/\.[^.]+$/, "") }).run();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Caricamento non riuscito");
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
   };
 
   return (
@@ -139,9 +155,10 @@ function Toolbar({ editor }: { editor: Editor }) {
       <ToolbarButton title="Link" active={editor.isActive("link")} onClick={setLink}>
         <Link2 className="h-4 w-4" />
       </ToolbarButton>
-      <ToolbarButton title="Immagine da indirizzo web" onClick={addImage}>
+      <ToolbarButton title={uploading ? "Caricamento..." : "Inserisci un'immagine"} disabled={uploading} onClick={() => fileInput.current?.click()}>
         <ImageIcon className="h-4 w-4" />
       </ToolbarButton>
+      <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={(e) => addImage(e.target.files?.[0])} />
       <span className="mx-1 h-5 w-px bg-gray-200" />
       <button
         type="button"
@@ -172,6 +189,9 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
   const [access, setAccess] = useState<"FREE" | "PAID_SUBSCRIBERS">(post && post.access !== "FREE" ? "PAID_SUBSCRIBERS" : "FREE");
   const [sendEmail, setSendEmail] = useState(post ? post.status !== "SCHEDULED" || post.emailOnPublish : true);
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(post?.scheduledAt ?? null));
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(post?.coverImageUrl ?? null);
+  const [podcast, setPodcast] = useState<{ audioUrl: string; durationSeconds: number } | null>(post?.podcast ?? null);
+  const [mediaBusy, setMediaBusy] = useState<"cover" | "audio" | null>(null);
   const [pending, setPending] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -198,6 +218,33 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
     }
   });
 
+  const uploadCover = async (file: File | undefined) => {
+    if (!file) return;
+    setMediaBusy("cover");
+    setError(null);
+    try {
+      setCoverImageUrl((await uploadFile(file, "image")).url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Caricamento non riuscito");
+    } finally {
+      setMediaBusy(null);
+    }
+  };
+
+  const uploadAudio = async (file: File | undefined) => {
+    if (!file) return;
+    setMediaBusy("audio");
+    setError(null);
+    try {
+      const [media, durationSeconds] = await Promise.all([uploadFile(file, "audio"), audioDuration(file)]);
+      setPodcast({ audioUrl: media.url, durationSeconds });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Caricamento non riuscito");
+    } finally {
+      setMediaBusy(null);
+    }
+  };
+
   const save = async (action: Action) => {
     if (!editor) return;
     setError(null);
@@ -217,7 +264,9 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
           access,
           action,
           sendEmail,
-          scheduledAt: action === "schedule" && scheduledAt ? new Date(scheduledAt).toISOString() : undefined
+          scheduledAt: action === "schedule" && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+          coverImageUrl,
+          podcast
         })
       });
       const data = await res.json().catch(() => ({}));
@@ -340,6 +389,43 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="border-b border-gray-100 pb-3 text-sm font-bold text-gray-900">Copertina e podcast</h3>
+            <div className="mt-4 space-y-4">
+              {coverImageUrl ? (
+                <div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverImageUrl} alt="Copertina" className="aspect-video w-full rounded-lg object-cover" />
+                  <button type="button" onClick={() => setCoverImageUrl(null)} className="mt-2 flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-rose-600">
+                    <Trash2 className="h-3.5 w-3.5" /> Togli copertina
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                  <ImageIcon className="h-4 w-4" /> {mediaBusy === "cover" ? "Caricamento..." : "Carica una copertina"}
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" disabled={mediaBusy !== null} onChange={(e) => uploadCover(e.target.files?.[0])} />
+                </label>
+              )}
+
+              {podcast ? (
+                <div>
+                  <audio controls src={podcast.audioUrl} className="w-full" />
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Episodio podcast{podcast.durationSeconds ? ` · ${Math.floor(podcast.durationSeconds / 60)} min ${podcast.durationSeconds % 60} s` : ""} · finisce nel feed per Apple Podcasts e Spotify se l&apos;articolo è gratuito
+                  </p>
+                  <button type="button" onClick={() => setPodcast(null)} className="mt-1 flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-rose-600">
+                    <Trash2 className="h-3.5 w-3.5" /> Togli audio
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-4 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                  <Mic className="h-4 w-4" /> {mediaBusy === "audio" ? "Caricamento audio..." : "Aggiungi un audio (podcast)"}
+                  <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav" className="hidden" disabled={mediaBusy !== null} onChange={(e) => uploadAudio(e.target.files?.[0])} />
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

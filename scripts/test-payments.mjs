@@ -7,6 +7,7 @@ import { createHmac } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
+import { confirmEmail } from "./lib/test-auth.mjs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { startStripeMock } from "./lib/stripe-mock.mjs";
@@ -50,6 +51,8 @@ async function register(label) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: `Test ${label}`, email: `${label}-${run}@example.it`, handle: `${label}-${run}`, password: "password-molto-lunga" })
   });
+  // Chi invia newsletter o collega Stripe deve aver confermato l'email.
+  if (process.env.EMAIL_LOG_DIR) await confirmEmail(BASE, process.env.EMAIL_LOG_DIR, `${label}-${run}@example.it`);
   return res.headers.get("set-cookie")?.split(";")[0];
 }
 

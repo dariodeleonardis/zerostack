@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShieldAlert, Users, Layers, DollarSign, Settings, ArrowLeft, BarChart3 } from "lucide-react";
+import { ShieldAlert, Users, Layers, ArrowLeft, BarChart3 } from "lucide-react";
 import { isPlatformAdmin, requireUser } from "../../lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div>
               <h2 className="text-sm font-black text-gray-900">ZeroStack Admin</h2>
               <span className="inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
-                Pannello SuperUser & Staff
+                Amministrazione
               </span>
             </div>
           </div>
@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <BarChart3 className="h-4 w-4 text-gray-500" />
-              Panoramica Globale
+              Panoramica
             </Link>
 
             <Link
@@ -44,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <Users className="h-4 w-4 text-gray-500" />
-              Gestione Utenti & Ruoli
+              Utenti
             </Link>
 
             <Link
@@ -52,16 +52,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <Layers className="h-4 w-4 text-gray-500" />
-              Pubblicazioni & Domini
+              Pubblicazioni
             </Link>
 
-            <Link
-              href="/admin/settings"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
-            >
-              <Settings className="h-4 w-4 text-gray-500" />
-              Impostazioni Piattaforma & Stripe
-            </Link>
           </nav>
         </div>
 

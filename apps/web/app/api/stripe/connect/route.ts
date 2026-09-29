@@ -3,6 +3,7 @@ import { prisma } from "@zerostack/database";
 import { platformUrlFromEnv, publicationBaseUrl } from "@zerostack/shared";
 import { getCurrentUser, isSameOriginJson } from "../../../../lib/auth";
 import { isStripeConfigured, stripe } from "../../../../lib/stripe";
+import { VERIFY_FIRST } from "../../../../lib/email-verification";
 
 /**
  * Avvia (o riprende) il collegamento del conto Stripe di una pubblicazione (Connect Express).
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Accedi per collegare Stripe" }, { status: 401 });
+  }
+  if (!user.emailVerified) {
+    return NextResponse.json({ error: VERIFY_FIRST, code: "email_not_verified" }, { status: 403 });
   }
   if (!isStripeConfigured()) {
     return NextResponse.json({ error: "I pagamenti non sono ancora configurati su questa piattaforma" }, { status: 503 });

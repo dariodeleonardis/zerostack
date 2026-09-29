@@ -48,6 +48,7 @@ export function startStripeMock(port = 12111) {
         const sub = subscriptions.get(parts[2]);
         if (!sub) return send(404, { error: { type: "invalid_request_error", message: "No such subscription" } });
         if (req.method === "POST" && "cancel_at_period_end" in params) sub.cancel_at_period_end = params.cancel_at_period_end === "true";
+        if (req.method === "DELETE") sub.status = "canceled";
         return send(200, sub);
       }
       send(404, { error: { type: "invalid_request_error", message: `mock: ${req.method} ${url.pathname} non gestito` } });

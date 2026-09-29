@@ -48,3 +48,4 @@ docker/caddy_config/
 .DS_Store
 Thumbs.db
 dump.rdb
+apps/web/uploads/

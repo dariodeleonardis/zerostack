@@ -71,6 +71,8 @@ model User {
   passwordHash  String
   role          Role      @default(READER)
   emailVerified DateTime?
+  // Sospeso dall'amministrazione: niente accesso, sessioni chiuse.
+  suspendedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -85,6 +87,8 @@ model User {
   billingDetails     ItalianBillingInfo[]
   sessions           Session[]
   passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  media              Media[]
 }
 
 // Sessioni di login: nel cookie viaggia un token casuale, qui solo il suo SHA-256.
@@ -115,6 +119,36 @@ model PasswordResetToken {
   @@index([userId])
 }
 
+// Conferma dell'indirizzo email dopo la registrazione (solo l'hash del token nel database).
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// File caricati dagli utenti (immagini, audio), sul disco del server o su uno storage S3.
+model Media {
+  id          String   @id @default(uuid())
+  ownerId     String
+  key         String   @unique
+  url         String
+  contentType String
+  size        Int
+  kind        String   // image | audio
+  createdAt   DateTime @default(now())
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
 model Publication {
   id                     String   @id @default(uuid())
   ownerId                String
@@ -127,6 +161,8 @@ model Publication {
   isDomainVerified       Boolean  @default(false)
   // Valore del record TXT _zerostack.<dominio> che prova la proprietà del dominio personalizzato.
   domainVerifyToken      String?
+  // Sospesa dall'amministrazione: pagine, feed, certificati e invii fermi.
+  suspendedAt            DateTime?
   primaryColor           String   @default("#FF5722")
   fontStyle              String   @default("sans")
   

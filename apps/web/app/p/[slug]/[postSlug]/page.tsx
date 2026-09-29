@@ -35,6 +35,7 @@ async function findPost(slugOrDomain: string, postSlug: string) {
       excerpt: true,
       contentHtml: true,
       coverImageUrl: true,
+      podcastEpisode: { select: { audioUrl: true, durationSeconds: true } },
       access: true,
       likesCount: true,
       publishedAt: true,
@@ -140,6 +141,18 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
           </div>
         </div>
       </header>
+
+      {post.coverImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={post.coverImageUrl} alt="" className="mt-8 aspect-video w-full rounded-2xl object-cover" />
+      )}
+
+      {post.podcastEpisode && hasAccess && (
+        <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Ascolta l&apos;episodio</p>
+          <audio controls preload="none" src={post.podcastEpisode.audioUrl} className="w-full" />
+        </div>
+      )}
 
       {visibleHtml.trim() && (
         <div

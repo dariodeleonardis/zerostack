@@ -80,9 +80,11 @@ export async function getCurrentUser() {
   if (!token) return null;
   const session = await prisma.session.findUnique({
     where: { tokenHash: sha256(token) },
-    include: { user: { select: { id: true, name: true, email: true, handle: true, role: true } } }
+    include: { user: { select: { id: true, name: true, email: true, handle: true, role: true, emailVerified: true, suspendedAt: true } } }
   });
   if (!session || session.expiresAt < new Date()) return null;
+  // Un account sospeso dall'amministrazione non ha più sessioni valide.
+  if (session.user.suspendedAt) return null;
   return session.user;
 }
 

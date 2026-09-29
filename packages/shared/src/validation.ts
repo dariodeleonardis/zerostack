@@ -93,7 +93,16 @@ export const SavePostSchema = z
     access: z.enum(["FREE", "PAID_SUBSCRIBERS"]).default("FREE"),
     action: z.enum(["draft", "schedule", "publish"]),
     scheduledAt: z.string().datetime({ offset: true }).optional(),
-    sendEmail: z.boolean().default(true)
+    sendEmail: z.boolean().default(true),
+    // Copertina e audio: URL dei file caricati (o di un indirizzo https esterno). null = togli.
+    coverImageUrl: z.string().url("Copertina non valida").max(1000).nullable().optional(),
+    podcast: z
+      .object({
+        audioUrl: z.string().url("Audio non valido").max(1000),
+        durationSeconds: z.number().int().min(0).max(24 * 60 * 60).default(0)
+      })
+      .nullable()
+      .optional()
   })
   .superRefine((data, ctx) => {
     const text = data.contentHtml.replace(/<[^>]+>/g, "").trim();
@@ -135,3 +144,14 @@ export const CustomDomainSchema = z
   .refine((v) => v.length <= 253 && /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(v), {
     message: "Dominio non valido (es. newsletter.tuonome.it)"
   });
+
+export const ProfileSchema = z.object({
+  name: z.string().trim().min(2, "Inserisci il tuo nome").max(80, "Nome massimo 80 caratteri"),
+  bio: z.string().trim().max(500, "Bio massimo 500 caratteri").optional().nullable(),
+  avatarUrl: z.string().url("Immagine non valida").max(1000).optional().nullable()
+});
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Inserisci la password attuale").max(200),
+  newPassword: z.string().min(10, "La nuova password deve avere almeno 10 caratteri").max(200, "Password troppo lunga")
+});

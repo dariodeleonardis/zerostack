@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     if (!reset || reset.usedAt || reset.expiresAt < new Date()) return null;
     const used = await tx.passwordResetToken.updateMany({ where: { id: reset.id, usedAt: null }, data: { usedAt: new Date() } });
     if (used.count !== 1) return null;
-    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+    // Chi apre il link ricevuto per email ha dimostrato che la casella è sua: vale come conferma.
+    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, emailVerified: new Date() } });
     // Chi aveva rubato la password (o una sessione) viene buttato fuori ovunque.
     await tx.session.deleteMany({ where: { userId: reset.userId } });
     // Gli altri link di recupero ancora aperti non servono più.

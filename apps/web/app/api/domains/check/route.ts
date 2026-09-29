@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      const pub = await prisma.publication.findUnique({ where: { slug: subdomain }, select: { id: true } });
+      const pub = await prisma.publication.findFirst({ where: { slug: subdomain, suspendedAt: null }, select: { id: true } });
       if (pub) {
         return new NextResponse("OK", { status: 200 });
       }
@@ -55,7 +55,8 @@ export async function GET(req: NextRequest) {
     const publication = await prisma.publication.findFirst({
       where: {
         customDomain: domain,
-        isDomainVerified: true
+        isDomainVerified: true,
+        suspendedAt: null
       },
       select: { id: true }
     });

@@ -16,6 +16,7 @@ export ZS_BASE_URL="$APP_URL"
 export EMAIL_PROVIDER=log
 export EMAIL_LOG_DIR="$WORK/mail"
 export ZS_FAKE_DNS_FILE="$WORK/dns.json"
+export UPLOAD_DIR="$WORK/uploads"
 export STRIPE_SECRET_KEY=sk_test_zs
 export STRIPE_API_BASE=http://127.0.0.1:12111
 export STRIPE_WEBHOOK_SECRET=whsec_zs_test
@@ -55,7 +56,8 @@ for suite in \
   "node scripts/test-newsletter.mjs" \
   "node scripts/test-payments.mjs" \
   "node scripts/test-import.mjs" \
-  "node scripts/test-foundations.mjs"; do
+  "node scripts/test-foundations.mjs" \
+  "node scripts/test-launch.mjs"; do
   flush
   echo "::group::$suite"
   if ! $suite; then failed=1; echo "❌ $suite"; fi

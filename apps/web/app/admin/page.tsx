@@ -1,138 +1,66 @@
 import React from "react";
-import Link from "next/link";
-import { Users, Layers, DollarSign, ShieldCheck, ArrowUpRight, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
+import { prisma } from "@zerostack/database";
 
-export default function AdminOverviewPage() {
+export const dynamic = "force-dynamic";
+
+function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-5">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">Panoramica Piattaforma</h1>
-          <p className="text-xs text-gray-500">Monitoraggio globale di utenti, pubblicazioni, transazioni Stripe e stato server.</p>
-        </div>
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{label}</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">{new Intl.NumberFormat("it-IT").format(value)}</p>
+      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+    </div>
+  );
+}
 
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-            <Activity className="h-3.5 w-3.5" /> Tutti i servizi VPS operativi
-          </span>
-        </div>
+function Check({ ok, label, detail }: { ok: boolean; label: string; detail: string }) {
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      <span className={ok ? "text-emerald-600" : "text-amber-600"}>{ok ? "✓" : "!"}</span>
+      <span>
+        <strong className="text-gray-900">{label}</strong> <span className="text-gray-500">— {detail}</span>
+      </span>
+    </li>
+  );
+}
+
+export default async function AdminOverviewPage() {
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [users, unverified, suspendedUsers, publications, suspendedPubs, subscribers, paid, sent, failedCampaigns] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { emailVerified: null } }),
+    prisma.user.count({ where: { suspendedAt: { not: null } } }),
+    prisma.publication.count(),
+    prisma.publication.count({ where: { suspendedAt: { not: null } } }),
+    prisma.newsletterSubscriber.count({ where: { status: "ACTIVE" } }),
+    prisma.subscription.count({ where: { isPaid: true, status: { in: ["ACTIVE", "TRIALING"] } } }),
+    prisma.emailDelivery.count({ where: { status: "SENT", createdAt: { gte: monthAgo } } }),
+    prisma.emailCampaign.count({ where: { status: "FAILED" } })
+  ]);
+
+  const env = process.env;
+  const provider = (env.EMAIL_PROVIDER || "log").toLowerCase();
+  return (
+    <div className="mx-auto max-w-6xl space-y-8">
+      <h1 className="text-2xl font-black text-gray-900">Panoramica</h1>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Utenti" value={users} hint={`${unverified} senza email confermata · ${suspendedUsers} sospesi`} />
+        <Stat label="Pubblicazioni" value={publications} hint={`${suspendedPubs} sospese`} />
+        <Stat label="Iscritti attivi" value={subscribers} hint={`${paid} abbonamenti pagati`} />
+        <Stat label="Email inviate" value={sent} hint={`ultimi 30 giorni · ${failedCampaigns} campagne interrotte`} />
       </div>
 
-      {/* Global KPI Cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Utenti Totali */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Utenti Registrati</span>
-            <Users className="h-4 w-4 text-blue-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">4.920</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">12 SuperAdmin/Staff &bull; 340 Creator</p>
-        </div>
-
-        {/* Pubblicazioni Attive */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Pubblicazioni Attive</span>
-            <Layers className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">385</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">42 con dominio personalizzato SSL</p>
-        </div>
-
-        {/* Volume GMV Stripe */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Volume Stripe (GMV)</span>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">68.450€</span>
-            <span className="text-xs font-bold text-emerald-600">+18% mese</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">Transato direttamente sui conti dei creator</p>
-        </div>
-
-        {/* Abbonamenti Attivi */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between text-gray-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Abbonamenti Ricorrenti</span>
-            <ShieldCheck className="h-4 w-4 text-amber-600" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-gray-900">1.240</span>
-          </div>
-          <p className="mt-1 text-xs text-gray-400">Conformi a fatturazione elettronica IT</p>
-        </div>
-      </div>
-
-      {/* Sezione Azioni Rapide & Verifiche per lo Staff */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Richieste di Verifica Domini Personalizzati */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="font-bold text-sm text-gray-900">Domini Personalizzati in Attesa di Caddy TLS</h2>
-            <Link href="/admin/publications" className="text-xs font-semibold text-blue-600 hover:underline">
-              Gestisci tutti &rarr;
-            </Link>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3 text-xs">
-              <div>
-                <p className="font-bold text-gray-900">newsletter.mariorossi.it</p>
-                <p className="text-gray-500">Pubblicazione: Cronache Digitali</p>
-              </div>
-              <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 font-bold text-amber-800">
-                <AlertTriangle className="h-3 w-3" /> CNAME in verifica
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3 text-xs">
-              <div>
-                <p className="font-bold text-gray-900">tech.tuodominio.it</p>
-                <p className="text-gray-500">Pubblicazione: Tech & Futuro Italia</p>
-              </div>
-              <span className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
-                <CheckCircle2 className="h-3 w-3" /> SSL Attivo & Connesso
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Ultime Pubblicazioni Registrate */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="font-bold text-sm text-gray-900">Nuovi Creator Registrati</h2>
-            <Link href="/admin/users" className="text-xs font-semibold text-blue-600 hover:underline">
-              Tutti gli utenti &rarr;
-            </Link>
-          </div>
-
-          <div className="mt-4 space-y-3 text-xs">
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3">
-              <div>
-                <p className="font-bold text-gray-900">Dario De Leonardis (@dario)</p>
-                <p className="text-gray-500">Ruolo: SUPERADMIN &bull; 1 pubblicazione attiva</p>
-              </div>
-              <span className="rounded bg-blue-100 px-2 py-0.5 font-bold text-blue-800">SuperUser</span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3">
-              <div>
-                <p className="font-bold text-gray-900">Elena Bianchi (@elenab)</p>
-                <p className="text-gray-500">Ruolo: CREATOR &bull; Pubblicazione: Economia Semplice</p>
-              </div>
-              <span className="rounded bg-purple-100 px-2 py-0.5 font-bold text-purple-800">Creator</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900">Configurazione</h2>
+        <ul className="mt-4 space-y-2">
+          <Check ok={provider !== "log"} label="Invio email" detail={provider === "log" ? "EMAIL_PROVIDER non impostato: le email non partono" : `provider ${provider}`} />
+          <Check ok={Boolean(env.EMAIL_WEBHOOK_TOKEN || env.RESEND_WEBHOOK_SECRET)} label="Webhook rimbalzi" detail={env.EMAIL_WEBHOOK_TOKEN || env.RESEND_WEBHOOK_SECRET ? "configurato" : "manca EMAIL_WEBHOOK_TOKEN (o RESEND_WEBHOOK_SECRET)"} />
+          <Check ok={Boolean(env.STRIPE_SECRET_KEY)} label="Pagamenti Stripe" detail={env.STRIPE_SECRET_KEY ? "chiave presente" : "manca STRIPE_SECRET_KEY"} />
+          <Check ok={Boolean(env.STRIPE_WEBHOOK_SECRET || env.STRIPE_CONNECT_WEBHOOK_SECRET)} label="Webhook Stripe" detail={env.STRIPE_WEBHOOK_SECRET || env.STRIPE_CONNECT_WEBHOOK_SECRET ? "segreto presente" : "manca il segreto: gli abbonamenti non si attivano"} />
+          <Check ok label="File caricati" detail={(env.STORAGE_DRIVER || "local") === "s3" ? `S3 (${env.S3_BUCKET ?? "?"})` : `disco del server (${env.UPLOAD_DIR || "./uploads"}): da includere nei backup`} />
+          <Check ok={Boolean(env.LEGAL_ENTITY_NAME && env.LEGAL_VAT_NUMBER && env.LEGAL_CONTACT_EMAIL)} label="Pagine legali" detail={env.LEGAL_ENTITY_NAME ? "dati del gestore presenti" : "mancano LEGAL_ENTITY_NAME, LEGAL_VAT_NUMBER, LEGAL_ADDRESS, LEGAL_CONTACT_EMAIL"} />
+        </ul>
+      </section>
     </div>
   );
 }

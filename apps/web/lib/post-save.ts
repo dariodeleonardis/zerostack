@@ -3,6 +3,7 @@ import { prisma, publishPost } from "@zerostack/database";
 import { publicationBaseUrl, SavePostSchema, slugify, splitAtPaywall } from "@zerostack/shared";
 import { getCurrentUser, isSameOriginJson } from "./auth";
 import { sanitizePostHtml } from "./posts";
+import { VERIFY_FIRST } from "./email-verification";
 
 async function uniquePostSlug(publicationId: string, title: string, excludePostId?: string): Promise<string> {
   const base = slugify(title) || "post";
@@ -60,6 +61,11 @@ export async function savePost(req: Request, postId?: string): Promise<Response>
   if (input.action !== "draft" && membership.role === "CONTRIBUTOR") {
     return NextResponse.json({ error: "Puoi salvare bozze: la pubblicazione spetta alla redazione" }, { status: 403 });
   }
+  // Mandare email agli iscritti da un indirizzo mai confermato è la porta dello spam.
+  const wouldEmail = input.sendEmail && input.action !== "draft" && existing?.status !== "PUBLISHED";
+  if (wouldEmail && !user.emailVerified) {
+    return NextResponse.json({ error: VERIFY_FIRST, code: "email_not_verified" }, { status: 403 });
+  }
   if (existing?.status === "PUBLISHED" && input.action !== "publish") {
     return NextResponse.json({ error: "Il post è già pubblicato: puoi solo aggiornarlo" }, { status: 400 });
   }
@@ -81,6 +87,8 @@ export async function savePost(req: Request, postId?: string): Promise<Response>
     excerpt: excerptFrom(contentHtml),
     access: input.access,
     emailOnPublish: input.action === "schedule" && input.sendEmail,
+    ...(input.coverImageUrl !== undefined ? { coverImageUrl: input.coverImageUrl } : {}),
+    ...(input.podcast !== undefined ? { format: input.podcast ? ("PODCAST" as const) : ("ARTICLE" as const) } : {}),
     ...(isPublished
       ? {}
       : input.action === "schedule"
@@ -91,9 +99,17 @@ export async function savePost(req: Request, postId?: string): Promise<Response>
   const saved = existing
     ? await prisma.post.update({ where: { id: existing.id }, data, select: { id: true } })
     : await prisma.post.create({
-        data: { ...data, publicationId: input.publicationId, authorId: user.id, format: "ARTICLE" },
+        data: { format: "ARTICLE", ...data, publicationId: input.publicationId, authorId: user.id },
         select: { id: true }
       });
+
+  // Episodio podcast: si crea, si aggiorna o si toglie insieme al post.
+  if (input.podcast) {
+    const episode = { audioUrl: input.podcast.audioUrl, durationSeconds: input.podcast.durationSeconds };
+    await prisma.podcastEpisode.upsert({ where: { postId: saved.id }, create: { postId: saved.id, ...episode }, update: episode });
+  } else if (input.podcast === null) {
+    await prisma.podcastEpisode.deleteMany({ where: { postId: saved.id } });
+  }
 
   let campaignId: string | null = null;
   if (input.action === "publish" && !isPublished) {

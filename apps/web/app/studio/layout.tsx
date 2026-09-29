@@ -2,6 +2,7 @@ import React from "react";
 import { prisma } from "@zerostack/database";
 import { requireUser } from "../../lib/auth";
 import { StudioShell } from "./StudioShell";
+import { VerifyEmailBanner } from "./VerifyEmailBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function StudioLayout({ children }: { children: React.React
 
   return (
     <StudioShell publications={memberships.map((m) => ({ ...m.publication, role: m.role }))}>
+      {!user.emailVerified && <VerifyEmailBanner email={user.email} />}
       {children}
     </StudioShell>
   );

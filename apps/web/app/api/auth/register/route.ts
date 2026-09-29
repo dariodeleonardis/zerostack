@@ -3,6 +3,7 @@ import { prisma, Prisma } from "@zerostack/database";
 import { RegisterSchema } from "@zerostack/shared";
 import { clientIp, createSession, hashPassword, isSameOriginJson } from "../../../../lib/auth";
 import { allowAttempt } from "../../../../lib/rate-limit";
+import { sendVerificationEmail } from "../../../../lib/email-verification";
 
 export async function POST(req: Request) {
   if (!isSameOriginJson(req)) {
@@ -27,9 +28,13 @@ export async function POST(req: Request) {
   try {
     const user = await prisma.user.create({
       data: { name, email, handle, passwordHash: await hashPassword(password) },
-      select: { id: true, handle: true }
+      select: { id: true, handle: true, email: true, name: true }
     });
     await createSession(user.id);
+    // Se l'email di conferma non parte l'account resta valido: la si può richiedere dal pannello.
+    await sendVerificationEmail(user).catch((err) =>
+      console.error("[register] email di conferma non inviata:", err instanceof Error ? err.message : err)
+    );
     return NextResponse.json({ user: { handle: user.handle } }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

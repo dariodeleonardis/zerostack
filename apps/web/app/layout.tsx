@@ -19,6 +19,10 @@ export default function RootLayout({
       <body className="min-h-screen pb-20">
         <Navbar />
         <main>{children}</main>
+        <footer className="mx-auto max-w-7xl px-4 py-10 text-center text-xs text-gray-500 sm:px-6">
+          <a href="/privacy" className="hover:text-gray-900">Privacy</a> · <a href="/termini" className="hover:text-gray-900">Termini</a> ·{" "}
+          <a href="/cookie" className="hover:text-gray-900">Cookie</a>
+        </footer>
         <AudioPlayer />
         <GdprBanner />
       </body>

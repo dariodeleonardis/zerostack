@@ -13,8 +13,12 @@ export const config = {
   ]
 };
 
+// Pagine della piattaforma che valgono uguali su ogni host (il piè di pagina le linka ovunque).
+const PLATFORM_PAGES = new Set(["/privacy", "/termini", "/cookie"]);
+
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
+  if (PLATFORM_PAGES.has(url.pathname)) return NextResponse.next();
   const hostname = req.headers.get("host")?.toLowerCase() || "";
   const rootDomain = (process.env.APP_DOMAIN || process.env.NEXT_PUBLIC_ROOT_DOMAIN || "zerostack.it").toLowerCase();
 

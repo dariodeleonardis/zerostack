@@ -15,6 +15,7 @@ async function main() {
       name: "Dario De Leonardis",
       handle: "dario",
       role: "ADMIN",
+      emailVerified: new Date(),
       passwordHash: "hash_demo_zerostack_2026",
       bio: "Fondatore di ZeroStack. Appassionato di software libero, publishing e sovranità digitale.",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
