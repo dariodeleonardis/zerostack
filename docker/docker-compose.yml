@@ -47,6 +47,8 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
+      - HEALTH_REQUIRE_BACKUP=${HEALTH_REQUIRE_BACKUP:-true}
     depends_on:
       - postgres
       - redis
@@ -76,6 +78,51 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
+    depends_on:
+      - postgres
+    networks:
+      - zerostack-net
+
+  # Backup giornaliero di database e file caricati (cifrato; copia su S3 esterno con BACKUP_S3_BUCKET)
+  backup:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["npm", "run", "backup", "--workspace=@zerostack/worker", "--", "--loop"]
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD:-zerostack_secret}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
+      - UPLOAD_DIR=/data/uploads
+      - BACKUP_DIR=/backups
+      - BACKUP_PASSPHRASE=${BACKUP_PASSPHRASE:-}
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      - BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - BACKUP_S3_PREFIX=${BACKUP_S3_PREFIX:-zerostack/}
+      - BACKUP_S3_REGION=${BACKUP_S3_REGION:-auto}
+      - BACKUP_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - BACKUP_S3_ACCESS_KEY=${BACKUP_S3_ACCESS_KEY:-}
+      - BACKUP_S3_SECRET_KEY=${BACKUP_S3_SECRET_KEY:-}
+      - BACKUP_S3_FORCE_PATH_STYLE=${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-log}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - TURBOSMTP_CONSUMER_KEY=${TURBOSMTP_CONSUMER_KEY:-}
+      - TURBOSMTP_CONSUMER_SECRET=${TURBOSMTP_CONSUMER_SECRET:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+    volumes:
+      - uploads_data:/data/uploads:ro
+      - backups_data:/backups
     depends_on:
       - postgres
     networks:
@@ -122,6 +169,7 @@ services:
 
 volumes:
   uploads_data:
+  backups_data:
   postgres_data:
   redis_data:
   caddy_data:

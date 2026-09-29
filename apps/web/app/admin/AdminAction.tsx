@@ -9,13 +9,16 @@ export function AdminAction({
   body,
   label,
   confirm,
-  tone = "neutral"
+  tone = "neutral",
+  showMessage = false
 }: {
   url: string;
   body: Record<string, unknown>;
   label: string;
   confirm?: string;
   tone?: "neutral" | "danger";
+  /** Mostra il campo "message" della risposta anche quando va a buon fine. */
+  showMessage?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -26,6 +29,7 @@ export function AdminAction({
     const data = await res.json().catch(() => ({}));
     setPending(false);
     if (!res.ok) window.alert(data.error ?? "Operazione non riuscita");
+    else if (showMessage && data.message) window.alert(data.message);
     router.refresh();
   };
   return (

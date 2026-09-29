@@ -2,7 +2,7 @@ import Redis from "ioredis";
 
 let client: Redis | null = null;
 
-function redis(): Redis | null {
+export function redis(): Redis | null {
   if (!process.env.REDIS_URL) return null;
   client ??= new Redis(process.env.REDIS_URL, {
     lazyConnect: true,

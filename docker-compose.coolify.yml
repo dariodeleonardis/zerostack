@@ -9,8 +9,10 @@
 # che chiede a /api/domains/check prima di emettere ogni certificato.
 #
 # Password e segreti li genera Coolify (SERVICE_HEX_*): non vanno scritti da nessuna parte.
-# Email: EMAIL_PROVIDER (brevo | resend | smtp) e la chiave del provider, uguali per
+# Email: EMAIL_PROVIDER (brevo | resend | turbosmtp | smtp) e la chiave del provider, uguali per
 # web (email di conferma) e worker (newsletter). Senza EMAIL_PROVIDER non parte nessuna email.
+# Produzione: BACKUP_PASSPHRASE e BACKUP_S3_* (backup), ERROR_REPORTING_DSN (errori),
+# ALERT_EMAIL (avvisi) e un monitor esterno su https://zerostack.it/api/health.
 # ==============================================================================
 
 # Variabili email in comune tra web e worker
@@ -27,15 +29,19 @@ x-email-env: &email-env
   SMTP_USER: ${SMTP_USER:-}
   SMTP_PASS: ${SMTP_PASS:-}
 
+# Segnalazione degli errori (Sentry o GlitchTip), uguale per tutti i servizi
+x-monitoring-env: &monitoring-env
+  ERROR_REPORTING_DSN: ${ERROR_REPORTING_DSN:-}
+  ALERT_EMAIL: ${ALERT_EMAIL:-}
+
 services:
-  # Schema del database: gira a ogni deploy e poi esce. Se fallisce, il web non parte
-  # (niente "|| true": un sito senza tabelle deve fermare il deploy, non passare in silenzio).
+  # Migrazioni del database (packages/database/prisma/migrations): girano a ogni deploy e poi
+  # il servizio esce. Se falliscono il web non parte: meglio un deploy fermo che un sito rotto.
   zerostack-migrate:
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
-    working_dir: /app/packages/database
-    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+    command: ["node", "packages/database/scripts/migrate.mjs"]
     restart: "no"
     exclude_from_hc: true
     environment:
@@ -50,10 +56,12 @@ services:
       dockerfile: docker/Dockerfile.web
     restart: unless-stopped
     environment:
-      <<: *email-env
+      <<: [*email-env, *monitoring-env]
       NODE_ENV: production
       DATABASE_URL: postgresql://zerostack:${SERVICE_HEX_32_POSTGRES}@zerostack-postgres:5432/zerostack?schema=public
       REDIS_URL: redis://zerostack-redis:6379
+      # /api/health risponde 503 anche se l'ultimo backup è vecchio di più di BACKUP_MAX_AGE_HOURS
+      HEALTH_REQUIRE_BACKUP: ${HEALTH_REQUIRE_BACKUP:-true}
       APP_DOMAIN: ${APP_DOMAIN:-zerostack.it}
       APP_URL: ${APP_URL:-https://zerostack.it}
       NEXT_PUBLIC_ROOT_DOMAIN: ${APP_DOMAIN:-zerostack.it}
@@ -80,7 +88,7 @@ services:
     volumes:
       - zerostack-uploads:/data/uploads
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- 'http://127.0.0.1:3000/api/domains/check?domain=zerostack.it' >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health/live >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -99,12 +107,46 @@ services:
     restart: unless-stopped
     exclude_from_hc: true
     environment:
-      <<: *email-env
+      <<: [*email-env, *monitoring-env]
       NODE_ENV: production
       DATABASE_URL: postgresql://zerostack:${SERVICE_HEX_32_POSTGRES}@zerostack-postgres:5432/zerostack?schema=public
       APP_DOMAIN: ${APP_DOMAIN:-zerostack.it}
       APP_URL: ${APP_URL:-https://zerostack.it}
       EMAIL_RATE_PER_SECOND: ${EMAIL_RATE_PER_SECOND:-10}
+    depends_on:
+      zerostack-migrate:
+        condition: service_completed_successfully
+
+  # Backup giornaliero di database e file caricati, cifrato e copiato su uno storage S3 esterno.
+  # Senza BACKUP_S3_BUCKET resta solo sul volume del server: non protegge da un server perso.
+  zerostack-backup:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    command: ["npm", "run", "backup", "--workspace=@zerostack/worker", "--", "--loop"]
+    restart: unless-stopped
+    exclude_from_hc: true
+    environment:
+      <<: [*email-env, *monitoring-env]
+      NODE_ENV: production
+      DATABASE_URL: postgresql://zerostack:${SERVICE_HEX_32_POSTGRES}@zerostack-postgres:5432/zerostack?schema=public
+      APP_DOMAIN: ${APP_DOMAIN:-zerostack.it}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      UPLOAD_DIR: /data/uploads
+      BACKUP_DIR: /backups
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-zerostack/}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-auto}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      BACKUP_S3_FORCE_PATH_STYLE: ${BACKUP_S3_FORCE_PATH_STYLE:-false}
+    volumes:
+      - zerostack-uploads:/data/uploads:ro
+      - zerostack-backups:/backups
     depends_on:
       zerostack-migrate:
         condition: service_completed_successfully
@@ -136,6 +178,7 @@ services:
       retries: 10
 
 volumes:
+  zerostack-backups:
   zerostack-uploads:
   zerostack-pgdata:
   zerostack-redisdata:

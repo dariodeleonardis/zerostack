@@ -1,5 +1,6 @@
 import { prisma } from "@zerostack/database";
 import { createTransportFromEnv } from "@zerostack/email";
+import { captureException, installErrorReporting } from "@zerostack/shared/src/monitoring";
 import { defaultOptions, runOnce } from "./campaigns";
 
 /**
@@ -12,7 +13,15 @@ import { defaultOptions, runOnce } from "./campaigns";
 const once = process.argv.includes("--once");
 const pollMs = Number(process.env.WORKER_POLL_SECONDS || 5) * 1000;
 
+/** Battito del worker: /api/health lo considera fermo se non si aggiorna da qualche minuto. */
+async function heartbeat(ok: boolean, detail: string | null) {
+  await prisma.systemStatus
+    .upsert({ where: { key: "worker" }, create: { key: "worker", ok, detail }, update: { ok, detail } })
+    .catch(() => undefined);
+}
+
 async function main() {
+  installErrorReporting("worker");
   const transport = createTransportFromEnv();
   const options = defaultOptions();
   options.log(`avviato (provider email: ${transport.name}${once ? ", un solo giro" : `, controllo ogni ${pollMs / 1000}s`})`);
@@ -28,9 +37,12 @@ async function main() {
   do {
     try {
       await runOnce(prisma, transport, options);
+      await heartbeat(true, null);
     } catch (err) {
       // Un errore (per esempio il database che si riavvia) non deve fermare il worker.
       console.error("[worker] giro non riuscito:", err instanceof Error ? err.message : err);
+      await captureException(err, { tags: { source: "worker-loop" } });
+      await heartbeat(false, err instanceof Error ? err.message.slice(0, 300) : String(err));
       if (once) process.exitCode = 1;
     }
     if (!once && !stopping) await options.sleep(pollMs);

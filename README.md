@@ -126,6 +126,28 @@ In sviluppo: `EMAIL_PROVIDER=log EMAIL_LOG_DIR=/tmp/zs-mail` scrive ogni email i
 
 ---
 
+## 🧰 Produzione: migrazioni, backup e monitoraggio
+
+**Migrazioni del database.** Lo schema cambia solo con le migrazioni in `packages/database/prisma/migrations`, applicate a ogni deploy dal servizio `zerostack-migrate` (`node packages/database/scripts/migrate.mjs`). Se una migrazione fallisce il sito non parte con lo schema a metà. I database creati con la vecchia `prisma db push` vengono riconosciuti e convertiti da soli al primo deploy. Per cambiare lo schema: modifica `schema.prisma`, poi `npm run db:migration:new -- --name descrizione` (serve un Postgres locale) e committa la cartella generata. La CI blocca uno `schema.prisma` cambiato senza la sua migrazione.
+
+**Backup.** Il servizio `zerostack-backup` fa ogni `BACKUP_INTERVAL_HOURS` (24) un dump del database e un archivio dei file caricati (se `STORAGE_DRIVER=local`). I file sono cifrati con `BACKUP_PASSPHRASE` (AES-256-GCM) e copiati su uno storage S3 esterno (`BACKUP_S3_*`: Cloudflare R2, Scaleway, Backblaze, AWS), poi tenuti per `BACKUP_KEEP_DAYS` (14). Se un backup fallisce parte un'email a `ALERT_EMAIL`, l'errore va a Sentry/GlitchTip e `/api/health` lo segnala. Con `STORAGE_DRIVER=s3` i media stanno già sul bucket: attiva lì il versioning.
+
+Ripristino (dal container di backup, che ha già `pg_restore` 16; percorsi assoluti):
+```bash
+BACKUP_PASSPHRASE=... npm run backup --workspace=@zerostack/worker -- decrypt /backups/zerostack-db-<data>.dump.enc /tmp/db.dump
+pg_restore --clean --if-exists --no-owner --no-acl -d "postgresql://utente:password@host:5432/zerostack" /tmp/db.dump
+BACKUP_PASSPHRASE=... npm run backup --workspace=@zerostack/worker -- decrypt /backups/zerostack-uploads-<data>.tar.gz.enc /tmp/uploads.tar.gz
+tar -xzf /tmp/uploads.tar.gz -C /data/uploads
+```
+Prova il ripristino su un database di prova almeno una volta: un backup mai ripristinato non è un backup.
+
+**Monitoraggio.**
+- `ERROR_REPORTING_DSN`: DSN di [Sentry](https://sentry.io) o di [GlitchTip](https://glitchtip.com) (compatibile, si può ospitare in UE o sullo stesso Coolify). Arrivano gli errori non gestiti e quelli registrati con `console.error` da web, worker e backup. Dal pannello admin, *Invia un errore di prova* verifica la configurazione.
+- `/api/health`: 200 se database, Redis, worker (battito negli ultimi 10 minuti) e ultimo backup (entro 26 ore) sono a posto, 503 altrimenti. Collegalo a un monitor esterno (Uptime Kuma su Coolify, Better Stack, UptimeRobot) per ricevere un avviso. `/api/health/live` è il controllo leggero usato dal container.
+- Il pannello admin mostra lo stesso stato con i dettagli.
+
+---
+
 ## 🧪 Test
 
 ```bash

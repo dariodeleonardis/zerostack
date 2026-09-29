@@ -48,12 +48,13 @@ fi
 
 # 5. Build e avvio dello stack Docker
 echo "🐳 Avvio container ZeroStack (Web, Worker, Postgres, Redis, Caddy)..."
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml build
+docker compose -f docker/docker-compose.yml up -d postgres redis
 
-# 6. Esecuzione migrazioni database
-echo "🗄️  Applicazione schema database Prisma..."
-sleep 5
-docker compose -f docker/docker-compose.yml exec web npx prisma db push --schema=/app/packages/database/prisma/schema.prisma || true
+# 6. Migrazioni database, prima di avviare il sito: se falliscono ci si ferma qui
+echo "🗄️  Applicazione migrazioni database..."
+docker compose -f docker/docker-compose.yml run --rm --no-deps worker node packages/database/scripts/migrate.mjs
+docker compose -f docker/docker-compose.yml up -d
 
 echo ""
 echo "=============================================================================="

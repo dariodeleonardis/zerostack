@@ -13,6 +13,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "db:generate": "npm run db:generate --workspace=@zerostack/database",
     "db:push": "npm run db:push --workspace=@zerostack/database",
+    "db:migrate": "npm run db:migrate --workspace=@zerostack/database",
+    "db:migration:new": "npm run db:migration:new --workspace=@zerostack/database --",
     "db:seed": "npm run db:seed --workspace=@zerostack/database",
     "deploy:vps": "bash scripts/deploy.sh",
     "typecheck": "npm run typecheck --workspaces --if-present",

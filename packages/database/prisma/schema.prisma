@@ -441,3 +441,11 @@ model EmailDelivery {
 
   @@unique([campaignId, subscriberId])
 }
+
+// Stato dei processi in background (worker, backup) per il controllo di salute e il pannello admin.
+model SystemStatus {
+  key       String   @id
+  ok        Boolean  @default(true)
+  detail    String?
+  updatedAt DateTime @updatedAt
+}

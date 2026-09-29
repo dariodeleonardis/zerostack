@@ -1,5 +1,7 @@
 import React from "react";
 import { prisma } from "@zerostack/database";
+import { checkHealth, type Check as HealthCheck } from "../../lib/health";
+import { AdminAction } from "./AdminAction";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,22 @@ function Check({ ok, label, detail }: { ok: boolean; label: string; detail: stri
   );
 }
 
+const HEALTH_LABELS: Record<string, string> = { database: "Database", redis: "Redis", worker: "Worker (newsletter e post programmati)", backup: "Backup" };
+
+function ago(seconds?: number): string {
+  if (seconds === undefined) return "";
+  if (seconds < 120) return ` · ${seconds} s fa`;
+  if (seconds < 7200) return ` · ${Math.round(seconds / 60)} min fa`;
+  return ` · ${Math.round(seconds / 3600)} ore fa`;
+}
+
+function describe(c: HealthCheck): string {
+  const base = c.state === "ok" ? "funziona" : c.state === "skipped" ? "non attivo" : "problema";
+  return `${base}${c.detail ? `: ${c.detail}` : ""}${ago(c.ageSeconds)}`;
+}
+
 export default async function AdminOverviewPage() {
+  const health = await checkHealth();
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [users, unverified, suspendedUsers, publications, suspendedPubs, subscribers, paid, sent, failedCampaigns] = await Promise.all([
     prisma.user.count(),
@@ -49,6 +66,24 @@ export default async function AdminOverviewPage() {
         <Stat label="Iscritti attivi" value={subscribers} hint={`${paid} abbonamenti pagati`} />
         <Stat label="Email inviate" value={sent} hint={`ultimi 30 giorni · ${failedCampaigns} campagne interrotte`} />
       </div>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900">Stato del sistema</h2>
+        <p className="mt-1 text-xs text-gray-500">Lo stesso controllo è su /api/health: collegalo a un servizio di monitoraggio per ricevere un avviso se qualcosa si ferma.</p>
+        <ul className="mt-4 space-y-2">
+          {Object.entries(health.checks).map(([name, c]) => (
+            <Check key={name} ok={c.state !== "fail"} label={HEALTH_LABELS[name] ?? name} detail={describe(c)} />
+          ))}
+          <Check
+            ok={Boolean(env.ERROR_REPORTING_DSN || env.SENTRY_DSN)}
+            label="Segnalazione errori"
+            detail={env.ERROR_REPORTING_DSN || env.SENTRY_DSN ? "attiva (Sentry/GlitchTip)" : "manca ERROR_REPORTING_DSN: gli errori restano solo nei log"}
+          />
+        </ul>
+        <div className="mt-4">
+          <AdminAction url="/api/admin/test-error" body={{}} label="Invia un errore di prova" showMessage />
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-bold text-gray-900">Configurazione</h2>

@@ -12,10 +12,10 @@ git pull origin main
 echo "🐳 Ricostruzione container aggiornati..."
 docker compose -f docker-compose.prod.yml build --pull web worker
 
+echo "🗄️  Migrazioni database (se falliscono il sito resta sulla versione precedente)..."
+docker compose -f docker-compose.prod.yml run --rm --no-deps worker node packages/database/scripts/migrate.mjs
+
 echo "🚀 Riavvio controllato dei servizi..."
 docker compose -f docker-compose.prod.yml up -d --no-deps web worker
-
-echo "🗄️  Verifica migrazioni database..."
-docker compose -f docker-compose.prod.yml exec web npx prisma db push --schema=/app/packages/database/prisma/schema.prisma || true
 
 echo "✅ Aggiornamento completato con successo!"

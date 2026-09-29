@@ -7,6 +7,8 @@
   "scripts": {
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:migration:new": "prisma migrate dev --create-only",
     "db:seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit -p ."
   },

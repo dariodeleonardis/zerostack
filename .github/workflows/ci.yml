@@ -46,6 +46,13 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    # pg_dump e pg_restore della stessa versione del server, per il test dei backup
+    - name: PostgreSQL 16 client
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq postgresql-client-16
+        echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+
     - name: Generate Prisma Client
       run: npx prisma generate --schema=packages/database/prisma/schema.prisma
 
@@ -54,7 +61,9 @@ jobs:
 
     - name: Database schema and seed data
       run: |
-        npx prisma db push --skip-generate --schema=packages/database/prisma/schema.prisma
+        node packages/database/scripts/migrate.mjs
+        # Uno schema.prisma cambiato senza la sua migrazione farebbe fallire il deploy: lo si blocca qui.
+        npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel packages/database/prisma/schema.prisma --exit-code
         npm run db:seed
 
     - name: Build web app
