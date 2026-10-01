@@ -47,7 +47,8 @@ export default async function AdminOverviewPage() {
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [users, unverified, suspendedUsers, publications, suspendedPubs, subscribers, paid, sent, failedCampaigns] = await Promise.all([
     prisma.user.count(),
-    prisma.user.count({ where: { emailVerified: null } }),
+    // Gli amministratori non si contano: è il pannello che stanno guardando (Dario, 1/10).
+    prisma.user.count({ where: { emailVerified: null, role: { notIn: ["ADMIN", "SUPERADMIN"] } } }),
     prisma.user.count({ where: { suspendedAt: { not: null } } }),
     prisma.publication.count(),
     prisma.publication.count({ where: { suspendedAt: { not: null } } }),

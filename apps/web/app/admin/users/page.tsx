@@ -51,7 +51,16 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: {
                   </td>
                   <td className="px-4 py-3">{editable && me?.role === "SUPERADMIN" ? <RoleSelect userId={u.id} role={u.role} /> : <span className="text-xs font-bold">{u.role}</span>}</td>
                   <td className="px-4 py-3 text-xs">
-                    {u.suspendedAt ? <span className="font-bold text-rose-700">Sospeso</span> : u.emailVerified ? <span className="text-emerald-700">Attivo</span> : <span className="text-amber-700">Email da confermare</span>}
+                    {u.suspendedAt ? (
+                      <span className="font-bold text-rose-700">Sospeso</span>
+                    ) : u.role === "ADMIN" || u.role === "SUPERADMIN" ? (
+                      // Chi amministra non è un utente da tenere d'occhio: niente "Email da confermare" (Dario, 1/10).
+                      <span className="text-emerald-700">Amministratore</span>
+                    ) : u.emailVerified ? (
+                      <span className="text-emerald-700">Attivo</span>
+                    ) : (
+                      <span className="text-amber-700">Email da confermare</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs">{u._count.ownedPublications}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">{date.format(u.createdAt)}</td>
