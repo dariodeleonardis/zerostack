@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Check, Globe, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
-import { suggestSlugs } from "@zerostack/shared";
+import { normalizeSlugInput, suggestSlugs, trimSlug } from "@zerostack/shared";
 
 type SlugState =
   | { status: "idle" }
@@ -53,16 +53,19 @@ export default function NewPublicationPage() {
       .catch(() => setAuthChecked(true));
   }, [router]);
 
+  // Lo slug come si salva: il trattino finale serve solo mentre si scrive la parola successiva.
+  const finalSlug = trimSlug(slug);
+
   // Disponibilità dello slug mentre si scrive (con una breve attesa per non chiedere a ogni tasto).
   useEffect(() => {
-    if (!slug) {
+    if (!finalSlug) {
       setSlugState({ status: "idle" });
       return;
     }
     setSlugState({ status: "checking" });
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetch(`/api/publications/slug-check?slug=${encodeURIComponent(slug)}`, { signal: controller.signal })
+      fetch(`/api/publications/slug-check?slug=${encodeURIComponent(finalSlug)}`, { signal: controller.signal })
         .then((res) => res.json())
         .then((data) =>
           setSlugState(data.available ? { status: "available", url: data.url } : { status: "unavailable", message: data.message })
@@ -75,7 +78,7 @@ export default function NewPublicationPage() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [slug]);
+  }, [finalSlug]);
 
   // Disponibilità di tutti i suggerimenti insieme, con una breve attesa mentre si scrive il titolo.
   useEffect(() => {
@@ -116,7 +119,7 @@ export default function NewPublicationPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !slug.trim()) return;
+    if (!name.trim() || !finalSlug) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -127,7 +130,7 @@ export default function NewPublicationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          slug,
+          slug: finalSlug,
           description: description || undefined,
           primaryColor,
           customDomain: customDomain || undefined
@@ -202,6 +205,14 @@ export default function NewPublicationPage() {
         </div>
       </div>
 
+      <p className="rounded-xl bg-blue-50 px-4 py-3 text-xs text-blue-900">
+        Il tuo account è già attivo. Se non hai ancora deciso nome e indirizzo, puoi creare la pubblicazione più
+        tardi dallo Studio.{" "}
+        <Link href="/studio" className="font-bold underline">
+          Lo faccio dopo
+        </Link>
+      </p>
+
       <form onSubmit={handleCreate} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div>
           <label htmlFor="name" className="block text-xs font-bold text-gray-700">Nome della Pubblicazione</label>
@@ -227,8 +238,13 @@ export default function NewPublicationPage() {
               value={slug}
               onChange={(e) => {
                 setSlugTouched(true);
-                setSlug(e.target.value.toLowerCase());
+                // Spazi e caratteri non ammessi diventano trattini mentre si scrive (Dario, 1/10).
+                setSlug(normalizeSlugInput(e.target.value));
               }}
+              onBlur={() => setSlug((current) => trimSlug(current))}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="min-w-0 flex-1 bg-transparent text-right font-bold text-gray-900 focus:outline-none"
               aria-describedby="slug-status"
               required

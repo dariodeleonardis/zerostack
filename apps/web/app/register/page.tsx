@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { slugify } from "@zerostack/shared";
+import { normalizeSlugInput, slugify, trimSlug } from "@zerostack/shared";
 import { safeNext } from "../../lib/safe-next";
 
 type FieldErrors = Partial<Record<"name" | "email" | "handle" | "password", string[]>>;
@@ -34,7 +34,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, handle, password })
+        body: JSON.stringify({ name, email, handle: trimSlug(handle), password })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -82,7 +82,8 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-md py-12">
       <h1 className="text-2xl font-black text-gray-900">Crea il tuo account</h1>
       <p className="mt-1 text-xs text-gray-500">
-        Poi scegli il nome della tua newsletter: avrà un indirizzo tutto suo, tipo <strong>tuonome.zerostack.it</strong>.
+        Prima crei l&apos;account. La tua newsletter, con un indirizzo tutto suo tipo <strong>tuonome.zerostack.it</strong>,
+        la crei subito dopo oppure quando vuoi dallo <strong>Studio</strong>.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -132,8 +133,13 @@ export default function RegisterPage() {
             onChange={(e) => {
               clearField("handle");
               setHandleTouched(true);
-              setHandle(e.target.value.toLowerCase());
+              // Come per l'indirizzo della pubblicazione: spazi e caratteri non ammessi diventano trattini.
+              setHandle(normalizeSlugInput(e.target.value));
             }}
+            onBlur={() => setHandle((current) => trimSlug(current))}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             {...fieldState("handle")}
             className={inputClass("handle", "font-bold")}
             required

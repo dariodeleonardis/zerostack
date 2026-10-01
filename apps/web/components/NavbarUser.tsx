@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { PenSquare } from "lucide-react";
 
 interface Me {
@@ -13,13 +14,25 @@ interface Me {
 // Lato client: la barra sta nel layout comune e leggere la sessione sul server renderebbe dinamica ogni pagina.
 export function NavbarUser() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const pathname = usePathname();
 
+  // Si rilegge a ogni cambio di pagina: il layout resta montato durante la navigazione, e leggendo
+  // la sessione una volta sola la barra mostrava "Accedi" anche dopo il login, fino a un F5
+  // (segnalato da Dario il 1/10).
   useEffect(() => {
+    let attivo = true;
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => setMe(data.user ?? null))
-      .catch(() => setMe(null));
-  }, []);
+      .then((data) => {
+        if (attivo) setMe(data.user ?? null);
+      })
+      .catch(() => {
+        if (attivo) setMe(null);
+      });
+    return () => {
+      attivo = false;
+    };
+  }, [pathname]);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });

@@ -16,6 +16,8 @@ import {
   slugProblem,
   slugify,
   suggestSlugs,
+  normalizeSlugInput,
+  trimSlug,
   RESERVED_SUBDOMAINS
 } from "../packages/shared/src/index";
 import { NewsletterEmail, WelcomeEmail, SubscriptionConfirmationEmail, renderEmail } from "../packages/email/src/index";
@@ -505,7 +507,17 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(grottesco.includes("dario"), "suggestSlugs: c'è il nome utente dell'autore", grottesco.join(", "));
   assert(grottesco.length <= 4 && grottesco.every((s) => s.length <= 30 && slugProblem(s) === null), "suggestSlugs: al massimo 4, corti (<= 30) e tutti validi", grottesco.join(", "));
   assert(new Set(grottesco).size === grottesco.length, "suggestSlugs: nessun doppione");
-  assert(suggestSlugs("La newsletter di Mario")[0] === "mario", "suggestSlugs: tolto il formato resta l'argomento");
+  assert(suggestSlugs("La newsletter di Mario").includes("mario"), "suggestSlugs: tolto il formato resta l'argomento", suggestSlugs("La newsletter di Mario").join(", "));
+  // Titolo breve: prima il titolo intero, e la negazione non sparisce (caso segnalato da Dario il 1/10: "so-ancora").
+  const nonLoSo = suggestSlugs("Non lo so ancora", "dariodeleonardis");
+  assert(nonLoSo[0] === "non-lo-so-ancora", "suggestSlugs: titolo breve, il primo è il titolo intero", nonLoSo.join(", "));
+  assert(!nonLoSo.includes("so-ancora") && nonLoSo.every((s) => s.startsWith("non") || s === "dariodeleonardis"), "suggestSlugs: la negazione non viene tolta", nonLoSo.join(", "));
+
+  // Indirizzo scritto a mano
+  assert(normalizeSlugInput("Non lo so ancora") === "non-lo-so-ancora", "normalizeSlugInput: spazi in trattini, maiuscole in minuscole");
+  assert(normalizeSlugInput("Perché sì ") === "perche-si-", "normalizeSlugInput: accenti tolti, trattino finale tenuto mentre si scrive");
+  assert(normalizeSlugInput("  ciao  ::  mondo") === "ciao-mondo", "normalizeSlugInput: più separatori diventano un solo trattino, niente trattino in testa");
+  assert(trimSlug("non-lo-so-") === "non-lo-so" && slugProblem(trimSlug(normalizeSlugInput("Non lo so "))) === null, "trimSlug: quello che si salva è valido");
   assert(suggestSlugs("Il Blog").every((s) => slugProblem(s) === null), "suggestSlugs: niente indirizzi riservati (blog)", suggestSlugs("Il Blog").join(", "));
   assert(suggestSlugs("").length === 0, "suggestSlugs: titolo vuoto, nessun suggerimento");
   assert(suggestSlugs("Perché l'Economia è Così Complicata Oggi").every((s) => !/[^a-z0-9-]/.test(s)), "suggestSlugs: accenti e apostrofi tolti");
