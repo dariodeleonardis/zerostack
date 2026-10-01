@@ -19,7 +19,10 @@ RUN npm install
 # Stage 2: Builder
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Tutta /app e non solo node_modules: npm mette alcune librerie nelle cartelle dei singoli
+# workspace (apps/web/node_modules/@tiptap/react, packages/email/node_modules/@react-email/render).
+# Copiando solo la cartella principale la build falliva con "Module not found" (deploy del 1/10).
+COPY --from=deps /app ./
 COPY . .
 
 # Generate Prisma client
