@@ -2,6 +2,8 @@ import React from "react";
 import { prisma } from "@zerostack/database";
 import { checkHealth, type Check as HealthCheck } from "../../lib/health";
 import { AdminAction } from "./AdminAction";
+import { CourtesyPanel } from "./CourtesyPanel";
+import { COURTESY_MESSAGE_MAX, DEFAULT_COURTESY_MESSAGE, getCourtesy } from "../../lib/courtesy";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +43,7 @@ function describe(c: HealthCheck): string {
 }
 
 export default async function AdminOverviewPage() {
-  const health = await checkHealth();
+  const [health, courtesy] = await Promise.all([checkHealth(), getCourtesy()]);
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [users, unverified, suspendedUsers, publications, suspendedPubs, subscribers, paid, sent, failedCampaigns] = await Promise.all([
     prisma.user.count(),
@@ -60,6 +62,12 @@ export default async function AdminOverviewPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <h1 className="text-2xl font-black text-gray-900">Panoramica</h1>
+      <CourtesyPanel
+        enabled={courtesy.enabled}
+        customMessage={courtesy.customMessage}
+        defaultMessage={DEFAULT_COURTESY_MESSAGE}
+        maxLength={COURTESY_MESSAGE_MAX}
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Utenti" value={users} hint={`${unverified} senza email confermata · ${suspendedUsers} sospesi`} />
         <Stat label="Pubblicazioni" value={publications} hint={`${suspendedPubs} sospese`} />

@@ -14,6 +14,7 @@ interface Me {
 // Lato client: la barra sta nel layout comune e leggere la sessione sul server renderebbe dinamica ogni pagina.
 export function NavbarUser() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [courtesy, setCourtesy] = useState(false);
   const pathname = usePathname();
 
   // Si rilegge a ogni cambio di pagina: il layout resta montato durante la navigazione, e leggendo
@@ -24,7 +25,9 @@ export function NavbarUser() {
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (attivo) setMe(data.user ?? null);
+        if (!attivo) return;
+        setMe(data.user ?? null);
+        setCourtesy(data.courtesy === true);
       })
       .catch(() => {
         if (attivo) setMe(null);
@@ -57,6 +60,15 @@ export function NavbarUser() {
   const isAdmin = me.role === "ADMIN" || me.role === "SUPERADMIN";
   return (
     <div className="flex items-center gap-3">
+      {isAdmin && courtesy && (
+        <Link
+          href="/admin"
+          title="I visitatori vedono la pagina di cortesia. Si spegne dal pannello di amministrazione."
+          className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-200"
+        >
+          Sito chiuso ai visitatori
+        </Link>
+      )}
       {isAdmin && (
         <Link href="/admin" className="hidden items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 sm:inline-flex">
           Admin

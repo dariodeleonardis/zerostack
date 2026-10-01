@@ -60,7 +60,8 @@ for suite in \
   "node scripts/test-foundations.mjs" \
   "node scripts/test-launch.mjs" \
   "node scripts/test-operations.mjs" \
-  "node scripts/test-invoicing.mjs"; do
+  "node scripts/test-invoicing.mjs" \
+  "node scripts/test-courtesy.mjs"; do
   flush
   echo "::group::$suite"
   if ! $suite; then failed=1; echo "❌ $suite"; fi
