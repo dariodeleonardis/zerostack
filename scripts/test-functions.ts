@@ -15,6 +15,7 @@ import {
   SlugSchema,
   slugProblem,
   slugify,
+  suggestSlugs,
   RESERVED_SUBDOMAINS
 } from "../packages/shared/src/index";
 import { NewsletterEmail, WelcomeEmail, SubscriptionConfirmationEmail, renderEmail } from "../packages/email/src/index";
@@ -494,6 +495,20 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(slugify("Perché è così") === "perche-e-cosi", "slugify: accenti italiani tolti");
   assert(slugify("  --Ciao--  ") === "ciao", "slugify: niente trattini in testa o in coda");
   assert(slugify("a".repeat(39) + " bcd").length <= 40 && !slugify("a".repeat(39) + " bcd").endsWith("-"), "slugify: taglio a 40 caratteri senza trattino finale");
+  // Il caso segnalato da Dario il 1/10: il titolo intero diventava "...-mondo-del", tagliato a metà parola.
+  assert(slugify("Questa settimana nel grottesco mondo dell'IA") === "questa-settimana-nel-grottesco-mondo", "slugify: oltre 40 caratteri taglia a fine parola, non a metà");
+
+  // Indirizzi suggeriti dal titolo libero della pubblicazione
+  const grottesco = suggestSlugs("Questa settimana nel grottesco mondo dell'IA", "dario");
+  assert(grottesco[0] === "grottesco-mondo-ia", "suggestSlugs: il primo toglie articoli, preposizioni e parole di formato", grottesco.join(", "));
+  assert(grottesco.includes("grottesco-ia"), "suggestSlugs: c'è la variante prima e ultima parola", grottesco.join(", "));
+  assert(grottesco.includes("dario"), "suggestSlugs: c'è il nome utente dell'autore", grottesco.join(", "));
+  assert(grottesco.length <= 4 && grottesco.every((s) => s.length <= 30 && slugProblem(s) === null), "suggestSlugs: al massimo 4, corti (<= 30) e tutti validi", grottesco.join(", "));
+  assert(new Set(grottesco).size === grottesco.length, "suggestSlugs: nessun doppione");
+  assert(suggestSlugs("La newsletter di Mario")[0] === "mario", "suggestSlugs: tolto il formato resta l'argomento");
+  assert(suggestSlugs("Il Blog").every((s) => slugProblem(s) === null), "suggestSlugs: niente indirizzi riservati (blog)", suggestSlugs("Il Blog").join(", "));
+  assert(suggestSlugs("").length === 0, "suggestSlugs: titolo vuoto, nessun suggerimento");
+  assert(suggestSlugs("Perché l'Economia è Così Complicata Oggi").every((s) => !/[^a-z0-9-]/.test(s)), "suggestSlugs: accenti e apostrofi tolti");
 
   // --------------------------------------------------------------------------
   // TEST GRUPPO 13: Registrazione e accesso

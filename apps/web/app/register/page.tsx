@@ -38,8 +38,17 @@ export default function RegisterPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Registrazione non riuscita");
-        setFields(data.fields ?? {});
+        const fieldErrors: FieldErrors = data.fields ?? {};
+        setFields(fieldErrors);
+        // Il messaggio va sotto il campo sbagliato. Il riquadro generale, che sta sotto la password,
+        // resta per gli errori senza campo: ripeterci l'errore del nome utente lo faceva sembrare
+        // un errore della password (segnalato da Dario il 1/10).
+        const firstField = (["name", "email", "handle", "password"] as const).find((key) => fieldErrors[key]?.length);
+        if (firstField) {
+          document.getElementById(firstField)?.focus();
+        } else {
+          setError(data.error ?? "Registrazione non riuscita");
+        }
         return;
       }
       // Chi arriva da un checkout torna lì; chi si registra da zero va a creare la sua pubblicazione.
@@ -53,7 +62,21 @@ export default function RegisterPage() {
   };
 
   const fieldError = (key: keyof FieldErrors) =>
-    fields[key]?.[0] ? <p className="mt-1 text-[11px] font-semibold text-rose-600">{fields[key]?.[0]}</p> : null;
+    fields[key]?.[0] ? <p id={`${key}-errore`} className="mt-1 text-[11px] font-semibold text-rose-600">{fields[key]?.[0]}</p> : null;
+
+  // Bordo rosso e collegamento al messaggio per chi usa un lettore di schermo.
+  const fieldState = (key: keyof FieldErrors) =>
+    fields[key]?.length
+      ? { "aria-invalid": true, "aria-describedby": `${key}-errore` }
+      : { "aria-invalid": false };
+  // Chi corregge un campo non deve continuare a vedere il vecchio errore.
+  const clearField = (key: keyof FieldErrors) => {
+    if (fields[key]?.length) setFields((prev) => ({ ...prev, [key]: undefined }));
+  };
+  const inputClass = (key: keyof FieldErrors, extra = "") =>
+    `mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${extra} ${
+      fields[key]?.length ? "border-rose-400 bg-rose-50/40 focus:border-rose-500" : "border-gray-200 focus:border-blue-500"
+    }`;
 
   return (
     <div className="mx-auto max-w-md py-12">
@@ -70,8 +93,12 @@ export default function RegisterPage() {
             type="text"
             autoComplete="name"
             value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            onChange={(e) => {
+              clearField("name");
+              handleNameChange(e.target.value);
+            }}
+            {...fieldState("name")}
+            className={inputClass("name")}
             required
           />
           {fieldError("name")}
@@ -84,8 +111,12 @@ export default function RegisterPage() {
             type="email"
             autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            onChange={(e) => {
+              clearField("email");
+              setEmail(e.target.value);
+            }}
+            {...fieldState("email")}
+            className={inputClass("email")}
             required
           />
           {fieldError("email")}
@@ -99,10 +130,12 @@ export default function RegisterPage() {
             autoComplete="username"
             value={handle}
             onChange={(e) => {
+              clearField("handle");
               setHandleTouched(true);
               setHandle(e.target.value.toLowerCase());
             }}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold focus:border-blue-500 focus:outline-none"
+            {...fieldState("handle")}
+            className={inputClass("handle", "font-bold")}
             required
           />
           <p className="mt-1 text-[11px] text-gray-400">Lettere minuscole, numeri e trattini. Nessun altro potrà usarlo come indirizzo.</p>
@@ -117,8 +150,12 @@ export default function RegisterPage() {
             autoComplete="new-password"
             minLength={10}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            onChange={(e) => {
+              clearField("password");
+              setPassword(e.target.value);
+            }}
+            {...fieldState("password")}
+            className={inputClass("password")}
             required
           />
           <p className="mt-1 text-[11px] text-gray-400">Almeno 10 caratteri.</p>

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Check, Globe, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
-import { slugify } from "@zerostack/shared";
+import { suggestSlugs } from "@zerostack/shared";
 
 type SlugState =
   | { status: "idle" }
@@ -29,6 +29,13 @@ export default function NewPublicationPage() {
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<FieldErrors>({});
   const [created, setCreated] = useState<{ name: string; url: string } | null>(null);
+  const [handle, setHandle] = useState<string | undefined>(undefined);
+  // Disponibilità dei suggerimenti: true libero, false preso o riservato, assente = non ancora controllato.
+  const [suggestionStatus, setSuggestionStatus] = useState<Record<string, boolean>>({});
+
+  // Il titolo è libero; l'indirizzo no: dal titolo si propongono indirizzi brevi, senza articoli e
+  // preposizioni (prima l'indirizzo era il titolo intero, troncato a metà parola).
+  const suggestions = useMemo(() => suggestSlugs(name, handle), [name, handle]);
 
   // Serve un account: chi non ha fatto l'accesso va al login e poi torna qui.
   useEffect(() => {
@@ -36,6 +43,7 @@ export default function NewPublicationPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (data.rootDomain) setRootDomain(data.rootDomain);
+        if (data.user?.handle) setHandle(data.user.handle);
         if (res.status === 401) {
           router.replace("/login?next=/studio/publications/new");
           return;
@@ -69,9 +77,41 @@ export default function NewPublicationPage() {
     };
   }, [slug]);
 
+  // Disponibilità di tutti i suggerimenti insieme, con una breve attesa mentre si scrive il titolo.
+  useEffect(() => {
+    if (suggestions.length === 0) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      Promise.all(
+        suggestions.map((candidate) =>
+          fetch(`/api/publications/slug-check?slug=${encodeURIComponent(candidate)}`, { signal: controller.signal })
+            .then((res) => res.json())
+            .then((data) => [candidate, Boolean(data.available)] as const)
+        )
+      )
+        .then((entries) => setSuggestionStatus((prev) => ({ ...prev, ...Object.fromEntries(entries) })))
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [suggestions]);
+
+  // Finché l'autore non sceglie da sé, l'indirizzo è il primo suggerimento libero.
+  useEffect(() => {
+    if (slugTouched) return;
+    const firstFree = suggestions.find((candidate) => suggestionStatus[candidate] === true);
+    setSlug(firstFree ?? suggestions[0] ?? "");
+  }, [suggestions, suggestionStatus, slugTouched]);
+
   const handleNameChange = (val: string) => {
     setName(val);
-    if (!slugTouched) setSlug(slugify(val));
+  };
+
+  const chooseSuggestion = (candidate: string) => {
+    setSlugTouched(true);
+    setSlug(candidate);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -208,6 +248,40 @@ export default function NewPublicationPage() {
               </span>
             )}
           </p>
+          {suggestions.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-semibold text-gray-500">
+                Indirizzi brevi suggeriti dal nome (più facili da ricordare e da trovare):
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Indirizzi suggeriti">
+                {suggestions.map((candidate) => {
+                  const status = suggestionStatus[candidate];
+                  const selected = candidate === slug;
+                  return (
+                    <button
+                      key={candidate}
+                      type="button"
+                      onClick={() => chooseSuggestion(candidate)}
+                      disabled={status === false}
+                      aria-pressed={selected}
+                      title={status === false ? "Già in uso" : `${candidate}.${rootDomain}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                        selected
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : status === false
+                            ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 line-through"
+                            : "border-gray-300 bg-white text-gray-800 hover:border-blue-500 hover:text-blue-700"
+                      }`}
+                    >
+                      {status === true && !selected && <Check className="h-3 w-3 text-emerald-600" />}
+                      {status === false && <X className="h-3 w-3" />}
+                      {candidate}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {fieldError("slug")}
         </div>
 
