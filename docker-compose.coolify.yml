@@ -79,6 +79,8 @@ services:
       LEGAL_VAT_NUMBER: ${LEGAL_VAT_NUMBER:-}
       LEGAL_ADDRESS: ${LEGAL_ADDRESS:-}
       LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+      # Data di "ultimo aggiornamento" delle pagine legali (es. "1 ottobre 2026")
+      LEGAL_UPDATED_AT: ${LEGAL_UPDATED_AT:-}
       SDI_ID_TRASMITTENTE: ${SDI_ID_TRASMITTENTE:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
