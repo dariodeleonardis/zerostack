@@ -2,17 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Rss,
-  Headphones,
-  Share2,
-  Heart,
-  Check,
-  ArrowRight,
-  Mail,
-  CheckCircle2
-} from "lucide-react";
-import { TipJar } from "../../../components/TipJar";
+import { Rss, Headphones, Share2, Check, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export interface PublicationViewProps {
   publicationId: string;
@@ -21,7 +11,11 @@ export interface PublicationViewProps {
   name: string;
   description: string | null;
   authorName: string;
-  primaryColor: string;
+  logoUrl: string | null;
+  /** Variabili --pub-* calcolate sul server da lib/colors.ts (colori dell'autore, contrasto garantito). */
+  paletteStyle: Record<string, string>;
+  titleFont: string;
+  bodyFont: string;
   subscriberCount: number;
   articles: {
     slug: string;
@@ -30,7 +24,6 @@ export interface PublicationViewProps {
     date: string;
     readTime: string;
     isPaidOnly: boolean;
-    likes: number;
   }[];
   tiers: {
     id: string;
@@ -42,6 +35,10 @@ export interface PublicationViewProps {
   }[];
 }
 
+/**
+ * Pagina di una pubblicazione: testata e colori sono dell'autore, l'impaginazione resta quella di
+ * ZeroStack (filetti, sommario da giornale). Ogni colore passa dalle variabili --pub-*.
+ */
 export function PublicationView({
   publicationId,
   checkoutBaseUrl,
@@ -49,7 +46,10 @@ export function PublicationView({
   name,
   description,
   authorName,
-  primaryColor,
+  logoUrl,
+  paletteStyle,
+  titleFont,
+  bodyFont,
   subscriberCount,
   articles,
   tiers
@@ -90,241 +90,159 @@ export function PublicationView({
     }
   };
 
-  const handleShare = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Appunti non disponibili (pagina non sicura o permesso negato): niente da fare.
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50/50 pb-20">
-      {/* Cover / Header Banner nel colore scelto dall'autore */}
-      <div className="h-44 w-full shadow-inner" style={{ backgroundColor: primaryColor }} />
+  const chip =
+    "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--pub-on-accent)] px-3 py-1.5 text-xs font-bold text-[color:var(--pub-on-accent)] transition hover:bg-[color:var(--pub-on-accent)] hover:text-[color:var(--pub-accent)]";
 
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 -mt-16">
-        {/* Profile Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="h-20 w-20 overflow-hidden rounded-2xl font-extrabold text-white text-3xl flex items-center justify-center shadow-md"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {name.charAt(0).toUpperCase()}
-              </div>
+  return (
+    <div style={paletteStyle as React.CSSProperties} className={`min-h-screen bg-[color:var(--pub-bg)] pb-20 text-[color:var(--pub-text)] ${bodyFont}`}>
+      {/* Testata nel colore dell'autore */}
+      <header className="bg-[color:var(--pub-accent)] text-[color:var(--pub-on-accent)]">
+        <div className="mx-auto max-w-4xl px-4 pb-12 pt-14 sm:px-6">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-center gap-5">
+              <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-[color:var(--pub-on-accent)] font-display text-4xl font-extrabold sm:h-24 sm:w-24">
+                {logoUrl ? <img src={logoUrl} alt="" className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+              </span>
               <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight sm:text-3xl">
-                  {name}
-                </h1>
-                <p className="text-xs font-semibold text-blue-600 mt-0.5">
-                  Di {authorName}
-                  {subscriberCount > 0 && (
-                    <>
-                      {" "}&bull; <span className="text-gray-500">{subscriberCount} lettori iscritti</span>
-                    </>
-                  )}
-                </p>
+                <p className="kicker opacity-90">Di {authorName}</p>
+                <h1 className={`mt-1 text-4xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl ${titleFont}`}>{name}</h1>
               </div>
             </div>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
-              <Link
-                href={`/api/feed/${slug}/rss`}
-                target="_blank"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
-                title="Feed RSS"
-              >
-                <Rss className="h-3.5 w-3.5 text-amber-500" /> RSS
+            <div className="flex flex-wrap items-center gap-2 font-sans">
+              <Link href={`/api/feed/${slug}/rss`} target="_blank" className={chip} title="Feed RSS">
+                <Rss className="h-3.5 w-3.5" aria-hidden /> RSS
               </Link>
-
-              <Link
-                href={`/api/feed/${slug}/podcast`}
-                target="_blank"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
-                title="Feed Podcast"
-              >
-                <Headphones className="h-3.5 w-3.5 text-purple-600" /> Podcast
+              <Link href={`/api/feed/${slug}/podcast`} target="_blank" className={chip} title="Feed del podcast">
+                <Headphones className="h-3.5 w-3.5" aria-hidden /> Podcast
               </Link>
-
-              <button
-                type="button"
-                onClick={handleShare}
-                className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-700 hover:bg-gray-50"
-                title="Condividi"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Share2 className="h-3.5 w-3.5" />}
+              <button type="button" onClick={handleShare} className={chip} aria-label="Copia il link della pubblicazione">
+                {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Share2 className="h-3.5 w-3.5" aria-hidden />}
+                {copied ? "Copiato" : "Condividi"}
               </button>
             </div>
           </div>
+          {description && <p className="mt-8 max-w-2xl text-xl leading-relaxed">{description}</p>}
+          {subscriberCount > 0 && <p className="kicker mt-4 opacity-90">{subscriberCount} lettori iscritti</p>}
+        </div>
+      </header>
 
-          {description && (
-            <p className="mt-4 text-sm text-gray-600 leading-relaxed">
-              {description}
+      <main className="mx-auto max-w-4xl px-4 sm:px-6">
+        {/* Iscrizione: il gesto principale della pagina */}
+        <section aria-label="Iscriviti alla newsletter" className="-mt-6 border-2 border-[color:var(--pub-text)] bg-[color:var(--pub-bg)] p-5 font-sans sm:p-6">
+          {justConfirmed ? (
+            <p className="flex items-center gap-2 text-base font-bold">
+              <CheckCircle2 className="h-5 w-5" aria-hidden /> Iscrizione confermata: riceverai i prossimi articoli via email.
             </p>
-          )}
-
-          {/* Sottoscrizione Newsletter Rapida */}
-          <div className="mt-6 rounded-xl bg-blue-50/60 p-4 border border-blue-100">
-            {justConfirmed ? (
-              <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <span>Iscrizione confermata: riceverai i prossimi articoli via email.</span>
-              </div>
-            ) : isSubscribed ? (
-              <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                <Check className="h-5 w-5 text-emerald-600" />
-                <span>{subscribeMessage}</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="email"
-                  required
-                  placeholder="Inserisci la tua email migliore..."
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={subscribeState === "sending"}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-60"
-                >
-                  <Mail className="h-4 w-4" />
-                  <span>{subscribeState === "sending" ? "Invio..." : "Iscriviti Gratis"}</span>
-                </button>
-              </form>
-            )}
-            {subscribeState === "error" && <p className="mt-2 text-xs font-semibold text-rose-600">{subscribeMessage}</p>}
-            {!isSubscribed && !justConfirmed && (
-              <p className="mt-2 text-[11px] text-gray-500">
-                Riceverai un&apos;email di conferma. Puoi disiscriverti con un clic da ogni newsletter.{" "}
-                <a href={`${checkoutBaseUrl}/privacy`} className="underline">Privacy</a>
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Tip Jar Component */}
-        <div className="mt-8">
-          <TipJar
-            creatorName={authorName}
-            publicationSlug={slug}
-            allowPayPerArticle={false}
-          />
-        </div>
-
-        {/* Lista Articoli / Feed */}
-        <section className="mt-10">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-            <h2 className="text-xl font-black text-gray-900">Ultimi Articoli & Analisi</h2>
-            <span className="text-xs font-semibold text-gray-500">Archivio pubblico</span>
-          </div>
-
-          {articles.length === 0 ? (
-            <p className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
-              Ancora nessun articolo pubblicato. Iscriviti per ricevere il primo.
+          ) : isSubscribed ? (
+            <p role="status" className="flex items-center gap-2 text-base font-bold">
+              <Check className="h-5 w-5" aria-hidden /> {subscribeMessage}
             </p>
           ) : (
-            <div className="mt-6 space-y-4">
+            <form onSubmit={handleSubscribe} className="flex flex-col gap-3 sm:flex-row">
+              <label htmlFor="iscrizione-email" className="sr-only">La tua email</label>
+              <input
+                id="iscrizione-email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="nome@esempio.it"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 rounded-full border-2 border-[color:var(--pub-text)] bg-white px-5 py-3 text-base text-ink placeholder-gray-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={subscribeState === "sending"}
+                className="rounded-full bg-[color:var(--pub-accent)] px-7 py-3 text-base font-bold text-[color:var(--pub-on-accent)] ring-2 ring-[color:var(--pub-text)] transition hover:opacity-90 disabled:opacity-60"
+              >
+                {subscribeState === "sending" ? "Invio…" : "Iscriviti gratis"}
+              </button>
+            </form>
+          )}
+          {subscribeState === "error" && <p role="alert" className="mt-3 text-sm font-semibold text-rose-700">{subscribeMessage}</p>}
+          {!isSubscribed && !justConfirmed && (
+            <p className="mt-3 text-sm opacity-80">
+              Ti arriva un&apos;email di conferma. Ti disiscrivi con un clic da ogni newsletter.{" "}
+              <a href={`${checkoutBaseUrl}/privacy`} className="underline underline-offset-4">Privacy</a>
+            </p>
+          )}
+        </section>
+
+        {/* Archivio: sommario da giornale */}
+        <section className="mt-16">
+          <h2 className={`border-b-[3px] border-[color:var(--pub-text)] pb-3 text-3xl font-extrabold tracking-tight ${titleFont}`}>Articoli</h2>
+          {articles.length === 0 ? (
+            <p className="py-10 text-center text-lg italic opacity-80">Il primo articolo deve ancora uscire. Iscriviti per riceverlo.</p>
+          ) : (
+            <ol className="divide-y divide-[color:var(--pub-text)]">
               {articles.map((article) => (
-                <article
-                  key={article.slug}
-                  className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-300 hover:shadow-md"
-                >
-                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                    <span>{article.date}</span>
-                    <span>&bull;</span>
-                    <span>{article.readTime} di lettura</span>
-                    {article.isPaidOnly && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                        Riservato Abbonati
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="mt-2 text-xl font-bold text-gray-900 group-hover:text-blue-600 transition">
-                    <Link href={`/p/${slug}/${article.slug}`}>
-                      {article.title}
-                    </Link>
-                  </h3>
-
-                  {article.excerpt && (
-                    <p className="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-2">
-                      {article.excerpt}
+                <li key={article.slug}>
+                  <Link href={`/p/${slug}/${article.slug}`} className="group block py-8">
+                    <p className="kicker flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-[color:var(--pub-accent-text)]">
+                      <span>{article.date}</span>
+                      <span aria-hidden>·</span>
+                      <span>{article.readTime} di lettura</span>
+                      {article.isPaidOnly && (
+                        <span className="rounded-full bg-[color:var(--pub-accent)] px-2 py-0.5 text-[color:var(--pub-on-accent)]">Per gli abbonati</span>
+                      )}
                     </p>
-                  )}
-
-                  <div className="mt-4 flex items-center justify-between pt-2 border-t border-gray-100 text-xs text-gray-500">
-                    <div className="flex items-center gap-1.5 text-rose-500">
-                      <Heart className="h-3.5 w-3.5 fill-rose-500" />
-                      <span>{article.likes} apprezzamenti</span>
-                    </div>
-
-                    <Link
-                      href={`/p/${slug}/${article.slug}`}
-                      className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700"
-                    >
-                      Leggi articolo <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </article>
+                    <h3 className={`mt-3 text-2xl font-bold leading-snug group-hover:underline sm:text-3xl ${titleFont}`}>{article.title}</h3>
+                    {article.excerpt && <p className="mt-2 line-clamp-2 text-lg leading-relaxed opacity-90">{article.excerpt}</p>}
+                    <span className="mt-3 inline-flex items-center gap-1 font-sans text-sm font-bold">
+                      Leggi <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden />
+                    </span>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
         </section>
 
         {/* Abbonamenti: solo quelli che l'autore ha davvero creato */}
         {tiers.length > 0 && (
-          <section className="mt-12 rounded-2xl border-2 border-blue-500/20 bg-gradient-to-b from-blue-50/50 to-white p-6 sm:p-8">
-            <div className="text-center max-w-lg mx-auto">
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                Supporto Indipendente
-              </span>
-              <h3 className="mt-3 text-2xl font-black text-gray-900">
-                Diventa un Abbonato Sostenitore
-              </h3>
-
+          <section className="mt-16 font-sans">
+            <h2 className={`border-b-[3px] border-[color:var(--pub-text)] pb-3 text-3xl font-extrabold tracking-tight ${titleFont}`}>Sostieni {name}</h2>
+            <div className="mt-8 grid gap-6 sm:grid-cols-2">
               {tiers.map((tier) => (
-                <div key={tier.id} className="mt-6 rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm">
-                  <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
-                    <div>
-                      <h4 className="font-bold text-gray-900">{tier.name}</h4>
-                      <p className="text-xs text-gray-500">{tier.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-3xl font-black text-gray-900">{tier.price}</span>
-                      <span className="text-xs text-gray-500"> {tier.interval}</span>
-                    </div>
-                  </div>
-
+                <div key={tier.id} className="flex flex-col border-2 border-[color:var(--pub-text)] p-6">
+                  <h3 className="kicker">{tier.name}</h3>
+                  <p className="mt-3">
+                    <span className={`text-5xl font-extrabold tracking-tight ${titleFont}`}>{tier.price}</span>
+                    <span className="text-sm opacity-80"> {tier.interval}</span>
+                  </p>
+                  {tier.description && <p className="mt-3 text-base opacity-90">{tier.description}</p>}
                   {tier.benefits.length > 0 && (
-                    <ul className="mt-4 space-y-2 text-xs text-gray-700">
+                    <ul className="mt-4 space-y-2 text-base">
                       {tier.benefits.map((benefit) => (
-                        <li key={benefit} className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <li key={benefit} className="flex items-start gap-2">
+                          <Check className="mt-1 h-4 w-4 shrink-0" aria-hidden />
                           <span>{benefit}</span>
                         </li>
                       ))}
                     </ul>
                   )}
-
-                  <div className="mt-6">
-                    <Link
-                      href={`${checkoutBaseUrl}/checkout/${tier.id}`}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition"
-                    >
-                      Abbonati a {tier.price} {tier.interval}
-                    </Link>
-                  </div>
+                  <Link
+                    href={`${checkoutBaseUrl}/checkout/${tier.id}`}
+                    className="mt-6 block rounded-full bg-[color:var(--pub-accent)] py-3 text-center text-base font-bold text-[color:var(--pub-on-accent)] ring-2 ring-[color:var(--pub-text)] transition hover:opacity-90"
+                  >
+                    Abbonati a {tier.price} {tier.interval}
+                  </Link>
                 </div>
               ))}
             </div>
           </section>
         )}
+
       </main>
     </div>
   );

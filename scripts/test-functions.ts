@@ -31,6 +31,8 @@ import { createHash, createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { sessionCookieDomain } from "../apps/web/lib/auth";
+import { contrast, publicationFont, publicationPalette, readableOn, textSafe } from "../apps/web/lib/colors";
+import { AppearanceSchema } from "../packages/shared/src/index";
 import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
 import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
 import http from "http";
@@ -722,6 +724,22 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   const otherSalt = generateDailyVisitorHash("203.0.113.7", "ua", "pub", "2026-10-02");
   const knownOldSalt = createHash("sha256").update("203.0.113.7-ua-pub-2026-10-02-zerostack-privacy-salt-2026").digest("hex").substring(0, 16);
   assert(otherSalt !== knownOldSalt, "Statistiche: il sale non è più quello scritto nel repository pubblico");
+
+  // --------------------------------------------------------------------------
+  // Colori delle pubblicazioni: sempre leggibili
+  // --------------------------------------------------------------------------
+  console.log("\n🎨 Colori delle pubblicazioni");
+  assert(Math.round(contrast("#000000", "#FFFFFF")) === 21 && contrast("#777777", "#777777") === 1, "Contrasto WCAG: nero su bianco 21, uguale su uguale 1");
+  assert(readableOn("#F2B705") === "#141210" && readableOn("#1C3F94") === "#FFFFFF", "Testo sul colore: inchiostro sul giallo, bianco sul blu");
+  const saffronText = textSafe("#F2B705", "#FBF8F2");
+  assert(saffronText !== "#F2B705" && contrast(saffronText, "#FBF8F2") >= 4.5, "Il giallo come testo su carta viene scurito fino a 4,5:1", saffronText);
+  assert(textSafe("#1F4D3A", "#F4F1E8") === "#1F4D3A", "Un colore già leggibile non viene toccato");
+  assert(contrast(textSafe("#3A342C", "#141210"), "#141210") >= 4.5, "Su fondo scuro il colore viene schiarito");
+  assert(contrast(textSafe("#808080", "#7A7A7A"), "#7A7A7A") >= 4.5, "Fondo di media luminanza: si ripiega su inchiostro o bianco");
+  const fallback = publicationPalette("rosso", "#12");
+  assert(fallback.accent === "#141210" && fallback.bg === "#FBF8F2", "Colori non validi nel database: si usano inchiostro e carta");
+  assert(publicationFont("comic").label === "Editoriale" && publicationFont("sans").label === "Moderno", "Caratteri sconosciuti: si usa Editoriale");
+  assert(AppearanceSchema.safeParse({ primaryColor: "#A8322D", backgroundColor: "#ffffff", fontStyle: "serif" }).success && !AppearanceSchema.safeParse({ primaryColor: "red", backgroundColor: "#ffffff", fontStyle: "serif" }).success, "Aspetto: colori esadecimali e solo i tre caratteri");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

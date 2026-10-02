@@ -165,7 +165,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         disabled={hasPaywall}
         onClick={() => editor.chain().focus().insertContent([{ type: "paywallDivider" }, { type: "paragraph" }]).run()}
         title="Quello che scrivi sotto il divisore lo leggono solo gli abbonati paganti"
-        className="flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-lg border border-saffron-200 bg-saffron-50 px-2.5 py-1.5 text-xs font-bold text-ink-700 hover:bg-saffron-100 disabled:opacity-40"
       >
         <Lock className="h-3.5 w-3.5" />
         {hasPaywall ? "Paywall inserito" : "Inserisci paywall"}
@@ -290,9 +290,9 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
   if (publications.length === 0) {
     return (
       <div className="mx-auto max-w-xl py-16 text-center">
-        <h1 className="text-2xl font-black text-gray-900">Prima crea una pubblicazione</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Prima crea una pubblicazione</h1>
         <p className="mt-2 text-sm text-gray-600">Ogni articolo appartiene a una pubblicazione con il suo indirizzo e i suoi iscritti.</p>
-        <Link href="/studio/publications/new" className="mt-6 inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+        <Link href="/studio/publications/new" className="mt-6 inline-block rounded-xl bg-ink-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-ink-700">
           Crea la pubblicazione
         </Link>
       </div>
@@ -310,7 +310,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-bold text-gray-700">{STATUS_LABEL[post.status]}</span>
           )}
           {isPublished && post && (
-            <a href={post.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+            <a href={post.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs font-semibold text-ink-600 hover:underline">
               Apri <ExternalLink className="h-3 w-3" />
             </a>
           )}
@@ -332,7 +332,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
             onClick={() => save("publish")}
             disabled={pending !== null || !editor || !canPublish}
             title={canPublish ? undefined : "Solo proprietari ed editor possono pubblicare"}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-ink-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-ink-700 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
             {pending === "publish" ? "Invio..." : isPublished ? "Aggiorna" : sendEmail ? "Pubblica e invia" : "Pubblica"}
@@ -358,7 +358,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={200}
-            className="w-full border-none bg-transparent text-3xl font-black text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-0"
+            className="w-full border-none bg-transparent font-display text-4xl font-extrabold tracking-tight text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-0"
           />
           <input
             type="text"
@@ -437,7 +437,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-700">
                 <input type="radio" name="access" checked={access === "PAID_SUBSCRIBERS"} onChange={() => setAccess("PAID_SUBSCRIBERS")} />
-                <span className="flex items-center gap-1 text-purple-700">
+                <span className="flex items-center gap-1 text-ink-700">
                   <Lock className="h-3 w-3" /> Solo abbonati paganti
                 </span>
               </label>
@@ -455,7 +455,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
               <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-700">
                 <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
                 <span className="flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-blue-600" /> Invia per email agli iscritti
+                  <Mail className="h-3.5 w-3.5 text-ink-600" /> Invia per email agli iscritti
                 </span>
               </label>
 

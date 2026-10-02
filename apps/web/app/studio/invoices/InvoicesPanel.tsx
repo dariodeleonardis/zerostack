@@ -103,7 +103,7 @@ function PublicationInvoices({ publication }: { publication: InvoicePublication 
 
   return (
     <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="border-b border-gray-100 pb-3 text-lg font-black text-gray-900">{publication.name}</h2>
+      <h2 className="border-b border-gray-100 pb-3 font-display text-lg font-extrabold text-gray-900">{publication.name}</h2>
 
       <form onSubmit={save} className="space-y-4">
         <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">

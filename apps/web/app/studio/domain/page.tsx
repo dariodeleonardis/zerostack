@@ -27,7 +27,7 @@ export default async function DomainPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="border-b border-gray-200 pb-5">
-        <h1 className="text-2xl font-black text-gray-900">Dominio personalizzato</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Dominio personalizzato</h1>
         <p className="mt-1 text-sm text-gray-600">
           Pubblica anche su un indirizzo tuo, gratis. Il certificato HTTPS arriva da solo dopo la verifica.
         </p>

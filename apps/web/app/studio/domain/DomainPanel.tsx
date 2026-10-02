@@ -57,7 +57,7 @@ function PublicationDomain({ publication }: { publication: DomainPublication }) 
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="border-b border-gray-100 pb-3 text-lg font-black text-gray-900">{publication.name}</h2>
+      <h2 className="border-b border-gray-100 pb-3 font-display text-lg font-extrabold text-gray-900">{publication.name}</h2>
       <p className="mt-3 text-xs text-gray-500">
         Indirizzo sulla piattaforma: <strong className="text-gray-800">{publication.platformAddress}</strong> (sempre attivo)
       </p>
@@ -111,7 +111,7 @@ function PublicationDomain({ publication }: { publication: DomainPublication }) 
               <Row label="Tipo" value="TXT" />
               <Row label="Nome" value={publication.txtName} />
               <Row label="Valore" value={publication.txtValue} />
-              <button type="button" onClick={verify} disabled={pending} className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+              <button type="button" onClick={verify} disabled={pending} className="mt-2 rounded-lg bg-ink-600 px-4 py-2 text-xs font-bold text-white hover:bg-ink-700 disabled:opacity-50">
                 {pending ? "Verifica..." : "Verifica ora"}
               </button>
             </div>

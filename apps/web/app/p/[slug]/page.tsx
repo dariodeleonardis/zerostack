@@ -4,6 +4,7 @@ import { prisma } from "@zerostack/database";
 import { PublicationView } from "./PublicationView";
 import { publicationWhere } from "../../../lib/publications";
 import { platformUrlFromEnv } from "@zerostack/shared";
+import { paletteStyle, publicationFont, publicationPalette } from "../../../lib/colors";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ async function findPublication(slugOrDomain: string) {
       name: true,
       description: true,
       primaryColor: true,
+      backgroundColor: true,
+      fontStyle: true,
+      logoUrl: true,
       owner: { select: { name: true } },
       tiers: {
         where: { isActive: true },
@@ -67,7 +71,10 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
       name={publication.name}
       description={publication.description}
       authorName={publication.owner.name}
-      primaryColor={publication.primaryColor}
+      logoUrl={publication.logoUrl}
+      paletteStyle={paletteStyle(publicationPalette(publication.primaryColor, publication.backgroundColor))}
+      titleFont={publicationFont(publication.fontStyle).title}
+      bodyFont={publicationFont(publication.fontStyle).body}
       subscriberCount={publication._count.subscribers}
       articles={publication.posts.map((post) => ({
         slug: post.slug,
@@ -75,8 +82,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
         excerpt: post.excerpt ?? post.subtitle ?? "",
         date: post.publishedAt ? dateFormat.format(post.publishedAt) : "",
         readTime: readTime(post.contentHtml),
-        isPaidOnly: post.access !== "FREE",
-        likes: post.likesCount
+        isPaidOnly: post.access !== "FREE"
       }))}
       tiers={publication.tiers.map((tier) => ({
         id: tier.id,

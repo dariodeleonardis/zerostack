@@ -19,18 +19,28 @@ export default async function CourtesyPage() {
     .catch(() => DEFAULT_COURTESY_MESSAGE);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-gradient-to-b from-white to-blue-50 px-6 py-12">
-      <div className="max-w-xl text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-black text-white shadow-md">
-          Z
+    <div className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-ink text-paper">
+      <div className="h-2 shrink-0 bg-saffron" />
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="max-w-2xl text-center">
+          <div className="mx-auto flex h-40 w-40 flex-col items-center justify-center rounded-full border-[8px] border-saffron bg-ink-700">
+            <span className="font-display text-5xl leading-none">
+              <span className="font-extrabold">Z</span>
+              <span className="italic">S</span>
+              <span className="text-saffron">.</span>
+            </span>
+          </div>
+          <p className="kicker mt-8 text-saffron">Newsletter · Blog · Podcast</p>
+          <h1 className="mt-4 font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-7xl">
+            ZeroStack sta arrivando
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl whitespace-pre-line text-lg leading-relaxed text-paper-300">{message}</p>
+          <p className="mt-12 text-sm text-ink-300">
+            <Link href="/privacy" className="underline-offset-4 hover:text-saffron hover:underline">Privacy</Link> ·{" "}
+            <Link href="/termini" className="underline-offset-4 hover:text-saffron hover:underline">Termini</Link> ·{" "}
+            <Link href="/login" className="underline-offset-4 hover:text-saffron hover:underline">Accesso riservato</Link>
+          </p>
         </div>
-        <h1 className="mt-6 text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">ZeroStack sta arrivando</h1>
-        <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-gray-600">{message}</p>
-        <p className="mt-10 text-xs text-gray-400">
-          <Link href="/privacy" className="hover:text-gray-700">Privacy</Link> ·{" "}
-          <Link href="/termini" className="hover:text-gray-700">Termini</Link> ·{" "}
-          <Link href="/login" className="hover:text-gray-700">Accesso riservato</Link>
-        </p>
       </div>
     </div>
   );

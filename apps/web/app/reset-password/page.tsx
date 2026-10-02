@@ -43,22 +43,22 @@ export default function ResetPasswordPage() {
     }
   };
 
-  const input = "mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
+  const input = "mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none";
   return (
-    <div className="mx-auto max-w-md py-12">
-      <h1 className="text-2xl font-black text-gray-900">Nuova password</h1>
+    <div className="mx-auto max-w-md px-4 py-14">
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Nuova password</h1>
       {token === "" ? (
         <p className="mt-6 text-sm text-gray-600">
-          Link incompleto. <Link href="/forgot-password" className="font-bold text-blue-600">Chiedine uno nuovo</Link>.
+          Link incompleto. <Link href="/forgot-password" className="font-bold text-ink-600">Chiedine uno nuovo</Link>.
         </p>
       ) : (
         <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div>
-            <label htmlFor="password" className="block text-xs font-bold text-gray-700">Nuova password (almeno 10 caratteri)</label>
+            <label htmlFor="password" className="block text-sm font-semibold text-ink">Nuova password (almeno 10 caratteri)</label>
             <input id="password" type="password" autoComplete="new-password" minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} className={input} required />
           </div>
           <div>
-            <label htmlFor="confirm" className="block text-xs font-bold text-gray-700">Ripeti la password</label>
+            <label htmlFor="confirm" className="block text-sm font-semibold text-ink">Ripeti la password</label>
             <input id="confirm" type="password" autoComplete="new-password" minLength={10} value={confirm} onChange={(e) => setConfirm(e.target.value)} className={input} required />
           </div>
           {error && (
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={pending || !token}
-            className="w-full rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-ink-700 disabled:opacity-50"
           >
             {pending ? "Salvataggio..." : "Salva e accedi"}
           </button>

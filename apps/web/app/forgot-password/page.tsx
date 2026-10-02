@@ -30,8 +30,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="mx-auto max-w-md py-12">
-      <h1 className="text-2xl font-black text-gray-900">Password dimenticata</h1>
+    <div className="mx-auto max-w-md px-4 py-14">
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Password dimenticata</h1>
       <p className="mt-1 text-xs text-gray-500">Ti mandiamo un link per sceglierne una nuova.</p>
       {message ? (
         <p role="status" className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
@@ -40,14 +40,14 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div>
-            <label htmlFor="email" className="block text-xs font-bold text-gray-700">Email dell&apos;account</label>
+            <label htmlFor="email" className="block text-sm font-semibold text-ink">Email dell&apos;account</label>
             <input
               id="email"
               type="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
               required
             />
           </div>
@@ -55,14 +55,14 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-ink-700 disabled:opacity-50"
           >
             {pending ? "Invio..." : "Mandami il link"}
           </button>
         </form>
       )}
       <p className="mt-4 text-center text-xs text-gray-500">
-        <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700">Torna all&apos;accesso</Link>
+        <Link href="/login" className="font-bold text-ink-600 hover:text-ink-700">Torna all&apos;accesso</Link>
       </p>
     </div>
   );

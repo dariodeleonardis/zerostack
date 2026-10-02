@@ -78,7 +78,7 @@ export const AudioPlayer: React.FC = () => {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         {/* Track info */}
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 font-bold">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-saffron-100 text-ink-600 font-bold">
             🎙️
           </div>
           <div className="truncate">
@@ -99,7 +99,7 @@ export const AudioPlayer: React.FC = () => {
             </button>
             <button
               onClick={togglePlay}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white shadow hover:bg-blue-700 transition"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-600 text-white shadow hover:bg-ink-700 transition"
             >
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </button>
@@ -123,7 +123,7 @@ export const AudioPlayer: React.FC = () => {
                 setCurrentTime(val);
                 if (audioRef.current) audioRef.current.currentTime = val;
               }}
-              className="h-1 w-44 sm:w-80 cursor-pointer accent-blue-600"
+              className="h-1 w-44 sm:w-80 cursor-pointer accent-ink-600"
             />
             <span>{formatTime(duration)}</span>
           </div>

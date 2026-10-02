@@ -75,12 +75,12 @@ export default function RegisterPage() {
   };
   const inputClass = (key: keyof FieldErrors, extra = "") =>
     `mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${extra} ${
-      fields[key]?.length ? "border-rose-400 bg-rose-50/40 focus:border-rose-500" : "border-gray-200 focus:border-blue-500"
+      fields[key]?.length ? "border-rose-400 bg-rose-50/40 focus:border-rose-500" : "border-gray-200 focus:border-ink"
     }`;
 
   return (
-    <div className="mx-auto max-w-md py-12">
-      <h1 className="text-2xl font-black text-gray-900">Crea il tuo account</h1>
+    <div className="mx-auto max-w-md px-4 py-14">
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Crea il tuo account</h1>
       <p className="mt-1 text-xs text-gray-500">
         Prima crei l&apos;account. La tua newsletter, con un indirizzo tutto suo tipo <strong>tuonome.zerostack.it</strong>,
         la crei subito dopo oppure quando vuoi dallo <strong>Studio</strong>.
@@ -88,7 +88,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div>
-          <label htmlFor="name" className="block text-xs font-bold text-gray-700">Nome e cognome</label>
+          <label htmlFor="name" className="block text-sm font-semibold text-ink">Nome e cognome</label>
           <input
             id="name"
             type="text"
@@ -106,7 +106,7 @@ export default function RegisterPage() {
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-xs font-bold text-gray-700">Email</label>
+          <label htmlFor="email" className="block text-sm font-semibold text-ink">Email</label>
           <input
             id="email"
             type="email"
@@ -124,7 +124,7 @@ export default function RegisterPage() {
         </div>
 
         <div>
-          <label htmlFor="handle" className="block text-xs font-bold text-gray-700">Nome utente</label>
+          <label htmlFor="handle" className="block text-sm font-semibold text-ink">Nome utente</label>
           <input
             id="handle"
             type="text"
@@ -149,7 +149,7 @@ export default function RegisterPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-xs font-bold text-gray-700">Password</label>
+          <label htmlFor="password" className="block text-sm font-semibold text-ink">Password</label>
           <input
             id="password"
             type="password"
@@ -182,7 +182,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
         >
           <UserPlus className="h-4 w-4" />
           {isSubmitting ? "Creazione in corso..." : "Crea account"}
@@ -190,7 +190,7 @@ export default function RegisterPage() {
       </form>
 
       <p className="mt-4 text-center text-xs text-gray-500">
-        Hai già un account? <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700">Accedi</Link>
+        Hai già un account? <Link href="/login" className="font-bold text-ink-600 hover:text-ink-700">Accedi</Link>
       </p>
     </div>
   );

@@ -87,6 +87,18 @@ try {
   assert(blockedStripe.status === 403, "Senza conferma non si collega Stripe", String(blockedStripe.status));
   const noEmailPublish = await call("POST", "/api/posts", { cookie: author, body: { publicationId, title: `Senza email ${run}`, contentHtml: "<p>Solo sul sito</p>", action: "publish", sendEmail: false } });
   assert(noEmailPublish.status === 201, "Pubblicare sul sito senza inviare email è permesso");
+
+  // ------------------------------------------------------------------ aspetto scelto dall'autore
+  const appearance = { primaryColor: "#a8322d", backgroundColor: "#F6F1E7", fontStyle: "serif" };
+  const savedLook = await call("PUT", `/api/publications/${publicationId}/appearance`, { cookie: author, body: appearance });
+  assert(savedLook.status === 200 && savedLook.json?.primaryColor === "#A8322D" && savedLook.json?.palette?.onAccent === "#FFFFFF", "Aspetto salvato dal proprietario, testo bianco sul rosso", savedLook.text);
+  const lookPage = await getWithHost("/", `lancio-${run}.zerostack.it`);
+  assert(lookPage.text.includes("--pub-accent:#A8322D") && lookPage.text.includes("--pub-bg:#F6F1E7"), "La pagina della pubblicazione usa subito i colori dell'autore");
+  const badLook = await call("PUT", `/api/publications/${publicationId}/appearance`, { cookie: author, body: { ...appearance, fontStyle: "comic" } });
+  const strangerLook = await call("PUT", `/api/publications/${publicationId}/appearance`, { cookie: await register("estraneo"), body: appearance });
+  assert(badLook.status === 400 && strangerLook.status === 404, "Aspetto: caratteri inesistenti respinti, chi non è proprietario non lo cambia", `(${badLook.status} ${strangerLook.status})`);
+  assert((await call("GET", "/studio/appearance", { cookie: author })).text.includes("Abbinamenti pronti"), "Lo Studio ha la pagina Aspetto");
+
   const studio = await call("GET", "/studio", { cookie: author });
   assert(studio.text.includes("Rimanda l"), "Lo studio mostra l'avviso con il pulsante per rimandare l'email");
 

@@ -18,11 +18,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div>
           {/* Header con Badge SuperAdmin */}
           <div className="flex items-center gap-2.5 pb-6 border-b border-gray-100">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm font-black">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm font-extrabold">
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-gray-900">ZeroStack Admin</h2>
+              <h2 className="font-display text-sm font-extrabold text-gray-900">ZeroStack Admin</h2>
               <span className="inline-block rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
                 Amministrazione
               </span>

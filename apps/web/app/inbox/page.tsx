@@ -30,11 +30,11 @@ export default function InboxPage() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-saffron-50 text-ink-600">
             <Inbox className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900">La Tua Posta</h1>
+            <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">La Tua Posta</h1>
             <p className="text-xs text-gray-500">Tutti i post e le newsletter delle pubblicazioni a cui sei iscritto.</p>
           </div>
         </div>
@@ -49,12 +49,12 @@ export default function InboxPage() {
           <Link
             key={item.id}
             href={`/p/${item.publicationSlug}/alternativa-italiana-a-substack`}
-            className={`block rounded-2xl border p-5 transition hover:border-blue-300 hover:shadow-sm ${
-              item.isRead ? "border-gray-200 bg-white" : "border-blue-200 bg-blue-50/20"
+            className={`block rounded-2xl border p-5 transition hover:border-ink-300 hover:shadow-sm ${
+              item.isRead ? "border-gray-200 bg-white" : "border-saffron-200 bg-saffron-50/20"
             }`}
           >
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span className="font-bold text-blue-600">{item.publication}</span>
+              <span className="font-bold text-ink-600">{item.publication}</span>
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" /> {item.date}

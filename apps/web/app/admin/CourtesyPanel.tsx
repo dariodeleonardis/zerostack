@@ -62,7 +62,7 @@ export function CourtesyPanel({
         maxLength={maxLength}
         rows={3}
         placeholder={defaultMessage}
-        className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
       />
       <p className="mt-1 text-[11px] text-gray-400">Vuoto = messaggio predefinito. Massimo {maxLength} caratteri.</p>
 
@@ -96,7 +96,7 @@ export function CourtesyPanel({
             Accendi la pagina di cortesia
           </button>
         )}
-        <a href="/cortesia" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+        <a href="/cortesia" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-ink-600 hover:text-ink-700">
           Anteprima
         </a>
       </div>

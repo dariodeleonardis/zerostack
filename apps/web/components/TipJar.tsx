@@ -178,11 +178,11 @@ export const TipJar: React.FC<TipJarProps> = ({
               onClick={() => setPaymentMethod("card")}
               className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
                 paymentMethod === "card"
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  ? "border-ink-500 bg-saffron-50 text-ink-700"
                   : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
-              <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+              <CreditCard className="h-3.5 w-3.5 text-ink-600" />
               <span>Carta / Apple Pay</span>
             </button>
           </div>

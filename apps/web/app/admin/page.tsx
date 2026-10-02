@@ -13,7 +13,7 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{label}</p>
-      <p className="mt-2 text-3xl font-black text-gray-900">{new Intl.NumberFormat("it-IT").format(value)}</p>
+      <p className="mt-2 font-display text-4xl font-extrabold tracking-tight text-gray-900">{new Intl.NumberFormat("it-IT").format(value)}</p>
       {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </div>
   );
@@ -66,7 +66,7 @@ export default async function AdminOverviewPage() {
   const provider = (env.EMAIL_PROVIDER || "log").toLowerCase();
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <h1 className="text-2xl font-black text-gray-900">Panoramica</h1>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Panoramica</h1>
       <CourtesyPanel
         enabled={courtesy.enabled}
         customMessage={courtesy.customMessage}

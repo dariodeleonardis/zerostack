@@ -15,7 +15,7 @@ interface Profile {
 }
 
 const card = "rounded-2xl border border-gray-200 bg-white p-6 shadow-sm";
-const input = "mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none";
+const input = "mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none";
 
 async function send(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -89,9 +89,9 @@ export function ProfileForms({ profile }: { profile: Profile }) {
   return (
     <div className="space-y-6">
       <form onSubmit={saveProfile} className={`${card} space-y-4`}>
-        <h2 className="text-lg font-black text-gray-900">Profilo pubblico</h2>
+        <h2 className="font-display text-lg font-extrabold text-gray-900">Profilo pubblico</h2>
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xl font-bold text-blue-700">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-saffron-100 text-xl font-bold text-ink-700">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
           </div>
@@ -105,11 +105,11 @@ export function ProfileForms({ profile }: { profile: Profile }) {
             </button>
           )}
         </div>
-        <label className="block text-xs font-bold text-gray-700">
+        <label className="block text-sm font-semibold text-ink">
           Nome
           <input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
         </label>
-        <label className="block text-xs font-bold text-gray-700">
+        <label className="block text-sm font-semibold text-ink">
           Bio
           <textarea className={input} rows={3} value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} />
         </label>
@@ -117,18 +117,18 @@ export function ProfileForms({ profile }: { profile: Profile }) {
           Email: <strong>{profile.email}</strong> {profile.emailVerified ? "(confermata)" : "(da confermare)"} · Nome utente: <strong>@{profile.handle}</strong>
         </p>
         {profileMsg && <Notice tone={profileMsg.tone}>{profileMsg.text}</Notice>}
-        <button type="submit" disabled={pending !== null} className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+        <button type="submit" disabled={pending !== null} className="flex items-center gap-2 rounded-xl bg-ink-600 px-4 py-2 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-50">
           <Save className="h-4 w-4" /> Salva profilo
         </button>
       </form>
 
       <form onSubmit={changePassword} className={`${card} space-y-4`}>
-        <h2 className="text-lg font-black text-gray-900">Password</h2>
-        <label className="block text-xs font-bold text-gray-700">
+        <h2 className="font-display text-lg font-extrabold text-gray-900">Password</h2>
+        <label className="block text-sm font-semibold text-ink">
           Password attuale
           <input className={input} type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
         </label>
-        <label className="block text-xs font-bold text-gray-700">
+        <label className="block text-sm font-semibold text-ink">
           Nuova password (almeno 10 caratteri)
           <input className={input} type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
         </label>
@@ -139,7 +139,7 @@ export function ProfileForms({ profile }: { profile: Profile }) {
       </form>
 
       <section className={`${card} space-y-3`}>
-        <h2 className="text-lg font-black text-gray-900">I tuoi dati</h2>
+        <h2 className="font-display text-lg font-extrabold text-gray-900">I tuoi dati</h2>
         <p className="text-sm text-gray-600">Scarica in un file tutto ciò che ZeroStack conserva su di te: account, pubblicazioni, articoli, abbonamenti, dati di fatturazione e iscrizioni.</p>
         <a href="/api/account/export" className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50">
           <Download className="h-4 w-4" /> Scarica i miei dati
@@ -147,7 +147,7 @@ export function ProfileForms({ profile }: { profile: Profile }) {
       </section>
 
       <form onSubmit={deleteAccount} className="space-y-4 rounded-2xl border border-rose-200 bg-rose-50/50 p-6">
-        <h2 className="text-lg font-black text-rose-900">Cancella l&apos;account</h2>
+        <h2 className="font-display text-lg font-extrabold text-rose-900">Cancella l&apos;account</h2>
         <p className="text-sm text-rose-900">
           Cancella per sempre account, pubblicazioni che possiedi con articoli e iscritti, e le tue iscrizioni alle newsletter. I tuoi abbonamenti a pagamento vengono
           disdetti subito.

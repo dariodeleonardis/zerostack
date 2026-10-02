@@ -42,7 +42,7 @@ export function LegalPanel({ initial, updatedAt, limits }: { initial: Record<Fie
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {(Object.keys(LABELS) as Field[]).map((f) => (
           <div key={f} className={f === "name" || f === "address" ? "sm:col-span-2" : ""}>
-            <label htmlFor={`legal-${f}`} className="block text-xs font-bold text-gray-700">{LABELS[f].label}</label>
+            <label htmlFor={`legal-${f}`} className="block text-sm font-semibold text-ink">{LABELS[f].label}</label>
             <input
               id={`legal-${f}`}
               type={f === "email" ? "email" : "text"}
@@ -53,7 +53,7 @@ export function LegalPanel({ initial, updatedAt, limits }: { initial: Record<Fie
                 setValues({ ...values, [f]: e.target.value });
                 setErrors({ ...errors, [f]: undefined });
               }}
-              className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${errors[f] ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-blue-500"}`}
+              className={`mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${errors[f] ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-ink"}`}
             />
             {errors[f] ? <p className="mt-1 text-[11px] font-semibold text-red-600">{errors[f]}</p> : LABELS[f].hint && <p className="mt-1 text-[11px] text-gray-400">{LABELS[f].hint}</p>}
           </div>

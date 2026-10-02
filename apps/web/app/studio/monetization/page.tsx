@@ -46,7 +46,7 @@ export default async function MonetizationPage({ searchParams }: { searchParams:
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="border-b border-gray-200 pb-5">
-        <h1 className="text-2xl font-black text-gray-900">Monetizzazione</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Monetizzazione</h1>
         <p className="text-xs text-gray-500">Collega Stripe e decidi i livelli di abbonamento delle tue pubblicazioni.</p>
       </div>
       <MonetizationPanel

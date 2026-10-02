@@ -2,13 +2,13 @@ import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Heart, MessageSquare, ArrowLeft } from "lucide-react";
+import { Heart, ArrowLeft } from "lucide-react";
 import { prisma } from "@zerostack/database";
 import { PaywallGate } from "../../../../components/PaywallGate";
-import { TipJar } from "../../../../components/TipJar";
 import { getCurrentUser } from "../../../../lib/auth";
 import { publicationWhere } from "../../../../lib/publications";
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
+import { paletteStyle, publicationFont, publicationPalette } from "../../../../lib/colors";
 import { ShareButton } from "./ShareButton";
 import { platformUrlFromEnv } from "@zerostack/shared";
 
@@ -45,6 +45,9 @@ async function findPost(slugOrDomain: string, postSlug: string) {
           id: true,
           slug: true,
           name: true,
+          primaryColor: true,
+          backgroundColor: true,
+          fontStyle: true,
           tiers: {
             where: { isActive: true },
             orderBy: { priceCents: "asc" },
@@ -97,116 +100,103 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
   const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
   const words = post.contentHtml.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
   const readTime = Math.max(1, Math.round(words / 200));
+  const palette = publicationPalette(publication.primaryColor, publication.backgroundColor);
+  const font = publicationFont(publication.fontStyle);
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <div className="mb-6">
-        <Link
-          href={`/p/${publication.slug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" /> Tutti gli articoli di {publication.name}
+    <div style={paletteStyle(palette) as React.CSSProperties} className="bg-[color:var(--pub-bg)] text-[color:var(--pub-text)]">
+      <div className="h-2 bg-[color:var(--pub-accent)]" />
+      <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <Link href={`/p/${publication.slug}`} className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline">
+          <ArrowLeft className="h-4 w-4" aria-hidden /> Tutti gli articoli di {publication.name}
         </Link>
-      </div>
 
-      <header className="border-b border-gray-100 pb-8">
-        <div className="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider">
-          <span>{publication.name}</span>
-        </div>
+        <header className="mt-10 border-b-[3px] border-[color:var(--pub-text)] pb-8">
+          <p className="kicker text-[color:var(--pub-accent-text)]">{publication.name}</p>
+          <h1 className={`mt-4 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl ${font.title}`}>{post.title}</h1>
+          {post.subtitle && <p className={`mt-5 text-xl leading-relaxed opacity-90 sm:text-2xl ${font.body}`}>{post.subtitle}</p>}
 
-        <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-900 sm:text-4xl sm:leading-tight">{post.title}</h1>
-
-        {post.subtitle && <p className="mt-3 text-lg text-gray-600 leading-relaxed">{post.subtitle}</p>}
-
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 overflow-hidden rounded-full bg-blue-100 font-bold text-blue-700 flex items-center justify-center">
-              {post.author.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">{post.author.name}</p>
-              <p className="text-xs text-gray-500">
-                {post.publishedAt ? `${dateFormat.format(post.publishedAt)} • ` : ""}
-                {readTime} min di lettura
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600">
-              <Heart className="h-4 w-4" />
-              <span>{post.likesCount}</span>
-            </span>
-            <ShareButton />
-          </div>
-        </div>
-      </header>
-
-      {post.coverImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.coverImageUrl} alt="" className="mt-8 aspect-video w-full rounded-2xl object-cover" />
-      )}
-
-      {post.podcastEpisode && hasAccess && (
-        <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Ascolta l&apos;episodio</p>
-          <audio controls preload="none" src={post.podcastEpisode.audioUrl} className="w-full" />
-        </div>
-      )}
-
-      {visibleHtml.trim() && (
-        <div
-          className="prose prose-lg mt-8 max-w-none text-gray-800 leading-relaxed font-serif"
-          dangerouslySetInnerHTML={{ __html: sanitizePostHtml(visibleHtml) }}
-        />
-      )}
-
-      {!hasAccess &&
-        (tier ? (
-          <PaywallGate
-            publicationName={publication.name}
-            tierId={tier.id}
-            checkoutHref={`${platformUrlFromEnv()}/checkout/${tier.id}`}
-            tierName={tier.name}
-            monthlyPriceEur={tier.priceCents / 100}
-            intervalLabel={INTERVAL_LABEL[tier.interval]}
-            benefits={tier.benefits.length > 0 ? tier.benefits : undefined}
-          />
-        ) : (
-          <p className="my-10 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-600">
-            Il resto di questo articolo è riservato agli abbonati di {publication.name}.
-          </p>
-        ))}
-
-      <TipJar
-        creatorName={post.author.name}
-        publicationSlug={publication.slug}
-        articleSlug={params.postSlug}
-        allowPayPerArticle={false}
-      />
-
-      <section className="mt-12 border-t border-gray-200 pt-8">
-        <div className="flex items-center gap-2 font-bold text-gray-900">
-          <MessageSquare className="h-5 w-5 text-blue-600" />
-          <span>Commenti dei lettori ({post._count.comments})</span>
-        </div>
-
-        {post.comments.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-500">Ancora nessun commento.</p>
-        ) : (
-          <ul className="mt-6 space-y-4">
-            {post.comments.map((comment) => (
-              <li key={comment.id} className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-bold text-gray-900">
-                  {comment.author.name}
-                  <span className="ml-2 font-normal text-gray-400">{dateFormat.format(comment.createdAt)}</span>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--pub-accent)] font-display text-lg font-extrabold text-[color:var(--pub-on-accent)]">
+                {post.author.name.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <p className="text-base font-bold">{post.author.name}</p>
+                <p className="text-sm opacity-80">
+                  {post.publishedAt ? `${dateFormat.format(post.publishedAt)} · ` : ""}
+                  {readTime} min di lettura
                 </p>
-                <p className="mt-1 whitespace-pre-line text-sm text-gray-700">{comment.content}</p>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 rounded-full border border-[color:var(--pub-text)] px-3 py-1.5 text-sm font-semibold" aria-label={`${post.likesCount} apprezzamenti`}>
+                <Heart className="h-4 w-4" aria-hidden />
+                <span>{post.likesCount}</span>
+              </span>
+              <ShareButton />
+            </div>
+          </div>
+        </header>
+
+        {post.coverImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={post.coverImageUrl} alt="" className="mt-10 aspect-video w-full object-cover" />
         )}
-      </section>
-    </article>
+
+        {post.podcastEpisode && hasAccess && (
+          <div className="mt-10 border-2 border-[color:var(--pub-text)] p-4">
+            <p className="kicker mb-3">Ascolta l&apos;episodio</p>
+            <audio controls preload="none" src={post.podcastEpisode.audioUrl} className="w-full" />
+          </div>
+        )}
+
+        {visibleHtml.trim() && (
+          <div
+            className={`prose prose-lg prose-pub mt-10 max-w-none leading-relaxed ${font.body} prose-headings:tracking-tight`}
+            dangerouslySetInnerHTML={{ __html: sanitizePostHtml(visibleHtml) }}
+          />
+        )}
+
+        {!hasAccess &&
+          (tier ? (
+            <PaywallGate
+              publicationName={publication.name}
+              tierId={tier.id}
+              checkoutHref={`${platformUrlFromEnv()}/checkout/${tier.id}`}
+              tierName={tier.name}
+              monthlyPriceEur={tier.priceCents / 100}
+              intervalLabel={INTERVAL_LABEL[tier.interval]}
+              benefits={tier.benefits.length > 0 ? tier.benefits : undefined}
+            />
+          ) : (
+            <p className="my-10 border-y-[3px] border-double border-[color:var(--pub-text)] py-8 text-center text-lg">
+              Il resto di questo articolo è riservato agli abbonati di {publication.name}.
+            </p>
+          ))}
+
+        {/* Il TipJar non c'è: simulava il pagamento (successo dopo 600 ms senza addebito) e Satispay
+            non è collegato. Torna quando le mance passano davvero da Stripe. */}
+
+        <section className="mt-14 border-t-[3px] border-[color:var(--pub-text)] pt-6">
+          <h2 className={`text-2xl font-extrabold tracking-tight ${font.title}`}>Commenti dei lettori ({post._count.comments})</h2>
+          {post.comments.length === 0 ? (
+            <p className="mt-4 opacity-80">Ancora nessun commento.</p>
+          ) : (
+            <ul className="mt-6 divide-y divide-[color:var(--pub-text)]">
+              {post.comments.map((comment) => (
+                <li key={comment.id} className="py-5">
+                  <p className="text-sm font-bold">
+                    {comment.author.name}
+                    <span className="ml-2 font-normal opacity-80">{dateFormat.format(comment.createdAt)}</span>
+                  </p>
+                  <p className={`mt-2 whitespace-pre-line text-base ${font.body}`}>{comment.content}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </article>
+    </div>
   );
 }

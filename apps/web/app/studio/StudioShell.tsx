@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { PenSquare, LayoutDashboard, DollarSign, Users, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe, FileText } from "lucide-react";
+import { PenSquare, LayoutDashboard, DollarSign, Users, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe, FileText, Palette } from "lucide-react";
 
 export interface StudioPublication {
   id: string;
@@ -37,7 +37,7 @@ export function StudioShell({
               className="mt-1 flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-2.5 text-left text-xs font-bold text-gray-900 hover:bg-gray-100 transition"
             >
               <div className="truncate">
-                <p className="truncate text-xs font-black">{currentPub?.name ?? "Nessuna pubblicazione"}</p>
+                <p className="truncate text-xs font-extrabold">{currentPub?.name ?? "Nessuna pubblicazione"}</p>
                 <p className="text-[10px] text-gray-400 font-normal">
                   {currentPub ? `Ruolo: ${currentPub.role}` : "Creane una per iniziare"}
                 </p>
@@ -59,7 +59,7 @@ export function StudioShell({
                       className="flex w-full items-center justify-between rounded-lg p-2 text-left text-xs hover:bg-gray-50"
                     >
                       <span className="font-semibold text-gray-800">{pub.name}</span>
-                      {currentPub?.id === pub.id && <Check className="h-3.5 w-3.5 text-blue-600" />}
+                      {currentPub?.id === pub.id && <Check className="h-3.5 w-3.5 text-ink-600" />}
                     </button>
                   ))}
                 </div>
@@ -68,7 +68,7 @@ export function StudioShell({
                   <Link
                     href="/studio/publications/new"
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-1.5 rounded-lg p-2 text-xs font-bold text-blue-600 hover:bg-blue-50"
+                    className="flex items-center gap-1.5 rounded-lg p-2 text-xs font-bold text-ink-600 hover:bg-saffron-50"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Crea Nuova Pubblicazione
@@ -85,15 +85,15 @@ export function StudioShell({
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <LayoutDashboard className="h-4 w-4 text-gray-500" />
-              Panoramica & Statistiche
+              Panoramica
             </Link>
 
             <Link
               href="/studio/posts/new"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-blue-600 bg-blue-50/50 hover:bg-blue-100 transition"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-ink-600 bg-saffron-50/50 hover:bg-saffron-100 transition"
             >
-              <PenSquare className="h-4 w-4 text-blue-600" />
-              Scrivi Post o Newsletter
+              <PenSquare className="h-4 w-4 text-ink-600" />
+              Scrivi
             </Link>
 
             <Link
@@ -101,7 +101,7 @@ export function StudioShell({
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <DollarSign className="h-4 w-4 text-gray-500" />
-              Monetizzazione & Stripe
+              Abbonamenti e Stripe
             </Link>
 
             <Link
@@ -110,6 +110,14 @@ export function StudioShell({
             >
               <FileText className="h-4 w-4 text-gray-500" />
               Fatture elettroniche
+            </Link>
+
+            <Link
+              href="/studio/appearance"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
+            >
+              <Palette className="h-4 w-4 text-gray-500" />
+              Aspetto
             </Link>
 
             <Link
@@ -133,7 +141,7 @@ export function StudioShell({
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <Users className="h-4 w-4 text-gray-500" />
-              Squadra & Collaboratori
+              Squadra
             </Link>
           </nav>
         </div>

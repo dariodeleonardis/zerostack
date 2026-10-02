@@ -28,7 +28,7 @@ export default async function AccountSubscriptionsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-black text-gray-900">I miei abbonamenti</h1>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">I miei abbonamenti</h1>
       <p className="mt-1 text-sm text-gray-500">Le ricevute di pagamento arrivano via email da Stripe a ogni addebito.</p>
 
       {subscriptions.length === 0 ? (

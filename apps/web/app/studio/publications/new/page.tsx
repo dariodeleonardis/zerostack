@@ -23,7 +23,7 @@ export default function NewPublicationPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugState, setSlugState] = useState<SlugState>({ status: "idle" });
   const [description, setDescription] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#0066FF");
+  const [primaryColor, setPrimaryColor] = useState("#F2B705");
   const [customDomain, setCustomDomain] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +163,7 @@ export default function NewPublicationPage() {
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
           <div className="flex items-center gap-2 text-emerald-800">
             <Check className="h-5 w-5" />
-            <h1 className="text-xl font-black">«{created.name}» è online</h1>
+            <h1 className="font-display text-xl font-extrabold">«{created.name}» è online</h1>
           </div>
           <p className="mt-2 text-sm text-emerald-900">
             Il suo indirizzo è{" "}
@@ -176,7 +176,7 @@ export default function NewPublicationPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/studio/posts/new" className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700">
+          <Link href="/studio/posts/new" className="rounded-xl bg-ink-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-ink-700">
             Scrivi il primo articolo
           </Link>
           <Link href="/studio" className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50">
@@ -198,14 +198,14 @@ export default function NewPublicationPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Crea una Nuova Pubblicazione</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Crea una nuova pubblicazione</h1>
           <p className="text-xs text-gray-500">
             Lancia una nuova newsletter, rivista o podcast indipendente su ZeroStack.
           </p>
         </div>
       </div>
 
-      <p className="rounded-xl bg-blue-50 px-4 py-3 text-xs text-blue-900">
+      <p className="rounded-xl bg-saffron-50 px-4 py-3 text-xs text-ink-900">
         Il tuo account è già attivo. Se non hai ancora deciso nome e indirizzo, puoi creare la pubblicazione più
         tardi dallo Studio.{" "}
         <Link href="/studio" className="font-bold underline">
@@ -215,21 +215,21 @@ export default function NewPublicationPage() {
 
       <form onSubmit={handleCreate} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div>
-          <label htmlFor="name" className="block text-xs font-bold text-gray-700">Nome della Pubblicazione</label>
+          <label htmlFor="name" className="block text-sm font-semibold text-ink">Nome della pubblicazione</label>
           <input
             id="name"
             type="text"
             placeholder="Es. Cronache di Design & AI"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
             required
           />
           {fieldError("name")}
         </div>
 
         <div>
-          <label htmlFor="slug" className="block text-xs font-bold text-gray-700">Indirizzo della tua newsletter</label>
+          <label htmlFor="slug" className="block text-sm font-semibold text-ink">Indirizzo della tua newsletter</label>
           <div className="mt-1 flex items-center rounded-xl border border-gray-200 px-3 py-2 text-sm bg-gray-50">
             <span className="text-gray-400">https://</span>
             <input
@@ -283,10 +283,10 @@ export default function NewPublicationPage() {
                       title={status === false ? "Già in uso" : `${candidate}.${rootDomain}`}
                       className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold transition ${
                         selected
-                          ? "border-blue-600 bg-blue-600 text-white"
+                          ? "border-ink-600 bg-ink-600 text-white"
                           : status === false
                             ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 line-through"
-                            : "border-gray-300 bg-white text-gray-800 hover:border-blue-500 hover:text-blue-700"
+                            : "border-gray-300 bg-white text-gray-800 hover:border-ink-500 hover:text-ink-700"
                       }`}
                     >
                       {status === true && !selected && <Check className="h-3 w-3 text-emerald-600" />}
@@ -302,7 +302,7 @@ export default function NewPublicationPage() {
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-xs font-bold text-gray-700">Descrizione Breve / Tagline</label>
+          <label htmlFor="description" className="block text-sm font-semibold text-ink">Descrizione breve</label>
           <textarea
             id="description"
             placeholder="Spiega ai lettori di cosa parlerai e perché dovrebbero iscriversi..."
@@ -310,13 +310,13 @@ export default function NewPublicationPage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             maxLength={250}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-ink focus:outline-none"
           />
           {fieldError("description")}
         </div>
 
         <div>
-          <label htmlFor="customDomain" className="block text-xs font-bold text-gray-700">Dominio Personalizzato (Opzionale)</label>
+          <label htmlFor="customDomain" className="block text-sm font-semibold text-ink">Dominio Personalizzato (Opzionale)</label>
           <div className="mt-1 flex items-center gap-2">
             <Globe className="h-4 w-4 text-gray-400" />
             <input
@@ -325,7 +325,7 @@ export default function NewPublicationPage() {
               placeholder="Es. newsletter.tuobrand.it"
               value={customDomain}
               onChange={(e) => setCustomDomain(e.target.value)}
-              className="block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-ink focus:outline-none"
             />
           </div>
           <p className="mt-1 text-[11px] text-gray-400">
@@ -335,9 +335,9 @@ export default function NewPublicationPage() {
         </div>
 
         <div>
-          <span className="block text-xs font-bold text-gray-700">Colore Primario del Brand</span>
+          <span className="block text-sm font-semibold text-ink">Colore principale (poi lo cambi da Studio › Aspetto)</span>
           <div className="mt-2 flex items-center gap-3">
-            {["#0066FF", "#7E22CE", "#059669", "#DC2626", "#D97706", "#111827"].map((color) => (
+            {["#F2B705", "#A8322D", "#1F4D3A", "#1C3F94", "#B4532A", "#141210"].map((color) => (
               <button
                 type="button"
                 key={color}
@@ -345,7 +345,7 @@ export default function NewPublicationPage() {
                 style={{ backgroundColor: color }}
                 aria-label={`Colore ${color}`}
                 aria-pressed={primaryColor === color}
-                className={`h-7 w-7 rounded-full transition ${
+                className={`h-9 w-9 rounded-full border border-gray-300 transition ${
                   primaryColor === color ? "ring-2 ring-offset-2 ring-gray-900" : ""
                 }`}
               />
@@ -363,10 +363,10 @@ export default function NewPublicationPage() {
           <button
             type="submit"
             disabled={isSubmitting || slugState.status === "unavailable"}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-ink-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4" />
-            {isSubmitting ? "Creazione in corso..." : "Lancia la tua Pubblicazione"}
+            {isSubmitting ? "Creazione in corso..." : "Crea la pubblicazione"}
           </button>
         </div>
       </form>

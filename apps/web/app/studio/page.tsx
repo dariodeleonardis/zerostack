@@ -28,7 +28,7 @@ function KpiCard({ label, value, hint, icon }: { label: string; value: string; h
         <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
         {icon}
       </div>
-      <div className="mt-3 text-3xl font-black text-gray-900">{value}</div>
+      <div className="mt-3 font-display text-4xl font-extrabold tracking-tight text-gray-900">{value}</div>
       <p className="mt-1 text-xs text-gray-400">{hint}</p>
     </div>
   );
@@ -46,9 +46,9 @@ export default async function StudioDashboard() {
   if (publications.length === 0) {
     return (
       <div className="mx-auto max-w-xl py-16 text-center">
-        <h1 className="text-2xl font-black text-gray-900">Benvenuto nello studio</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Benvenuto nello studio</h1>
         <p className="mt-2 text-sm text-gray-600">Crea la tua pubblicazione: avrà un indirizzo tutto suo e una lista di iscritti.</p>
-        <Link href="/studio/publications/new" className="mt-6 inline-block rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+        <Link href="/studio/publications/new" className="mt-6 inline-block rounded-xl bg-ink-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-ink-700">
           Crea la pubblicazione
         </Link>
       </div>
@@ -87,12 +87,12 @@ export default async function StudioDashboard() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">Pannello Creator</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-gray-900">Pannello Creator</h1>
           <p className="mt-1 text-sm text-gray-500">{publications.map((p) => p.name).join(" · ")}</p>
         </div>
         <Link
           href="/studio/posts/new"
-          className="flex items-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+          className="flex items-center gap-2 self-start rounded-xl bg-ink-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-ink-700"
         >
           <PenSquare className="h-4 w-4" />
           Nuovo post
@@ -100,16 +100,16 @@ export default async function StudioDashboard() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Iscritti attivi" value={number.format(activeSubscribers)} hint="Hanno confermato l'email" icon={<Users className="h-4 w-4 text-blue-600" />} />
+        <KpiCard label="Iscritti attivi" value={number.format(activeSubscribers)} hint="Hanno confermato l'email" icon={<Users className="h-4 w-4 text-ink-600" />} />
         <KpiCard label="In attesa" value={number.format(pendingSubscribers)} hint="Non hanno ancora confermato" icon={<Clock className="h-4 w-4 text-amber-600" />} />
         <KpiCard label="Abbonati paganti" value={number.format(paidSubscriptions)} hint="Abbonamenti attivi" icon={<CreditCard className="h-4 w-4 text-emerald-600" />} />
-        <KpiCard label="Email inviate" value={number.format(emailsSent)} hint="Ultimi 30 giorni" icon={<MailCheck className="h-4 w-4 text-purple-600" />} />
+        <KpiCard label="Email inviate" value={number.format(emailsSent)} hint="Ultimi 30 giorni" icon={<MailCheck className="h-4 w-4 text-ink-600" />} />
       </div>
 
       <div className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <h2 className="text-lg font-bold text-gray-900">I tuoi post</h2>
-          <Link href="/studio/posts/new" className="text-xs font-semibold text-blue-600 hover:underline">
+          <Link href="/studio/posts/new" className="text-xs font-semibold text-ink-600 hover:underline">
             + Scrivi nuovo
           </Link>
         </div>

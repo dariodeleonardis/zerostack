@@ -54,7 +54,7 @@ export function CheckoutForm({ tierId, buttonLabel }: { tierId: string; buttonLa
       <button
         type="submit"
         disabled={pending}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-ink-700 disabled:opacity-50"
       >
         <ShieldCheck className="h-4 w-4" />
         {pending ? "Apertura del pagamento..." : buttonLabel}

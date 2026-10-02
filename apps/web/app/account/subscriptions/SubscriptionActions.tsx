@@ -29,7 +29,7 @@ export function SubscriptionActions({ id, cancelAtPeriodEnd }: { id: string; can
   return (
     <div className="text-right">
       {cancelAtPeriodEnd ? (
-        <button type="button" disabled={pending} onClick={() => run("resume")} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+        <button type="button" disabled={pending} onClick={() => run("resume")} className="rounded-lg bg-ink-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-ink-700 disabled:opacity-50">
           Riattiva il rinnovo
         </button>
       ) : (

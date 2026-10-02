@@ -68,7 +68,7 @@ function StripeCard({ publication, stripeConfigured }: { publication: PanelPubli
           onClick={connect}
           disabled={pending || !stripeConfigured}
           title={stripeConfigured ? undefined : "La piattaforma non ha ancora le chiavi Stripe"}
-          className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-ink-600 px-4 py-2 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-50"
         >
           {pending ? "Apertura di Stripe..." : publication.stripeAccountId ? "Completa su Stripe" : "Collega Stripe"}
         </button>
@@ -162,7 +162,7 @@ export function MonetizationPanel({ publications, stripeConfigured }: { publicat
     <div className="space-y-8">
       {publications.map((publication) => (
         <section key={publication.id} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="border-b border-gray-100 pb-3 text-lg font-black text-gray-900">{publication.name}</h2>
+          <h2 className="border-b border-gray-100 pb-3 font-display text-lg font-extrabold text-gray-900">{publication.name}</h2>
           <div className="mt-4">
             <StripeCard publication={publication} stripeConfigured={stripeConfigured} />
           </div>
@@ -172,7 +172,7 @@ export function MonetizationPanel({ publications, stripeConfigured }: { publicat
             <button
               type="button"
               onClick={() => setAdding(adding === publication.id ? null : publication.id)}
-              className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+              className="flex items-center gap-1 text-xs font-bold text-ink-600 hover:underline"
             >
               <Plus className="h-3.5 w-3.5" /> Nuovo livello
             </button>

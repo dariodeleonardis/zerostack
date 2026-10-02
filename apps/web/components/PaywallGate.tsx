@@ -1,91 +1,60 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import { Lock, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Check } from "lucide-react";
 
 interface PaywallGateProps {
   publicationName: string;
-  tierName?: string;
-  monthlyPriceEur?: number;
-  intervalLabel?: string;
+  tierName: string;
+  monthlyPriceEur: number;
+  intervalLabel: string;
   tierId: string;
   /** Indirizzo assoluto del checkout sulla piattaforma (dai sottodomini il relativo non basta). */
   checkoutHref?: string;
+  /** Solo i vantaggi scritti dall'autore: se non ne ha scritti, non se ne inventano. */
   benefits?: string[];
 }
 
-export const PaywallGate: React.FC<PaywallGateProps> = ({
-  publicationName = "Tech & Futuro Italia",
-  tierName = "Abbonato Premium",
-  monthlyPriceEur = 7,
-  intervalLabel = "/ mese",
-  tierId = "demo-tier",
-  checkoutHref,
-  benefits = [
-    "Accesso completo a tutti gli articoli e archivi",
-    "Podcast privato riservato agli abbonati",
-    "Commenti ed interazione diretta con la redazione",
-    "Fattura elettronica valida per deduzione fiscale"
-  ]
-}) => {
+const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+
+/** Fine dell'anteprima gratuita: nei colori della pubblicazione (variabili --pub-*). */
+export function PaywallGate({ publicationName, tierName, monthlyPriceEur, intervalLabel, tierId, checkoutHref, benefits = [] }: PaywallGateProps) {
+  const price = euro.format(monthlyPriceEur);
   return (
-    <div className="relative my-10 overflow-hidden rounded-2xl border-2 border-blue-500/20 bg-gradient-to-b from-blue-50/50 to-white p-6 sm:p-10 shadow-lg">
+    <aside className="my-12 border-y-[3px] border-double border-[color:var(--pub-text)] py-10 font-sans">
       <div className="mx-auto max-w-lg text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
-          <Lock className="h-6 w-6" />
-        </div>
-
-        <h3 className="mt-4 text-2xl font-black tracking-tight text-gray-900">
-          Questo contenuto è riservato agli abbonati
-        </h3>
-
-        <p className="mt-2 text-sm text-gray-600">
-          Sostieni il giornalismo indipendente di <strong>{publicationName}</strong> per continuare a leggere questa analisi approfondita.
+        <p className="kicker text-[color:var(--pub-accent-text)]">Continua a leggere</p>
+        <h3 className="mt-3 font-display text-3xl font-extrabold tracking-tight">Il resto è riservato agli abbonati</h3>
+        <p className="mt-3 text-lg opacity-90">
+          Abbonati a <strong>{publicationName}</strong> per leggere tutto, e sostieni chi scrive.
         </p>
 
-        {/* Card Vantaggi & Prezzo */}
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm">
-          <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
-            <div>
-              <h4 className="font-bold text-gray-900">{tierName}</h4>
-              <p className="text-xs text-gray-500">Accesso immediato senza vincoli</p>
-            </div>
-            <div className="text-right">
-              <span className="text-3xl font-extrabold text-gray-900">{monthlyPriceEur}€</span>
-              <span className="text-xs text-gray-500"> {intervalLabel}</span>
-            </div>
+        <div className="mt-8 border-2 border-[color:var(--pub-text)] p-6 text-left">
+          <div className="flex items-baseline justify-between gap-4">
+            <h4 className="kicker">{tierName}</h4>
+            <p>
+              <span className="font-display text-4xl font-extrabold">{price}</span>
+              <span className="text-sm opacity-80"> {intervalLabel}</span>
+            </p>
           </div>
-
-          <ul className="mt-4 space-y-2 text-sm text-gray-700">
-            {benefits.map((b, idx) => (
-              <li key={idx} className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-6">
-            <Link
-              href={checkoutHref ?? `/checkout/${tierId}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700"
-            >
-              Abbonati ora a {monthlyPriceEur}€ {intervalLabel}
-            </Link>
-          </div>
+          {benefits.length > 0 && (
+            <ul className="mt-4 space-y-2 text-base">
+              {benefits.map((b) => (
+                <li key={b} className="flex items-start gap-2">
+                  <Check className="mt-1 h-4 w-4 shrink-0" aria-hidden />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href={checkoutHref ?? `/checkout/${tierId}`}
+            className="mt-6 block rounded-full bg-[color:var(--pub-accent)] py-3 text-center text-base font-bold text-[color:var(--pub-on-accent)] ring-2 ring-[color:var(--pub-text)] transition hover:opacity-90"
+          >
+            Abbonati a {price} {intervalLabel}
+          </Link>
         </div>
-
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Pagamento sicuro Stripe & SEPA
-          </span>
-          <span>&bull;</span>
-          <span>Disdici con 1 clic</span>
-          <span>&bull;</span>
-          <span>Dati fiscali per fattura</span>
-        </div>
+        <p className="mt-4 text-sm opacity-80">Pagamento con Stripe · Disdici quando vuoi · Fattura elettronica su richiesta</p>
       </div>
-    </div>
+    </aside>
   );
-};
+}

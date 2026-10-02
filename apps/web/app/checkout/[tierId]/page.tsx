@@ -48,7 +48,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
           <CheckCircle2 className="h-10 w-10" />
         </div>
-        <h1 className="mt-4 text-2xl font-black text-gray-900">{hasActive ? "Abbonamento attivo" : "Pagamento ricevuto"}</h1>
+        <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-gray-900">{hasActive ? "Abbonamento attivo" : "Pagamento ricevuto"}</h1>
         <p className="mt-2 text-sm leading-relaxed text-gray-600">
           Grazie per sostenere <strong>{publication.name}</strong>.{" "}
           {hasActive
@@ -56,7 +56,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: {
             : "Stiamo attivando l'abbonamento: ci vuole qualche secondo (con l'addebito SEPA qualche giorno). Riceverai una conferma."}
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <a href={publicationUrl} className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-blue-700">
+          <a href={publicationUrl} className="rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-ink-700">
             Vai a {publication.name}
           </a>
           <Link href="/account/subscriptions" className="rounded-xl border border-gray-300 px-6 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">
@@ -78,7 +78,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: {
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
         <p className="text-sm text-gray-700">Per abbonarti serve un account: così ritrovi l&apos;abbonamento su ogni dispositivo.</p>
         <div className="mt-4 flex justify-center gap-3">
-          <Link href={`/register?next=${next}`} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+          <Link href={`/register?next=${next}`} className="rounded-xl bg-ink-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-ink-700">
             Crea l&apos;account
           </Link>
           <Link href={`/login?next=${next}`} className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">
@@ -104,15 +104,15 @@ export default async function CheckoutPage({ params, searchParams }: { params: {
       <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
         <div className="md:col-span-5">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Riepilogo</span>
-            <h1 className="mt-2 text-xl font-black text-gray-900">{publication.name}</h1>
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-600">Riepilogo</span>
+            <h1 className="mt-2 font-display text-xl font-extrabold text-gray-900">{publication.name}</h1>
             <p className="text-sm font-semibold text-gray-500">{tier.name}</p>
             <p className="mt-2 text-sm text-gray-600">{tier.description}</p>
 
             <div className="mt-6 flex items-baseline justify-between border-y border-gray-100 py-4">
               <span className="text-sm text-gray-600">Totale:</span>
               <div className="text-right">
-                <span className="text-2xl font-black text-gray-900">{price}</span>
+                <span className="font-display text-4xl font-extrabold tracking-tight text-ink">{price}</span>
                 <span className="text-xs text-gray-500"> {INTERVAL_LABEL[tier.interval]}</span>
               </div>
             </div>
@@ -127,7 +127,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: {
             </ul>
 
             {tier.interval !== "ONE_TIME" && (
-              <div className="mt-6 rounded-xl bg-blue-50/60 p-3 text-center text-xs text-blue-900">
+              <div className="mt-6 rounded-xl bg-saffron-50/60 p-3 text-center text-xs text-ink-900">
                 Nessun vincolo: disdici quando vuoi e continui a leggere fino alla fine del periodo pagato.
               </div>
             )}

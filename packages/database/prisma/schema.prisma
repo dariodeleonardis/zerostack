@@ -163,8 +163,11 @@ model Publication {
   domainVerifyToken      String?
   // Sospesa dall'amministrazione: pagine, feed, certificati e invii fermi.
   suspendedAt            DateTime?
+  // Aspetto scelto dall'autore (Studio › Aspetto): colore principale, fondo, caratteri
+  // ("bodoni" | "serif" | "sans"). Il contrasto del testo lo garantisce apps/web/lib/colors.ts.
   primaryColor           String   @default("#FF5722")
-  fontStyle              String   @default("sans")
+  backgroundColor        String   @default("#FBF8F2")
+  fontStyle              String   @default("bodoni")
   
   // Impostazioni integrazione pagamenti & email (indipendenza del creator)
   stripeAccountId        String?

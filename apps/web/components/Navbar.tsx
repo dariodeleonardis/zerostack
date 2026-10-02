@@ -1,57 +1,22 @@
 import React from "react";
 import Link from "next/link";
-import { Compass, Radio, MessageSquare, Inbox, ShieldCheck } from "lucide-react";
 import { NavbarUser } from "./NavbarUser";
+import { Wordmark } from "./Wordmark";
 
+/** Testata: fascia d'inchiostro, marchio a sinistra, voci in maiuscoletto, filo zafferano sotto. */
 export const Navbar: React.FC = () => {
+  const item = "kicker text-paper-300 transition hover:text-saffron";
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand & Badge Made in Italy / 0% fee */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 text-2xl font-black tracking-tight text-gray-900">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-lg font-bold text-white shadow-sm">
-              Z
-            </span>
-            <span>ZeroStack</span>
-          </Link>
-          <span className="hidden rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 md:inline-flex items-center gap-1 border border-emerald-200">
-            <ShieldCheck className="w-3.5 h-3.5" /> 0% Fee &bull; 100% Tuo
-          </span>
-        </div>
-
-        {/* Navigation links */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <Link
-            href="/inbox"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-gray-900"
-          >
-            <Inbox className="h-4 w-4" />
-            Posta
-          </Link>
-          <Link
-            href="/notes"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-gray-900"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Note
-          </Link>
-          <Link
-            href="/podcasts"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-gray-900"
-          >
-            <Radio className="h-4 w-4" />
-            Podcast
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-gray-900"
-          >
-            <Compass className="h-4 w-4" />
-            Esplora
-          </Link>
+    <header className="sticky top-0 z-40 w-full border-b-[3px] border-saffron bg-ink text-paper">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" aria-label="ZeroStack, pagina iniziale" className="shrink-0">
+          <Wordmark />
+        </Link>
+        <nav aria-label="Sezioni" className="hidden items-center gap-7 md:flex">
+          <Link href="/notes" className={item}>Note</Link>
+          <Link href="/podcasts" className={item}>Podcast</Link>
+          <Link href="/inbox" className={item}>Posta</Link>
         </nav>
-
         <NavbarUser />
       </div>
     </header>

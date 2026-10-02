@@ -56,10 +56,10 @@ export default function PodcastsPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <div className="mb-8 border-b border-gray-200 pb-6">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-saffron-50 px-3 py-1 text-xs font-semibold text-ink-700">
           <Radio className="h-3.5 w-3.5" /> Podcast & Audio
         </div>
-        <h1 className="mt-3 text-3xl font-black text-gray-900">Episodi Podcast</h1>
+        <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight text-gray-900">Episodi Podcast</h1>
         <p className="mt-1 text-sm text-gray-600">
           Ascolta i podcast delle tue pubblicazioni preferite. Puoi continuare la riproduzione mentre navighi o leggi articoli.
         </p>
@@ -73,7 +73,7 @@ export default function PodcastsPage() {
           >
             <div className="flex-1">
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                <span className="text-purple-600 font-bold">{ep.publicationName}</span>
+                <span className="text-ink-600 font-bold">{ep.publicationName}</span>
                 <span>&bull;</span>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" /> {ep.publishedDate}
@@ -91,7 +91,7 @@ export default function PodcastsPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => handlePlay(ep)}
-                className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-purple-600/20 transition hover:bg-purple-700"
+                className="flex items-center gap-2 rounded-xl bg-ink-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-ink-700"
               >
                 <Play className="h-4 w-4 fill-white" />
                 <span>Ascolta</span>

@@ -42,27 +42,27 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div>
-        <label htmlFor="email" className="block text-xs font-bold text-gray-700">Email</label>
+        <label htmlFor="email" className="block text-sm font-semibold text-ink">Email</label>
         <input
           id="email"
           type="email"
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-xs font-bold text-gray-700">Password</label>
+        <label htmlFor="password" className="block text-sm font-semibold text-ink">Password</label>
         <input
           id="password"
           type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
           required
         />
       </div>
@@ -76,7 +76,7 @@ function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
       >
         <LogIn className="h-4 w-4" />
         {isSubmitting ? "Accesso in corso..." : "Accedi"}
@@ -87,8 +87,8 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="mx-auto max-w-md py-12">
-      <h1 className="text-2xl font-black text-gray-900">Accedi a ZeroStack</h1>
+    <div className="mx-auto max-w-md px-4 py-14">
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Accedi a ZeroStack</h1>
       <p className="mt-1 text-xs text-gray-500">Per scrivere, gestire le tue pubblicazioni e i tuoi abbonamenti.</p>
       {/* useSearchParams richiede un confine Suspense nelle pagine statiche di Next 14 */}
       <Suspense>
@@ -98,7 +98,7 @@ export default function LoginPage() {
         <Link href="/forgot-password" className="font-bold text-gray-700 hover:text-gray-900">Password dimenticata?</Link>
       </p>
       <p className="mt-2 text-center text-xs text-gray-500">
-        Non hai un account? <Link href="/register" className="font-bold text-blue-600 hover:text-blue-700">Registrati</Link>
+        Non hai un account? <Link href="/register" className="font-bold text-ink-600 hover:text-ink-700">Registrati</Link>
       </p>
     </div>
   );

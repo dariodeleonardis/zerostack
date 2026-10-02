@@ -71,7 +71,7 @@ export function ImportForm({ publications }: { publications: { id: string; name:
           />
         </label>
         {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
-        <button type="submit" disabled={!file || pending} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+        <button type="submit" disabled={!file || pending} className="flex items-center gap-2 rounded-xl bg-ink-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-50">
           <Upload className="h-4 w-4" /> {pending ? "Importazione in corso..." : "Importa"}
         </button>
       </form>

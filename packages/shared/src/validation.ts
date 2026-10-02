@@ -83,6 +83,13 @@ export const CreatePublicationSchema = z.object({
   })
 });
 
+// Aspetto della pubblicazione (Studio › Aspetto). Il contrasto lo sistema la pagina, non si rifiuta un colore.
+export const AppearanceSchema = z.object({
+  primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Colore principale non valido"),
+  backgroundColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Colore di fondo non valido"),
+  fontStyle: z.enum(["bodoni", "serif", "sans"], { errorMap: () => ({ message: "Scegli uno dei tre caratteri" }) })
+});
+
 export const CreatePostSchema = z.object({
   publicationId: z.string().uuid(),
   title: z.string().min(2, "Il titolo è obbligatorio"),

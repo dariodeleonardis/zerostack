@@ -47,7 +47,7 @@ export default function PublicationTeamPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between border-b border-gray-200 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Squadra & Collaboratori</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Squadra e collaboratori</h1>
           <p className="text-xs text-gray-500">
             Invita co-autori ed editor a collaborare agli articoli della tua pubblicazione.
           </p>
@@ -57,7 +57,7 @@ export default function PublicationTeamPage() {
       {/* Form Invito */}
       <form onSubmit={handleInvite} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-          <UserPlus className="h-4 w-4 text-blue-600" /> Invita un Nuovo Membro
+          <UserPlus className="h-4 w-4 text-ink-600" /> Invita un Nuovo Membro
         </h2>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -66,7 +66,7 @@ export default function PublicationTeamPage() {
             placeholder="Indirizzo email del collaboratore..."
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
-            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs shadow-sm focus:border-blue-500 focus:outline-none"
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs shadow-sm focus:border-ink focus:outline-none"
             required
           />
 
@@ -82,7 +82,7 @@ export default function PublicationTeamPage() {
           <button
             type="submit"
             disabled={isInviting}
-            className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+            className="rounded-xl bg-ink-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
           >
             {isInviting ? "Invio invito..." : "Invia Invito"}
           </button>
@@ -109,9 +109,9 @@ export default function PublicationTeamPage() {
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                       m.role === "OWNER"
-                        ? "bg-purple-100 text-purple-800"
+                        ? "bg-saffron-100 text-ink-800"
                         : m.role === "EDITOR"
-                        ? "bg-blue-100 text-blue-800"
+                        ? "bg-saffron-100 text-ink-800"
                         : "bg-gray-100 text-gray-700"
                     }`}
                   >

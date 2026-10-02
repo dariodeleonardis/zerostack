@@ -42,7 +42,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({ onNoteCreated }) => 
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <form onSubmit={handleSubmit}>
         <div className="flex gap-3">
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-blue-100 font-bold text-blue-700 flex items-center justify-center">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-saffron-100 font-bold text-ink-700 flex items-center justify-center">
             D
           </div>
           <div className="flex-1">
@@ -70,7 +70,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({ onNoteCreated }) => 
               <button
                 type="submit"
                 disabled={!content.trim() || isSubmitting}
-                className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full bg-ink-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-ink-700 disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{isSubmitting ? "Invio..." : "Invia Nota"}</span>

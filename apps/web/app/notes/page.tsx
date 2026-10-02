@@ -86,7 +86,7 @@ export default function NotesPage() {
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Note & Dispacci</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Note & Dispacci</h1>
           <p className="text-xs text-gray-500">
             Il micro-blogging di ZeroStack: pensieri rapidi, aggiornamenti e conversazioni tra autori e lettori.
           </p>
@@ -102,7 +102,7 @@ export default function NotesPage() {
           <div key={note.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 overflow-hidden rounded-full bg-blue-100 font-bold text-blue-700 flex items-center justify-center text-xs">
+                <div className="h-9 w-9 overflow-hidden rounded-full bg-saffron-100 font-bold text-ink-700 flex items-center justify-center text-xs">
                   {note.author.name[0]}
                 </div>
                 <div>
@@ -128,12 +128,12 @@ export default function NotesPage() {
                 <span>{note.likesCount}</span>
               </button>
 
-              <button className="flex items-center gap-1.5 hover:text-blue-600 transition">
+              <button className="flex items-center gap-1.5 hover:text-ink-600 transition">
                 <Repeat className="h-4 w-4" />
                 <span>{note.restacksCount}</span>
               </button>
 
-              <button className="flex items-center gap-1.5 hover:text-blue-600 transition">
+              <button className="flex items-center gap-1.5 hover:text-ink-600 transition">
                 <MessageSquare className="h-4 w-4" />
                 <span>{note.repliesCount}</span>
               </button>

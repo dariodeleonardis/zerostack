@@ -21,7 +21,7 @@ export default async function AdminPublicationsPage({ searchParams }: { searchPa
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-black text-gray-900">Pubblicazioni</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Pubblicazioni</h1>
         <form className="flex gap-2">
           <input name="q" defaultValue={q} placeholder="Nome, slug o dominio" className="w-64 rounded-lg border border-gray-300 px-3 py-1.5 text-sm" />
           <button className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-bold text-white">Cerca</button>
