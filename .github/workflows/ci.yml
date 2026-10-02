@@ -59,6 +59,9 @@ jobs:
     - name: Typecheck
       run: npm run typecheck
 
+    - name: Lint
+      run: npm run lint --workspace=@zerostack/web
+
     - name: Database schema and seed data
       run: |
         node packages/database/scripts/migrate.mjs

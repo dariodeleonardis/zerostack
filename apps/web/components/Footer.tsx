@@ -20,7 +20,6 @@ export function Footer() {
           <ul className="mt-3 space-y-2">
             <li><Link href="/register" className={link}>Apri una pubblicazione</Link></li>
             <li><Link href="/login" className={link}>Accedi</Link></li>
-            <li><Link href="/podcasts" className={link}>Podcast</Link></li>
           </ul>
         </nav>
         <nav aria-label="Note legali" className="text-sm">

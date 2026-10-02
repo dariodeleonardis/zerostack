@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Heart, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { prisma } from "@zerostack/database";
 import { PaywallGate } from "../../../../components/PaywallGate";
 import { getCurrentUser } from "../../../../lib/auth";
@@ -130,13 +130,8 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 rounded-full border border-[color:var(--pub-text)] px-3 py-1.5 text-sm font-semibold" aria-label={`${post.likesCount} apprezzamenti`}>
-                <Heart className="h-4 w-4" aria-hidden />
-                <span>{post.likesCount}</span>
-              </span>
-              <ShareButton />
-            </div>
+            {/* Il contatore dei mi piace tornerà quando i lettori potranno metterli davvero. */}
+            <ShareButton />
           </div>
         </header>
 
@@ -176,14 +171,11 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
             </p>
           ))}
 
-        {/* Il TipJar non c'è: simulava il pagamento (successo dopo 600 ms senza addebito) e Satispay
-            non è collegato. Torna quando le mance passano davvero da Stripe. */}
-
+        {/* Commenti: si mostrano quelli che ci sono (per esempio importati), ma scriverne non si può
+            ancora, quindi niente invito a commentare finché il modulo non esiste. */}
+        {post.comments.length > 0 && (
         <section className="mt-14 border-t-[3px] border-[color:var(--pub-text)] pt-6">
           <h2 className={`text-2xl font-extrabold tracking-tight ${font.title}`}>Commenti dei lettori ({post._count.comments})</h2>
-          {post.comments.length === 0 ? (
-            <p className="mt-4 opacity-80">Ancora nessun commento.</p>
-          ) : (
             <ul className="mt-6 divide-y divide-[color:var(--pub-text)]">
               {post.comments.map((comment) => (
                 <li key={comment.id} className="py-5">
@@ -195,8 +187,8 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
                 </li>
               ))}
             </ul>
-          )}
         </section>
+        )}
       </article>
       <PublicationFooter background={palette.bg} />
     </div>

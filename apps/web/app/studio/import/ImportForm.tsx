@@ -88,7 +88,7 @@ export function ImportForm({ publications }: { publications: { id: string; name:
               {report.postsImported} articoli pubblicati e {report.postsDrafts} bozze importati
               {report.postsSkippedExisting > 0 && ` (${report.postsSkippedExisting} già presenti, lasciati com'erano)`}
             </li>
-            {report.postsWithoutHtml > 0 && <li>{report.postsWithoutHtml} articoli senza file HTML nell'export, non importati</li>}
+            {report.postsWithoutHtml > 0 && <li>{report.postsWithoutHtml} articoli senza file HTML nell&apos;export, non importati</li>}
           </ul>
           {report.paidOnSubstack > 0 && (
             <p className="mt-4 rounded-xl bg-white/70 p-3 text-xs text-emerald-900">

@@ -461,7 +461,7 @@ export function PostEditor({ publications, post }: { publications: EditorPublica
 
               <div className="mt-5 border-t border-gray-100 pt-4">
                 <label className="text-xs font-semibold text-gray-700" htmlFor="scheduledAt">
-                  Oppure programma l'uscita
+                  Oppure programma l&apos;uscita
                 </label>
                 <input
                   id="scheduledAt"

@@ -73,8 +73,7 @@ export default async function CookiePage() {
 
       <h2>Statistiche</h2>
       <p>
-        Le statistiche di lettura delle pubblicazioni non usano cookie né altri identificativi salvati nel tuo dispositivo: il server calcola un codice che cambia ogni giorno e
-        da cui non si risale al tuo indirizzo IP.
+        ZeroStack oggi non raccoglie statistiche di visita. Gli autori vedono solo i numeri che servono al servizio, come iscritti, abbonati ed email inviate.
       </p>
 
       <h2>Pagamenti</h2>

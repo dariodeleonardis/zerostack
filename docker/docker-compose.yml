@@ -1,7 +1,9 @@
-version: '3.8'
+# SOLO SVILUPPO LOCALE. I valori predefiniti (password del database, NEXTAUTH_SECRET) sono di prova
+# e pubblici: non usare questo file su un server. La produzione è docker-compose.coolify.yml, dove i
+# segreti li genera Coolify (audit C1, 2/10/2026).
 
 services:
-  # Web Application (Next.js 15 Standalone)
+  # Web Application (Next.js 14 standalone)
   web:
     build:
       context: ..

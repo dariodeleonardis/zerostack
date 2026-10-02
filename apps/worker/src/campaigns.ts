@@ -1,6 +1,6 @@
 import { publishPost, type PrismaClient } from "@zerostack/database";
 import { buildNewsletterEmail, EmailSendError, type EmailTransport } from "@zerostack/email";
-import { isSubscriptionActive, platformUrlFromEnv, publicationBaseUrl, splitAtPaywall } from "@zerostack/shared";
+import { envNumber, isSubscriptionActive, platformUrlFromEnv, publicationBaseUrl, splitAtPaywall } from "@zerostack/shared";
 
 export interface WorkerOptions {
   /** Email al secondo verso il provider (Brevo e Resend hanno limiti per piano). */
@@ -18,7 +18,7 @@ export interface WorkerOptions {
 }
 
 export const defaultOptions = (env: NodeJS.ProcessEnv = process.env): WorkerOptions => ({
-  ratePerSecond: Number(env.EMAIL_RATE_PER_SECOND || 10),
+  ratePerSecond: envNumber(env, "EMAIL_RATE_PER_SECOND", 10, { max: 1000 }),
   batchSize: 200,
   maxAttempts: 3,
   maxConsecutiveFailures: 20,

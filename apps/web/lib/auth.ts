@@ -130,6 +130,10 @@ export function isSameOriginJson(req: Request): boolean {
 }
 
 export function clientIp(req: Request): string {
-  // Dietro Caddy l'IP vero arriva in X-Forwarded-For (primo valore).
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "sconosciuto";
+  // Dietro Caddy l'IP vero arriva in X-Forwarded-For. Si prende l'ULTIMO valore, quello scritto dal
+  // nostro proxy: i primi li può scrivere chiunque nella richiesta (audit A2). Oggi Caddy non si fida
+  // degli X-Forwarded-For in arrivo e li sostituisce, quindi primo e ultimo coincidono; se un giorno
+  // ci sarà un CDN davanti, va configurato trusted_proxies in Caddy, non cambiato questo.
+  const hops = (req.headers.get("x-forwarded-for") ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  return hops[hops.length - 1] || req.headers.get("x-real-ip") || "sconosciuto";
 }

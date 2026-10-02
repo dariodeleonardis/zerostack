@@ -33,9 +33,10 @@ async function testLiveEndpoints() {
   // 1. Pagine Web Pubbliche
   console.log("📌 1. Test Pagine Portale Pubblico & Lettori:");
   await check("Homepage ZeroStack", "/");
-  await check("Feed Lettore (La Tua Posta)", "/inbox");
-  await check("Timeline Note & Dispacci", "/notes");
-  await check("Catalogo Podcast", "/podcasts");
+  // Posta, Note e Podcast erano pagine con contenuti finti: tolte il 2/10, tornano quando sono vere.
+  await check("Posta finta rimossa -> 404", "/inbox", undefined, (res) => res.status === 404);
+  await check("Note finte rimosse -> 404", "/notes", undefined, (res) => res.status === 404);
+  await check("Podcast finti rimossi -> 404", "/podcasts", undefined, (res) => res.status === 404);
   await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
   await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>
     res.status === 200 && text.includes("Sovranità dei dati") && !text.includes("paywall-divider"));
@@ -48,7 +49,7 @@ async function testLiveEndpoints() {
   await check("Editor Nuovo Post / Newsletter senza sessione -> login", "/studio/posts/new", { redirect: "manual" }, toLogin);
   await check("Monetizzazione Stripe Connect & Tiers senza sessione -> login", "/studio/monetization", { redirect: "manual" }, toLogin);
   await check("Creazione Nuova Pubblicazione senza sessione -> login", "/studio/publications/new", { redirect: "manual" }, toLogin);
-  await check("Squadra & Collaboratori senza sessione -> login", "/studio/team", { redirect: "manual" }, toLogin);
+  await check("Squadra finta rimossa -> 404", "/studio/team", { redirect: "manual" }, (res) => res.status === 404 || toLogin(res));
 
   // 3. Pannello SuperAdmin & Staff
   console.log("\n📌 3. Test Pannello SuperAdmin & Moderazione Staff:");
@@ -121,63 +122,20 @@ async function testLiveEndpoints() {
   await check("Ricevuta PDF finta rimossa -> 404", "/api/receipts/pdf/sub_test_live_99", undefined, (res) => res.status === 404);
   await check("FatturaPA XML finta rimossa -> 404", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res) => res.status === 404);
 
-  // 5.8 Donazione e Micro-pagamento Satispay
-  await check("Satispay Micro-donation API", "/api/donations/satispay", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amountEur: 2.5,
-      publicationSlug: "tech-italia"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes("satispay://pay");
-  });
-
-  await check("Satispay importo non numerico -> 400", "/api/donations/satispay", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amountEur: "abc" })
-  }, (res) => res.status === 400);
-
   await check("Stripe Connect senza sessione -> 401", "/api/stripe/connect", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ publicationId: "x" })
   }, (res) => res.status === 401);
 
-  // 5.9 RFC 7033 WebFinger Fediverse Discovery
-  await check("WebFinger RFC 7033 Discovery", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res, text) => {
-    return text.includes("application/activity+json") && text.includes("tech-italia");
-  });
-
-  // 5.10 ActivityPub Actor W3C JSON-LD
-  await check("ActivityPub Actor Profile", "/api/activitypub/users/tech-italia", undefined, (res, text) => {
-    return text.includes("activitystreams") && text.includes('"type":"Person"');
-  });
-
-  // 5.11 Telemetria Analitiche Privacy-First (GDPR)
-  await check("Raccolta Analitiche Zero-Cookie", "/api/analytics/collect", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      path: "/p/tech-italia/test",
-      publicationSlug: "tech-italia"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes('"visitorHash"');
-  });
-
-  // 5.12 Trascrizione Podcast & Sottotitoli WebVTT
-  await check("Trascrizione Podcast API", "/api/podcasts/transcribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audioUrl: "https://zerostack.it/sample.mp3"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes("WEBVTT");
-  });
-
+  // API finte tolte il 2/10 (vedi docs/STATO-FUNZIONI-E-AUDIT.md): Satispay con ID inventati,
+  // statistiche che non salvavano, trascrizione con testo d'esempio, Fediverso con chiave finta.
+  const post = { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" };
+  await check("Satispay finto rimosso -> 404", "/api/donations/satispay", post, (res) => res.status === 404);
+  await check("Statistiche finte rimosse -> 404", "/api/analytics/collect", post, (res) => res.status === 404);
+  await check("Trascrizione finta rimossa -> 404", "/api/podcasts/transcribe", post, (res) => res.status === 404);
+  await check("WebFinger finto rimosso -> 404", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res) => res.status === 404);
+  await check("Attore ActivityPub finto rimosso -> 404", "/api/activitypub/users/tech-italia", undefined, (res) => res.status === 404);
 
   console.log("\n========================================================");
   console.log(`📊 RISULTATO TEST LIVE ENDPOINTS: ${passed}/${passed + failed} SUPERATI`);

@@ -66,7 +66,7 @@ export default async function InvoicesPage() {
         <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Fatture elettroniche</h1>
         <p className="mt-1 text-sm text-gray-600">
           Quando un lettore chiede la fattura al checkout, ZeroStack la prepara a tuo nome in formato FatturaPA a ogni pagamento, rinnovi compresi.
-          Tu la trasmetti allo SdI dal tuo gestionale o dal portale Fatture e Corrispettivi dell'Agenzia delle Entrate.
+          Tu la trasmetti allo SdI dal tuo gestionale o dal portale Fatture e Corrispettivi dell&apos;Agenzia delle Entrate.
         </p>
       </div>
       {publications.length === 0 ? (

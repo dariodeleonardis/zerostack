@@ -30,7 +30,9 @@ import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
 import { createHash, createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
-import { sessionCookieDomain } from "../apps/web/lib/auth";
+import { clientIp, sessionCookieDomain } from "../apps/web/lib/auth";
+import { allowAttemptInMemory } from "../apps/web/lib/rate-limit";
+import { envNumber } from "../packages/shared/src/index";
 import { contrast, publicationFont, publicationPalette, readableOn, textSafe } from "../apps/web/lib/colors";
 import { AppearanceSchema } from "../packages/shared/src/index";
 import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
@@ -440,21 +442,17 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   // --------------------------------------------------------------------------
   console.log("\n📌 GRUPPO 11: Script di Produzione, Sicurezza & Backup VPS");
 
+  // dist/backup-vps.sh è stato tolto il 2/10 con la vecchia via di deploy: i backup li fa il servizio
+  // zerostack-backup (apps/worker/src/backup.ts), con cifratura AES-256-GCM e copia S3.
   const hardenScriptPath = path.join(__dirname, "../dist/harden-vps.sh");
-  const backupScriptPath = path.join(__dirname, "../dist/backup-vps.sh");
-
   assert(fs.existsSync(hardenScriptPath), "File dist/harden-vps.sh presente nel pacchetto di distribuzione");
-  assert(fs.existsSync(backupScriptPath), "File dist/backup-vps.sh presente nel pacchetto di distribuzione");
+  assert(!fs.existsSync(path.join(__dirname, "../dist/backup-vps.sh")) && !fs.existsSync(path.join(__dirname, "../dist/docker-compose.prod.yml")), "La vecchia via di deploy (dist/) non c'è più: si pubblica solo con Coolify");
 
   const hardenContent = fs.readFileSync(hardenScriptPath, "utf-8");
   assert(hardenContent.includes("ufw allow 80/tcp"), "Script hardening include regole firewall per porta HTTP 80");
   assert(hardenContent.includes("ufw allow 443/tcp"), "Script hardening include regole firewall per porta HTTPS 443");
   assert(hardenContent.includes("fail2ban"), "Script hardening include configurazione protezione Fail2ban");
   assert(hardenContent.includes("tcp_syncookies"), "Script hardening applica mitigazione SYN flood");
-
-  const backupContent = fs.readFileSync(backupScriptPath, "utf-8");
-  assert(backupContent.includes("AES256"), "Script backup include cifratura simmetrica AES-256 GPG");
-  assert(backupContent.includes("OFFSITE_DESTINATION"), "Script backup include parametro upload remoto offsite");
 
   // --------------------------------------------------------------------------
   // TEST GRUPPO 12: Routing Multi-Tenant Sottodomini & Wildcard zerostack.it
@@ -740,6 +738,26 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(fallback.accent === "#141210" && fallback.bg === "#FBF8F2", "Colori non validi nel database: si usano inchiostro e carta");
   assert(publicationFont("comic").label === "Editoriale" && publicationFont("sans").label === "Moderno", "Caratteri sconosciuti: si usa Editoriale");
   assert(AppearanceSchema.safeParse({ primaryColor: "#A8322D", backgroundColor: "#ffffff", fontStyle: "serif" }).success && !AppearanceSchema.safeParse({ primaryColor: "red", backgroundColor: "#ffffff", fontStyle: "serif" }).success, "Aspetto: colori esadecimali e solo i tre caratteri");
+
+  // --------------------------------------------------------------------------
+  // Audit del 2/10: IP del client, limite senza Redis, impostazioni del worker
+  // --------------------------------------------------------------------------
+  console.log("\n🛡️  Correzioni dell'audit");
+  const ipOf = (xff?: string, real?: string) =>
+    clientIp(new Request("http://x/", { headers: { ...(xff ? { "x-forwarded-for": xff } : {}), ...(real ? { "x-real-ip": real } : {}) } }));
+  assert(ipOf("6.6.6.6, 203.0.113.9") === "203.0.113.9", "IP: vale l'ultimo valore (quello del nostro proxy), non quello scritto dal client");
+  assert(ipOf("203.0.113.9") === "203.0.113.9" && ipOf(undefined, "198.51.100.2") === "198.51.100.2" && ipOf() === "sconosciuto", "IP: valore singolo, X-Real-IP di ripiego, sconosciuto");
+  const t0 = 1_000_000;
+  const memKey = `prova-${Math.random()}`;
+  const attempts = [1, 2, 3, 4].map(() => allowAttemptInMemory(memKey, 3, 60, t0));
+  assert(attempts.join() === "true,true,true,false", "Senza Redis il limite resta: il quarto tentativo su tre è respinto", attempts.join());
+  assert(allowAttemptInMemory(memKey, 3, 60, t0 + 61_000), "Senza Redis il limite si azzera allo scadere della finestra");
+  assert(envNumber({}, "X", 5) === 5 && envNumber({ X: " " }, "X", 5) === 5 && envNumber({ X: "0" }, "X", 10) === 0, "Variabili numeriche: vuote = predefinito, zero ammesso");
+  let badEnv = "";
+  try { envNumber({ WORKER_POLL_SECONDS: "cinque" }, "WORKER_POLL_SECONDS", 5, { min: 1 }); } catch (e) { badEnv = String(e); }
+  let lowEnv = false;
+  try { envNumber({ X: "0" }, "X", 5, { min: 1 }); } catch { lowEnv = true; }
+  assert(badEnv.includes("WORKER_POLL_SECONDS") && lowEnv, "Variabili numeriche scritte male o fuori intervallo: errore che dice quale", badEnv);
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

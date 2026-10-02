@@ -1,6 +1,7 @@
 import { prisma } from "@zerostack/database";
 import { createTransportFromEnv } from "@zerostack/email";
 import { captureException, installErrorReporting } from "@zerostack/shared/src/monitoring";
+import { envNumber } from "@zerostack/shared/src/env";
 import { defaultOptions, runOnce } from "./campaigns";
 
 /**
@@ -11,7 +12,7 @@ import { defaultOptions, runOnce } from "./campaigns";
  *   npm run once --workspace=@zerostack/worker         (un giro e basta: test e cron)
  */
 const once = process.argv.includes("--once");
-const pollMs = Number(process.env.WORKER_POLL_SECONDS || 5) * 1000;
+const pollMs = envNumber(process.env, "WORKER_POLL_SECONDS", 5, { min: 1, max: 3600 }) * 1000;
 
 /** Battito del worker: /api/health lo considera fermo se non si aggiorna da qualche minuto. */
 async function heartbeat(ok: boolean, detail: string | null) {

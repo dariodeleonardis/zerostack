@@ -39,36 +39,32 @@ zerostack/
 │   ├── email/                  # Template email responsive (React Email) per newsletter e transazioni
 │   └── shared/                 # Tipi TypeScript, validazione Zod e dizionario i18n italiano
 ├── docker/
-│   ├── docker-compose.yml      # Stack VPS completo (Web, Worker, Postgres, Redis, Caddy)
+│   ├── docker-compose.yml      # SOLO sviluppo locale (password di prova)
 │   ├── Dockerfile.web          # Immagine Next.js standalone ottimizzata
 │   ├── Dockerfile.worker       # Background worker per l'invio asincrono delle newsletter
 │   └── Caddyfile               # Reverse proxy con emissione SSL automatica
+├── docker-compose.coolify.yml # Lo stack di produzione, pubblicato da Coolify
+├── dist/                       # Blocco Caddy per i domini degli autori e messa in sicurezza del VPS
 └── scripts/
-    ├── deploy.sh               # Installatore e gestore aggiornamenti 1-click per VPS
     └── import-substack.ts      # Import da riga di comando dell'export di Substack (ZIP o CSV)
 ```
 
 ---
 
-## ⚡ Guida Rapida: Avvio su VPS con 1 Comando
+## ⚡ Pubblicazione in produzione
 
-Per installare ZeroStack sul tuo server VPS Linux (Ubuntu / Debian):
+ZeroStack si pubblica **solo con Coolify**: risorsa da repository GitHub, build pack "Docker Compose",
+file `/docker-compose.coolify.yml`, dominio sul servizio `zerostack-web` porta 3000. Coolify genera da sé
+password e segreti; le chiavi dei servizi (email, Stripe, S3 dei backup) si scrivono nelle sue variabili.
+I sottodomini e i domini degli autori li serve il blocco on demand di `dist/coolify-proxy.Caddyfile`.
+Dettagli in [dist/README.md](dist/README.md).
 
-```bash
-# Clona il repository sul tuo server
-git clone https://github.com/dariodeleonardis/zerostack.git
-cd zerostack
-
-# Avvia lo script di installazione automatica (installa Docker se manca, crea .env e avvia i container)
-sudo bash scripts/deploy.sh
-```
-
-I container avviati includono:
+Lo stack comprende:
 * **Web (Next.js)** su porta interna `3000`
-* **Caddy** su porte `80` e `443` con certificati HTTPS emessi in automatico
-* **PostgreSQL 16** con dati persistenti
-* **Redis 7** per code e cache
-* **Worker asincrono** per non bloccare l'invio delle email
+* **Migrazioni** del database a ogni deploy (se falliscono il web non parte)
+* **PostgreSQL 16** e **Redis 7** con dati persistenti
+* **Worker** per newsletter e post programmati
+* **Backup** giornaliero di database e upload
 
 ---
 

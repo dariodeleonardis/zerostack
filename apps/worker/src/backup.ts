@@ -10,6 +10,7 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { prisma } from "@zerostack/database";
 import { createTransportFromEnv, platformSender } from "@zerostack/email";
 import { captureException, installErrorReporting } from "@zerostack/shared/src/monitoring";
+import { envNumber } from "@zerostack/shared/src/env";
 
 /**
  * Backup di ZeroStack: database (pg_dump) e file caricati (se stanno sul disco del server).
@@ -194,7 +195,7 @@ export async function runBackup(now = new Date()): Promise<string> {
     written.push(await writeArtifact(commandStream("tar", ["-czf", "-", "-C", uploadDir, "."]), dir, `zerostack-uploads-${stamp}.tar.gz`));
   }
 
-  const keepDays = Number(process.env.BACKUP_KEEP_DAYS || 14);
+  const keepDays = envNumber(process.env, "BACKUP_KEEP_DAYS", 14, { min: 1, max: 3650 });
   const target = s3Target();
   let offsite = "";
   if (target) {
@@ -251,7 +252,7 @@ async function backupOnce(): Promise<boolean> {
 }
 
 async function loop() {
-  const intervalMs = Number(process.env.BACKUP_INTERVAL_HOURS || 24) * 3_600_000;
+  const intervalMs = envNumber(process.env, "BACKUP_INTERVAL_HOURS", 24, { min: 1, max: 24 * 31 }) * 3_600_000;
   const retryMs = 30 * 60_000;
   let stopping = false;
   process.on("SIGTERM", () => (stopping = true));

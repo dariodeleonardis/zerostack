@@ -191,6 +191,19 @@ try {
   const billing = await prisma.italianBillingInfo.findFirst({ where: { subscriptionId: rows[0]?.id } });
   assert(billing?.codiceFiscale === "RSSMRA85M01H501Z" && billing?.sdi === "M5UXCR1", "Dati per la fattura collegati all'abbonamento");
 
+  // --- Gara fra webhook (audit A1): checkout completato e abbonamento creato nello stesso istante
+  const raceId = `sub_${run}_gara`;
+  const raceMeta = { userId: metadata.userId, tierId: metadata.tierId, publicationId: metadata.publicationId };
+  stripe.addSubscription({ id: raceId, object: "subscription", status: "active", customer: `cus_${run}`, cancel_at_period_end: false, current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400, metadata: raceMeta });
+  const raceResults = await Promise.all([
+    webhook({ type: "checkout.session.completed", account: acct, data: { object: { id: "cs_gara", object: "checkout.session", mode: "subscription", payment_status: "paid", subscription: raceId, customer: `cus_${run}`, metadata: raceMeta } } }),
+    webhook({ type: "customer.subscription.created", account: acct, data: { object: stripe.getSubscription(raceId) } }),
+    webhook({ type: "customer.subscription.updated", account: acct, data: { object: stripe.getSubscription(raceId) } })
+  ]);
+  const raceRows = await prisma.subscription.findMany({ where: { stripeSubscriptionId: raceId } });
+  assert(raceResults.every((r) => r.status === 200) && raceRows.length === 1, "Tre webhook in contemporanea: un solo abbonamento", `(${raceResults.map((r) => r.status)} righe ${raceRows.length})`);
+  await prisma.subscription.deleteMany({ where: { stripeSubscriptionId: raceId } });
+
   const after = await call("GET", postPath, { cookie: reader });
   assert(after.text.includes(secret), "Dopo il pagamento l'articolo è completo");
   const account = await call("GET", "/account/subscriptions", { cookie: reader });

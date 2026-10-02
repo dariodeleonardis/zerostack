@@ -232,7 +232,8 @@ model Subscription {
   userId               String
   tierId               String?
   status               SubscriptionStatus @default(ACTIVE)
-  stripeSubscriptionId String?
+  // Unico: due avvisi di Stripe in contemporanea non devono creare due abbonamenti (audit A1, 2/10).
+  stripeSubscriptionId String?            @unique
   stripeCustomerId     String?
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
@@ -246,7 +247,6 @@ model Subscription {
   billingInfo          ItalianBillingInfo?
   payments             Payment[]
 
-  @@index([stripeSubscriptionId])
   @@index([userId, publicationId])
 }
 

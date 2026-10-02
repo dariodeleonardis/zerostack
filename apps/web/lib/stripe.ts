@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { prisma } from "@zerostack/database";
+import { prisma, Prisma } from "@zerostack/database";
 import { mapStripeSubscriptionStatus } from "@zerostack/shared";
 
 let client: Stripe | null = null;
@@ -88,16 +88,17 @@ export async function upsertSubscriptionFromStripe(
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     stripeCustomerId: typeof sub.customer === "string" ? sub.customer : sub.customer.id
   };
-  const existing = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: sub.id }, select: { id: true } });
-  if (existing) {
-    await prisma.subscription.update({ where: { id: existing.id }, data });
-    return existing.id;
+  // stripeSubscriptionId è unico: se due webhook arrivano insieme, uno crea e l'altro trova il vincolo
+  // (P2002) e aggiorna la riga appena creata. Mai due abbonamenti per lo stesso abbonamento Stripe.
+  const create = { ...data, stripeSubscriptionId: sub.id, publicationId: context.publicationId, userId: context.userId, tierId: context.tierId };
+  try {
+    const row = await prisma.subscription.upsert({ where: { stripeSubscriptionId: sub.id }, update: data, create, select: { id: true } });
+    return row.id;
+  } catch (err) {
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err;
+    const row = await prisma.subscription.update({ where: { stripeSubscriptionId: sub.id }, data, select: { id: true } });
+    return row.id;
   }
-  const created = await prisma.subscription.create({
-    data: { ...data, stripeSubscriptionId: sub.id, publicationId: context.publicationId, userId: context.userId, tierId: context.tierId },
-    select: { id: true }
-  });
-  return created.id;
 }
 
 /**
