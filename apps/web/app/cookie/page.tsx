@@ -83,6 +83,13 @@ export default function CookiePage() {
         <a href="https://stripe.com/it/cookie-settings" rel="noopener noreferrer" target="_blank">informativa sui cookie</a>.
       </p>
 
+      <h2>Registro delle scelte</h2>
+      <p>
+        Quando scegli sui cookie facoltativi, il browser salva in <code>zs_consent</code> un codice casuale e noi conserviamo, insieme a quel codice, la data, la versione
+        dell&apos;elenco dei servizi, le categorie accettate e il sito su cui hai scelto. Non salviamo il tuo indirizzo IP né il tuo account. Serve a dimostrare il consenso e
+        si cancella dopo 24 mesi. Il codice lo trovi nel pannello delle preferenze.
+      </p>
+
       <h2>Come cambiare le tue scelte</h2>
       <p>
         Puoi rivedere le preferenze in ogni momento con il pulsante qui sotto o con &quot;Preferenze cookie&quot; in fondo a ogni pagina. Puoi anche cancellare i cookie dalle

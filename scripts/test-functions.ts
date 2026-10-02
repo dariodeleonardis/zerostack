@@ -31,7 +31,7 @@ import { createHash, createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { sessionCookieDomain } from "../apps/web/lib/auth";
-import { CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
+import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
 import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
 import http from "http";
 import fs from "fs";
@@ -699,11 +699,15 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   // --------------------------------------------------------------------------
   console.log("\n🍪 Consenso ai cookie");
   const when = new Date("2026-10-02T10:00:00Z");
-  const saved = serializeConsent(["statistiche", "contenuti-esterni"], when);
-  assert(/^[0-9a-z.+-]+$/.test(saved), "Consenso: il valore del cookie non ha caratteri da codificare", saved);
+  const codice = newConsentId();
+  const saved = serializeConsent(["statistiche", "contenuti-esterni"], codice, when);
+  assert(/^[0-9A-Za-z._+-]+$/.test(saved), "Consenso: il valore del cookie non ha caratteri da codificare", saved);
   const read = parseConsent(saved);
-  assert(read?.version === CONSENT_VERSION && read.decidedAt.getTime() === when.getTime() && read.granted.join() === "statistiche,contenuti-esterni", "Consenso: scritto e riletto uguale", JSON.stringify(read));
-  const refused = parseConsent(serializeConsent([], when));
+  assert(read?.version === CONSENT_VERSION && read.decidedAt.getTime() === when.getTime() && read.granted.join() === "statistiche,contenuti-esterni" && read.id === codice, "Consenso: scritto e riletto uguale, codice compreso", JSON.stringify(read));
+  const codes = new Set(Array.from({ length: 200 }, () => newConsentId()));
+  assert(codes.size === 200 && Array.from(codes).every((c) => CONSENT_ID_PATTERN.test(c)), "Consenso: codici casuali tutti diversi e nel formato atteso");
+  assert(parseConsent(`${CONSENT_VERSION}.1759399200.statistiche`)?.id === null, "Consenso: un cookie senza codice resta leggibile (ne riceverà uno alla prossima scelta)");
+  const refused = parseConsent(serializeConsent([], codice, when));
   assert(refused !== null && refused.granted.length === 0, "Consenso: il rifiuto è una scelta valida, non un'assenza di scelta");
   assert(parseConsent(`${CONSENT_VERSION + 1}.1759399200.statistiche`) === null, "Consenso: una scelta su un altro elenco di servizi non vale più");
   assert(parseConsent("accepted") === null && parseConsent(undefined) === null && parseConsent("1.x.statistiche") === null, "Consenso: valori illeggibili ignorati");

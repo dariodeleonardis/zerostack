@@ -454,6 +454,21 @@ model SystemStatus {
   updatedAt DateTime @updatedAt
 }
 
+// Registro delle scelte sui cookie facoltativi, per dimostrare il consenso (Garante, 10/6/2021).
+// Il legame con la persona è solo il codice casuale nel suo cookie zs_consent: niente IP, niente account.
+// Si conserva per 24 mesi (CONSENT_RECORD_MONTHS), poi si cancella.
+model ConsentRecord {
+  id        String   @id @default(uuid())
+  consentId String
+  version   Int
+  granted   String[]
+  host      String
+  createdAt DateTime @default(now())
+
+  @@index([consentId])
+  @@index([createdAt])
+}
+
 // Dati fiscali di chi incassa (l'autore): servono per emettere le fatture elettroniche a suo nome.
 model FiscalProfile {
   id             String   @id @default(uuid())

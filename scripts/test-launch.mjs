@@ -166,6 +166,22 @@ try {
   const cookiePage = await call("GET", "/cookie");
   assert(cookiePage.status === 200 && cookiePage.text.includes("zs_session") && cookiePage.text.includes("zs_consent") && cookiePage.text.includes("Preferenze cookie"), "Pagina cookie: elenco dal registro e pulsante delle preferenze");
   assert(privacy.text.includes("pagina sui cookie"), "La privacy rimanda alla pagina dei cookie");
+
+  // ------------------------------------------------------------------ registro dei consensi
+  const consentId = `prova${run}`.padEnd(22, "x");
+  const recorded = await call("POST", "/api/consent", { body: { consentId, version: 1, granted: ["statistiche", "inventata"] } });
+  const rows = await prisma.consentRecord.findMany({ where: { consentId } });
+  assert(recorded.status === 201 && rows.length === 1 && rows[0].host === "localhost", "Consenso registrato sul server con codice e sito", `(${recorded.status} ${recorded.text})`);
+  assert(rows[0]?.granted.length === 0, "Una categoria senza servizi attivi non diventa un consenso", JSON.stringify(rows[0]?.granted));
+  assert(!Object.keys(rows[0] ?? {}).some((k) => /ip|user/i.test(k)), "Nel registro niente IP né account");
+  const badId = await call("POST", "/api/consent", { body: { consentId: "corto", version: 1, granted: [] } });
+  const badVersion = await call("POST", "/api/consent", { body: { consentId, version: 99, granted: [] } });
+  const otherSite = await call("POST", "/api/consent", { body: { consentId, version: 1, granted: [] }, headers: { origin: "https://altro-sito.example" } });
+  assert(badId.status === 400 && badVersion.status === 400 && otherSite.status === 400, "Codice, versione o origine sbagliati: respinto", `(${badId.status} ${badVersion.status} ${otherSite.status})`);
+  await prisma.consentRecord.create({ data: { consentId: `vecchio${run}`.padEnd(22, "x"), version: 1, granted: [], host: "localhost", createdAt: new Date(Date.now() - 25 * 30 * 86400_000) } });
+  await call("POST", "/api/consent", { body: { consentId, version: 1, granted: [] } });
+  assert((await prisma.consentRecord.count({ where: { consentId: `vecchio${run}`.padEnd(22, "x") } })) === 0, "Le scelte più vecchie di 24 mesi vengono cancellate");
+  await prisma.consentRecord.deleteMany({ where: { consentId } });
   const onSubdomain = await getWithHost("/privacy", `lancio-${run}.zerostack.it`);
   assert(onSubdomain.status === 200 && onSubdomain.text.includes("Informativa sulla privacy"), "Le pagine legali si aprono anche dai sottodomini");
 

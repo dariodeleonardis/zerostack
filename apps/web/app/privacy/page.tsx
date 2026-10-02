@@ -53,7 +53,9 @@ export default function PrivacyPage() {
 
       <h2>Cookie</h2>
       <p>
-        ZeroStack usa solo i cookie tecnici necessari al servizio, elencati nella <a href="/cookie">pagina sui cookie</a>, dove puoi anche rivedere le tue preferenze.
+        ZeroStack usa solo i cookie tecnici necessari al servizio, elencati nella <a href="/cookie">pagina sui cookie</a>, dove puoi anche rivedere le tue preferenze. Se un giorno ti chiederemo un
+        consenso per cookie facoltativi, terremo per 24 mesi un registro della tua scelta legato solo a un codice casuale, senza IP né account, per poterla dimostrare
+        (obbligo legale, art. 6.1.c e art. 7.1).
       </p>
 
       <h2>I tuoi diritti</h2>

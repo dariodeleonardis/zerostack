@@ -33,6 +33,7 @@ export function CookieConsent() {
   const [banner, setBanner] = useState(false);
   const [panel, setPanel] = useState(false);
   const [selected, setSelected] = useState<ConsentCategory[]>([]);
+  const [consentId, setConsentId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,7 +45,9 @@ export function CookieConsent() {
     setSelected(state?.granted ?? []);
     setBanner(needsConsentPrompt(state));
     const open = () => {
-      setSelected(readConsent()?.granted ?? []);
+      const current = readConsent();
+      setSelected(current?.granted ?? []);
+      setConsentId(current?.id ?? null);
       setPanel(true);
     };
     window.addEventListener(CONSENT_OPEN_EVENT, open);
@@ -162,6 +165,11 @@ export function CookieConsent() {
                 <button type="button" className={choice} onClick={() => save(active)}>Accetta tutti</button>
                 <button type="button" className={secondary} onClick={() => save(selected.filter((s) => active.includes(s)))}>Salva le scelte</button>
               </div>
+            )}
+            {consentId && (
+              <p className="mt-3 text-xs text-gray-500">
+                Codice della tua scelta: <code className="select-all text-gray-900">{consentId}</code>. Citalo se ci scrivi per una verifica.
+              </p>
             )}
             <p className="mt-3 text-xs text-gray-500">
               <a href="/cookie" className="underline">Informativa sui cookie</a> · <a href="/privacy" className="underline">Privacy</a>
