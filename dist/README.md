@@ -17,5 +17,6 @@ Li fa il servizio `zerostack-backup` del compose (`apps/worker/src/backup.ts`): 
 archivio degli upload ogni 24 ore, cifrati se c'è `BACKUP_PASSPHRASE`, copiati su S3 se ci sono le
 variabili `BACKUP_S3_*`. Senza S3 restano sul VPS e non proteggono dalla perdita del server.
 
-La prova di ripristino si fa sul VPS con `vps-zerostack/zs-prova-ripristino.sh` (fuori da questo
-repository): ripristina l'ultimo dump in un Postgres usa e getta e confronta le righe con la produzione.
+La prova di ripristino si fa sul VPS con `vps/zs-prova-ripristino.sh` (cartella `vps/` del progetto,
+esclusa da git perché descrive il server): ripristina l'ultimo dump in un Postgres usa e getta e confronta
+le righe con la produzione.

@@ -62,7 +62,7 @@ export async function checkHealth(): Promise<Health> {
     cache(),
     heartbeat("worker", Number(process.env.WORKER_STALE_MINUTES || 10) * 60, true),
     heartbeat("backup", Number(process.env.BACKUP_MAX_AGE_HOURS || 26) * 3600, process.env.HEALTH_REQUIRE_BACKUP === "true"),
-    // Copia fuori dal VPS (Google Drive, script vps-zerostack/backup-esterno): la scrive lo script sul server.
+    // Copia fuori dal VPS (Google Drive, script vps/backup-esterno): la scrive lo script sul server.
     heartbeat("backup-esterno", 26 * 3600, false)
   ]);
   const checks = { database: db, redis: redisCheck, worker, backup, offsite };

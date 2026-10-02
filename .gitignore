@@ -41,6 +41,11 @@ pnpm-debug.log*
 # Backup scaricati dal VPS (dati degli utenti, in chiaro): restano solo sul PC, mai su GitHub.
 backup/
 *.dump
+# Script e configurazioni del VPS (CI, anteprima, posta, copia su Drive): nel progetto ma fuori da
+# GitHub, perché descrivono il server. Le password non ci sono mai, stanno solo sul VPS.
+vps/
+# File temporanei di lavoro (archivi per la CI sul VPS)
+.tmp/
 Audit-Bug-Report.pdf
 docker/data/
 docker/caddy_data/
