@@ -162,7 +162,10 @@ try {
   // ------------------------------------------------------------------ pagine legali
   const privacy = await call("GET", "/privacy");
   assert(privacy.status === 200 && privacy.text.includes("Informativa sulla privacy") && privacy.text.includes("responsabile del trattamento"), "Pagina privacy");
-  assert((await call("GET", "/termini")).status === 200 && (await call("GET", "/cookie")).text.includes("zs_session"), "Pagine termini e cookie");
+  assert((await call("GET", "/termini")).status === 200, "Pagina termini");
+  const cookiePage = await call("GET", "/cookie");
+  assert(cookiePage.status === 200 && cookiePage.text.includes("zs_session") && cookiePage.text.includes("zs_consent") && cookiePage.text.includes("Preferenze cookie"), "Pagina cookie: elenco dal registro e pulsante delle preferenze");
+  assert(privacy.text.includes("pagina sui cookie"), "La privacy rimanda alla pagina dei cookie");
   const onSubdomain = await getWithHost("/privacy", `lancio-${run}.zerostack.it`);
   assert(onSubdomain.status === 200 && onSubdomain.text.includes("Informativa sulla privacy"), "Le pagine legali si aprono anche dai sottodomini");
 

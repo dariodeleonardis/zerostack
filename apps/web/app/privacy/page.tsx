@@ -51,6 +51,11 @@ export default function PrivacyPage() {
         <li>Dati tecnici di sicurezza: al massimo qualche giorno.</li>
       </ul>
 
+      <h2>Cookie</h2>
+      <p>
+        ZeroStack usa solo i cookie tecnici necessari al servizio, elencati nella <a href="/cookie">pagina sui cookie</a>, dove puoi anche rivedere le tue preferenze.
+      </p>
+
       <h2>I tuoi diritti</h2>
       <p>
         Puoi chiedere accesso, rettifica, cancellazione, limitazione, portabilità e opporti al trattamento (artt. 15-22 GDPR). Dal tuo profilo puoi già scaricare tutti i tuoi dati e

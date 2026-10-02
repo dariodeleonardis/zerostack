@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "../components/Navbar";
-import { GdprBanner } from "../components/GdprBanner";
+import { CookieConsent, CookiePreferencesButton } from "../components/CookieConsent";
 import { AudioPlayer } from "../components/AudioPlayer";
 
 export const metadata: Metadata = {
@@ -21,10 +21,10 @@ export default function RootLayout({
         <main>{children}</main>
         <footer className="mx-auto max-w-7xl px-4 py-10 text-center text-xs text-gray-500 sm:px-6">
           <a href="/privacy" className="hover:text-gray-900">Privacy</a> · <a href="/termini" className="hover:text-gray-900">Termini</a> ·{" "}
-          <a href="/cookie" className="hover:text-gray-900">Cookie</a>
+          <a href="/cookie" className="hover:text-gray-900">Cookie</a> · <CookiePreferencesButton className="hover:text-gray-900" />
         </footer>
         <AudioPlayer />
-        <GdprBanner />
+        <CookieConsent />
       </body>
     </html>
   );

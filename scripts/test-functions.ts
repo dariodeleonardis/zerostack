@@ -27,10 +27,11 @@ import { generateDailyVisitorHash, parseDeviceType } from "../apps/web/lib/analy
 import { formatVttTimestamp, generateWebVtt, transcribeAudio } from "../apps/web/lib/transcription";
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../apps/web/lib/posts";
 import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
-import { createHmac } from "crypto";
+import { createHash, createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { sessionCookieDomain } from "../apps/web/lib/auth";
+import { CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
 import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
 import http from "http";
 import fs from "fs";
@@ -692,6 +693,31 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   let turboMissing = false;
   try { createTransportFromEnv({ EMAIL_PROVIDER: "turbosmtp", TURBOSMTP_CONSUMER_KEY: "x" }); } catch { turboMissing = true; }
   assert(turboMissing && createTransportFromEnv({ EMAIL_PROVIDER: "turbosmtp", TURBOSMTP_CONSUMER_KEY: "k", TURBOSMTP_CONSUMER_SECRET: "s" }).name === "turbosmtp", "turboSMTP: si attiva con EMAIL_PROVIDER=turbosmtp e le due chiavi");
+
+  // --------------------------------------------------------------------------
+  // Consenso ai cookie
+  // --------------------------------------------------------------------------
+  console.log("\n🍪 Consenso ai cookie");
+  const when = new Date("2026-10-02T10:00:00Z");
+  const saved = serializeConsent(["statistiche", "contenuti-esterni"], when);
+  assert(/^[0-9a-z.+-]+$/.test(saved), "Consenso: il valore del cookie non ha caratteri da codificare", saved);
+  const read = parseConsent(saved);
+  assert(read?.version === CONSENT_VERSION && read.decidedAt.getTime() === when.getTime() && read.granted.join() === "statistiche,contenuti-esterni", "Consenso: scritto e riletto uguale", JSON.stringify(read));
+  const refused = parseConsent(serializeConsent([], when));
+  assert(refused !== null && refused.granted.length === 0, "Consenso: il rifiuto è una scelta valida, non un'assenza di scelta");
+  assert(parseConsent(`${CONSENT_VERSION + 1}.1759399200.statistiche`) === null, "Consenso: una scelta su un altro elenco di servizi non vale più");
+  assert(parseConsent("accepted") === null && parseConsent(undefined) === null && parseConsent("1.x.statistiche") === null, "Consenso: valori illeggibili ignorati");
+  assert(parseConsent(`${CONSENT_VERSION}.1759399200.statistiche+inventata`)?.granted.join() === "statistiche", "Consenso: categorie sconosciute scartate");
+  assert(!needsConsentPrompt(null), "Consenso: con soli cookie tecnici il banner non compare");
+  assert(TECHNICAL_COOKIES.some((c) => c.name === "zs_session") && TECHNICAL_COOKIES.some((c) => c.name === "zs_consent"), "Consenso: l'elenco dei cookie tecnici comprende sessione e scelta");
+  const youtube: OptionalService[] = [{ id: "youtube", name: "YouTube", category: "contenuti-esterni", provider: "Google", privacyUrl: "https://policies.google.com/privacy", cookies: [] }];
+  assert(activeCategories(youtube).join() === "contenuti-esterni", "Consenso: si chiede solo per le categorie con un servizio attivo");
+  assert(needsConsentPrompt(null, youtube) && !needsConsentPrompt(refused, youtube), "Consenso: con un servizio facoltativo il banner compare finché non si sceglie");
+  assert(isGranted(read, "contenuti-esterni") && !isGranted(refused, "contenuti-esterni") && !isGranted(null, "statistiche"), "Consenso: senza un sì esplicito niente è consentito");
+
+  const otherSalt = generateDailyVisitorHash("203.0.113.7", "ua", "pub", "2026-10-02");
+  const knownOldSalt = createHash("sha256").update("203.0.113.7-ua-pub-2026-10-02-zerostack-privacy-salt-2026").digest("hex").substring(0, 16);
+  assert(otherSalt !== knownOldSalt, "Statistiche: il sale non è più quello scritto nel repository pubblico");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE
