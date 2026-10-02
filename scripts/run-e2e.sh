@@ -22,6 +22,9 @@ export STRIPE_SECRET_KEY=sk_test_zs
 export STRIPE_API_BASE=http://127.0.0.1:12111
 export STRIPE_WEBHOOK_SECRET=whsec_zs_test
 export EMAIL_WEBHOOK_TOKEN=zs_email_test
+export GOOGLE_CLIENT_ID=zs-test.apps.googleusercontent.com
+export GOOGLE_CLIENT_SECRET=zs_google_test
+export GOOGLE_OAUTH_BASE=http://127.0.0.1:12113
 export RESEND_WEBHOOK_SECRET=whsec_dGVzdC1zZWdyZXRvLXJlc2VuZA==
 echo '{}' > "$ZS_FAKE_DNS_FILE"
 
@@ -61,6 +64,7 @@ for suite in \
   "node scripts/test-launch.mjs" \
   "node scripts/test-operations.mjs" \
   "node scripts/test-invoicing.mjs" \
+  "node scripts/test-google.mjs" \
   "node scripts/test-courtesy.mjs"; do
   flush
   echo "::group::$suite"

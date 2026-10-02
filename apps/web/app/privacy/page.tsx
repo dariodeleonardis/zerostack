@@ -27,6 +27,7 @@ export default async function PrivacyPage() {
       <h2>Quali dati e perché</h2>
       <ul>
         <li><strong>Account</strong>: nome, email, nome utente, password (conservata solo come impronta crittografica), bio e foto se le inserisci. Servono a fornirti il servizio (art. 6.1.b).</li>
+        <li><strong>Accesso con Google</strong>, se lo scegli: da Google riceviamo nome, indirizzo email e un codice che identifica il tuo account Google, nient&apos;altro (né contatti né altri dati). Li usiamo solo per farti entrare (art. 6.1.b). Puoi scollegarlo dalle impostazioni del tuo account Google.</li>
         <li><strong>Iscrizioni alle newsletter</strong>: email, nome se lo dai, data di iscrizione e di conferma. Base: il tuo consenso, confermato con la doppia verifica via email (art. 6.1.a).</li>
         <li><strong>Abbonamenti e fatturazione</strong>: piano, stato dell&apos;abbonamento e, se richiedi la fattura, codice fiscale, partita IVA, codice SDI o PEC e indirizzo. Base: contratto e obblighi fiscali (art. 6.1.b e 6.1.c). I dati della carta non passano da ZeroStack: li tratta Stripe.</li>
         <li><strong>Contenuti</strong>: articoli, commenti, immagini e audio che pubblichi.</li>

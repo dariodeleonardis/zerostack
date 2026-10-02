@@ -75,6 +75,10 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      # Accesso con Google: credenziali OAuth (applicazione web) dalla Google Cloud Console, indirizzo
+      # di ritorno https://zerostack.it/api/auth/google/callback. Vuote = pulsante nascosto.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       # Commissione di ZeroStack sugli abbonamenti pagati, in percento (predefinita 8)
       PLATFORM_FEE_PERCENT: ${PLATFORM_FEE_PERCENT:-8}
       LEGAL_ENTITY_NAME: ${LEGAL_ENTITY_NAME:-}
