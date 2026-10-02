@@ -30,7 +30,7 @@ function Check({ ok, label, detail }: { ok: boolean; label: string; detail: stri
   );
 }
 
-const HEALTH_LABELS: Record<string, string> = { database: "Database", redis: "Redis", worker: "Worker (newsletter e post programmati)", backup: "Backup" };
+const HEALTH_LABELS: Record<string, string> = { database: "Database", redis: "Redis", worker: "Worker (newsletter e post programmati)", backup: "Backup", offsite: "Copia dei backup su Google Drive" };
 
 function ago(seconds?: number): string {
   if (seconds === undefined) return "";

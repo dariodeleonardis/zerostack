@@ -143,6 +143,16 @@ try {
   const health = await call("GET", "/api/health");
   assert(health.json?.checks.backup.state === "ok", "Il controllo di salute vede il backup riuscito");
 
+  // Copia su Google Drive (script sul VPS): finché non c'è non conta; se fallisce si vede.
+  await prisma.systemStatus.deleteMany({ where: { key: "backup-esterno" } });
+  assert((await call("GET", "/api/health")).json?.checks.offsite.state === "skipped", "Copia esterna non ancora attiva: segnalata come tale, non come guasto");
+  await prisma.systemStatus.create({ data: { key: "backup-esterno", ok: false, detail: "rclone: token scaduto" } });
+  const offsiteDown = await call("GET", "/api/health");
+  assert(offsiteDown.status === 503 && offsiteDown.json?.checks.offsite.state === "fail", "Copia su Drive non riuscita: il controllo di salute lo segnala");
+  await prisma.systemStatus.update({ where: { key: "backup-esterno" }, data: { ok: true, detail: "copiati 2 file" } });
+  assert((await call("GET", "/api/health")).json?.checks.offsite.state === "ok", "Copia su Drive riuscita: tutto in ordine");
+  await prisma.systemStatus.deleteMany({ where: { key: "backup-esterno" } });
+
   // Ripristino: si scarica la copia remota, si decifra, si carica in un database nuovo.
   const remoteDump = path.join(work, "remoto.dump.enc");
   await writeFile(remoteDump, remote.get(`zerostack/${dbFile}`).body);

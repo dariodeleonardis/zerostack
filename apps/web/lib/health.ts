@@ -13,7 +13,7 @@ export interface Check {
 
 export interface Health {
   ok: boolean;
-  checks: Record<"database" | "redis" | "worker" | "backup", Check>;
+  checks: Record<"database" | "redis" | "worker" | "backup" | "offsite", Check>;
 }
 
 const withTimeout = <T>(p: Promise<T>, ms: number) =>
@@ -57,12 +57,14 @@ async function heartbeat(key: string, maxAgeSeconds: number, required: boolean):
 }
 
 export async function checkHealth(): Promise<Health> {
-  const [db, redisCheck, worker, backup] = await Promise.all([
+  const [db, redisCheck, worker, backup, offsite] = await Promise.all([
     database(),
     cache(),
     heartbeat("worker", Number(process.env.WORKER_STALE_MINUTES || 10) * 60, true),
-    heartbeat("backup", Number(process.env.BACKUP_MAX_AGE_HOURS || 26) * 3600, process.env.HEALTH_REQUIRE_BACKUP === "true")
+    heartbeat("backup", Number(process.env.BACKUP_MAX_AGE_HOURS || 26) * 3600, process.env.HEALTH_REQUIRE_BACKUP === "true"),
+    // Copia fuori dal VPS (Google Drive, script vps-zerostack/backup-esterno): la scrive lo script sul server.
+    heartbeat("backup-esterno", 26 * 3600, false)
   ]);
-  const checks = { database: db, redis: redisCheck, worker, backup };
+  const checks = { database: db, redis: redisCheck, worker, backup, offsite };
   return { ok: Object.values(checks).every((c) => c.state !== "fail"), checks };
 }
