@@ -38,6 +38,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Database & VPS local data
+# Backup scaricati dal VPS (dati degli utenti, in chiaro): restano solo sul PC, mai su GitHub.
+backup/
+*.dump
+Audit-Bug-Report.pdf
 docker/data/
 docker/caddy_data/
 docker/caddy_config/
