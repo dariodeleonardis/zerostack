@@ -65,11 +65,33 @@ due compose con i fine riga cambiati: ripristinati con `git checkout` il 2/10.
 Confermato anche quello che l'audit dà per sano: firme dei webhook Stripe e Resend, controlli di proprietà
 sulle API, sanificazione dei contenuti, query parametrizzate, upload senza path traversal, password con scrypt.
 
-## 3. Ordine di lavoro proposto
+## 3. Ordine di lavoro
 
-1. **Onestà**: togliere dalla navigazione F1, F2, F8, F9; spegnere le API F3, F4, F5 (risposta 404 o 501 onesta) e F6.
-2. **Soldi e dati**: A1 (vincolo unico sugli abbonamenti), A12 (variabili del worker), A2 e A3.
-3. **Persistenza**: A13 (prova di ripristino dei backup), via `dist/` da allineare o togliere (C1-C3, A14, A15).
-4. **Strumenti**: A16 (lint), A17 (via turbo.json).
-5. **Funzioni vere**: commenti e mi piace (con il vincolo giusto, A9), Podcast dal database, Posta del lettore,
-   inviti alla squadra, Note, trascrizione con Whisper, Fediverso.
+Blocchi 1-4 **fatti il 2/10** (commit 33b7e77, dde50d4): onestà, soldi e dati, persistenza, strumenti.
+
+## 4. Da fare: le funzioni vere (rimandate da Dario il 2/10, da riprendere)
+
+In quest'ordine. Ognuna sostituisce una funzione finta tolta il 2/10 e torna in navigazione solo quando è vera,
+con i suoi test.
+
+| # | Funzione | Cosa serve | Note |
+|---|---|---|---|
+| T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | Lo schema `Comment` c'è; oggi si leggono solo |
+| T2 | **Mi piace** | API metti/togli, contatore coerente | Prima correggere il vincolo (A9): `@@unique` con colonne NULL non blocca i doppioni; servono vincoli separati per articolo, nota, commento |
+| T3 | **Podcast** | Pagina `/podcasts` con gli episodi veri dal database (`PodcastEpisode`) e il lettore audio | I dati e il feed RSS ci sono già |
+| T4 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
+| T5 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |
+| T6 | **Note** | Feed di note brevi dei creatori (`Note`), scrittura dallo Studio, mi piace e risposte | Dopo T2 |
+| T7 | **Trascrizione** | Whisper (o altro servizio) con chiave nel compose, quota per autore, solo per i propri episodi | `lib/transcription.ts` oggi restituisce un testo d'esempio |
+| T8 | **Fediverso** | WebFinger e attore ActivityPub veri: chiavi per pubblicazione, inbox/outbox, firma delle richieste | Ultimo, il più complesso |
+| T9 | **Mance** | Solo con un pagamento vero via Stripe (Checkout una tantum), commissione come gli abbonamenti | Il TipJar simulato è stato cancellato |
+
+## 5. Altro in sospeso (non codice, o in attesa di Dario)
+
+- Credenziali Google (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) in Coolify: il codice è online, il pulsante compare con le chiavi.
+- Fatturazione agli autori della commissione dell'8%: da definire con il commercialista.
+- Revisione legale dei testi (privacy, termini con la commissione, cookie).
+- `BACKUP_PASSPHRASE` per cifrare i backup; copia su Google Drive pronta in `vps/backup-esterno` ma non attivata.
+- Email della piattaforma ancora in modalità log: serve un provider (turboSMTP o altro) con SPF e DKIM.
+- Stripe: chiavi e webhook in Coolify per aprire gli abbonamenti.
+- DMARC della posta da `p=none` a `quarantine` dopo un paio di settimane di rapporti puliti (metà ottobre).
