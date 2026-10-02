@@ -86,12 +86,6 @@ con i suoi test.
 | T8 | **Fediverso** | WebFinger e attore ActivityPub veri: chiavi per pubblicazione, inbox/outbox, firma delle richieste | Ultimo, il più complesso |
 | T9 | **Mance** | Solo con un pagamento vero via Stripe (Checkout una tantum), commissione come gli abbonamenti | Il TipJar simulato è stato cancellato |
 
-## 5. Altro in sospeso (non codice, o in attesa di Dario)
+## 5. Altro in sospeso
 
-- Credenziali Google (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) in Coolify: il codice è online, il pulsante compare con le chiavi.
-- Fatturazione agli autori della commissione dell'8%: da definire con il commercialista.
-- Revisione legale dei testi (privacy, termini con la commissione, cookie).
-- `BACKUP_PASSPHRASE` per cifrare i backup; copia su Google Drive pronta in `vps/backup-esterno` ma non attivata.
-- Email della piattaforma ancora in modalità log: serve un provider (turboSMTP o altro) con SPF e DKIM.
-- Stripe: chiavi e webhook in Coolify per aprire gli abbonamenti.
-- DMARC della posta da `p=none` a `quarantine` dopo un paio di settimane di rapporti puliti (metà ottobre).
+Tutto quello che non è codice, o aspetta Dario o altri, sta in [IN-SOSPESO.md](IN-SOSPESO.md): è l'elenco permanente.
