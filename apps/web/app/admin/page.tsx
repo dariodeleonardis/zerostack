@@ -4,6 +4,8 @@ import { checkHealth, type Check as HealthCheck } from "../../lib/health";
 import { AdminAction } from "./AdminAction";
 import { CourtesyPanel } from "./CourtesyPanel";
 import { COURTESY_MESSAGE_MAX, DEFAULT_COURTESY_MESSAGE, getCourtesy } from "../../lib/courtesy";
+import { LegalPanel } from "./LegalPanel";
+import { LEGAL_LIMITS, legalEntity } from "../../lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +45,9 @@ function describe(c: HealthCheck): string {
 }
 
 export default async function AdminOverviewPage() {
-  const [health, courtesy] = await Promise.all([checkHealth(), getCourtesy()]);
+  const [health, courtesy, legal] = await Promise.all([checkHealth(), getCourtesy(), legalEntity()]);
+  // "[da completare]" non va riproposto come valore: il campo resta vuoto da riempire.
+  const legalInput = (v: string) => (v === "[da completare]" ? "" : v);
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [users, unverified, suspendedUsers, publications, suspendedPubs, subscribers, paid, sent, failedCampaigns] = await Promise.all([
     prisma.user.count(),
@@ -68,6 +72,11 @@ export default async function AdminOverviewPage() {
         customMessage={courtesy.customMessage}
         defaultMessage={DEFAULT_COURTESY_MESSAGE}
         maxLength={COURTESY_MESSAGE_MAX}
+      />
+      <LegalPanel
+        initial={{ name: legalInput(legal.name), vat: legalInput(legal.vat), address: legalInput(legal.address), email: legalInput(legal.email) }}
+        updatedAt={legal.updatedAt}
+        limits={LEGAL_LIMITS}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Utenti" value={users} hint={`${unverified} senza email confermata · ${suspendedUsers} sospesi`} />

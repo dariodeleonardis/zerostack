@@ -195,6 +195,24 @@ try {
   const readerId = (await prisma.user.findUnique({ where: { email: email("lettore") } })).id;
   const adminHome = await call("GET", "/admin", { cookie: adminCookie });
   assert(adminHome.status === 200 && adminHome.text.includes("Configurazione"), "Il pannello admin mostra numeri e configurazione");
+
+  // Dati legali dal pannello: valgono subito, senza riavviare il server.
+  assert(adminHome.text.includes("Dati legali"), "Il pannello mostra il riquadro dei dati legali");
+  const legal = { name: `absolutezero.agency di Prova ${run}`, vat: "02561060738", address: "Via di Prova 1, Palagiano", email: "privacy@example.it" };
+  const legalByReader = await call("POST", "/api/admin/legal", { cookie: reader, body: legal });
+  assert(legalByReader.status === 404, "Dati legali: chi non è amministratore non li cambia (404)", `(${legalByReader.status})`);
+  const legalBad = await call("POST", "/api/admin/legal", { cookie: adminCookie, body: { ...legal, email: "non-una-email", vat: "" } });
+  assert(legalBad.status === 400 && legalBad.json?.fields?.email && legalBad.json?.fields?.vat, "Dati legali: errori segnalati sul campo giusto", legalBad.text);
+  const legalSaved = await call("POST", "/api/admin/legal", { cookie: adminCookie, body: legal });
+  const today = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" }).format(new Date());
+  assert(legalSaved.status === 200 && legalSaved.json?.data?.updatedAt === today, "Dati legali salvati, data portata a oggi", legalSaved.text);
+  const [privacyNow, termsNow, cookieNow] = await Promise.all(["/privacy", "/termini", "/cookie"].map((p) => call("GET", p)));
+  assert(
+    [privacyNow, termsNow, cookieNow].every((r) => r.text.includes(`<strong>${legal.name}</strong>`)) && termsNow.text.includes(today) && privacyNow.text.includes("privacy@example.it"),
+    "Privacy, Termini e Cookie mostrano subito i nuovi dati, il titolare in evidenza"
+  );
+  await prisma.platformSetting.deleteMany({ where: { key: "dati-legali" } });
+
   const usersPage = await call("GET", `/admin/users?q=${run}`, { cookie: adminCookie });
   assert(usersPage.text.includes(email("lettore")), "Ricerca degli utenti");
 

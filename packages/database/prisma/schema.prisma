@@ -454,6 +454,15 @@ model SystemStatus {
   updatedAt DateTime @updatedAt
 }
 
+// Impostazioni della piattaforma che l'amministrazione cambia da /admin senza un nuovo deploy
+// (per esempio i dati del titolare nelle pagine legali, chiave "dati-legali"). value è JSON.
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
 // Registro delle scelte sui cookie facoltativi, per dimostrare il consenso (Garante, 10/6/2021).
 // Il legame con la persona è solo il codice casuale nel suo cookie zs_consent: niente IP, niente account.
 // Si conserva per 24 mesi (CONSENT_RECORD_MONTHS), poi si cancella.

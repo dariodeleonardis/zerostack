@@ -31,12 +31,12 @@ function CookieTable({ cookies }: { cookies: CookieEntry[] }) {
   );
 }
 
-export default function CookiePage() {
-  const e = legalEntity();
+export default async function CookiePage() {
+  const e = await legalEntity();
   return (
     <LegalPage title="Cookie" updatedAt={e.updatedAt}>
       <p>
-        Questa pagina elenca i cookie che ZeroStack usa su zerostack.it, sui sottodomini delle pubblicazioni e sui domini personalizzati degli autori. Il titolare è {e.name}
+        Questa pagina elenca i cookie che ZeroStack usa su zerostack.it, sui sottodomini delle pubblicazioni e sui domini personalizzati degli autori. Il titolare è <strong>{e.name}</strong>
         (vedi l&apos;<a href="/privacy">informativa sulla privacy</a>).
       </p>
 

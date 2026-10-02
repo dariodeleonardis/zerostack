@@ -6,12 +6,12 @@ import { legalEntity } from "../../lib/legal";
 export const metadata: Metadata = { title: "Termini di servizio | ZeroStack" };
 export const dynamic = "force-dynamic";
 
-export default function TermsPage() {
-  const e = legalEntity();
+export default async function TermsPage() {
+  const e = await legalEntity();
   return (
     <LegalPage title="Termini di servizio" updatedAt={e.updatedAt}>
       <p>
-        ZeroStack è una piattaforma per pubblicare newsletter, articoli e podcast, gestita da {e.name} (P.IVA {e.vat}, {e.address}). Usando il servizio accetti questi termini.
+        ZeroStack è una piattaforma per pubblicare newsletter, articoli e podcast, gestita da <strong>{e.name}</strong> (P.IVA {e.vat}, {e.address}). Usando il servizio accetti questi termini.
       </p>
 
       <h2>Account</h2>

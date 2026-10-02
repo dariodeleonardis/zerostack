@@ -6,8 +6,8 @@ import { legalEntity } from "../../lib/legal";
 export const metadata: Metadata = { title: "Informativa privacy | ZeroStack" };
 export const dynamic = "force-dynamic";
 
-export default function PrivacyPage() {
-  const e = legalEntity();
+export default async function PrivacyPage() {
+  const e = await legalEntity();
   return (
     <LegalPage title="Informativa sulla privacy" updatedAt={e.updatedAt}>
       <p>
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
       <h2>Chi tratta i dati</h2>
       <p>
-        <strong>Per gli account della piattaforma</strong> (autori e lettori registrati) il titolare del trattamento è {e.name}, P.IVA {e.vat}, con sede in {e.address},
+        <strong>Per gli account della piattaforma</strong> (autori e lettori registrati) il titolare del trattamento è <strong>{e.name}</strong>, P.IVA {e.vat}, con sede in {e.address},
         contattabile a {e.email}.
       </p>
       <p>
