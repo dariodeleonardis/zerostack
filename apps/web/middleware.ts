@@ -51,6 +51,18 @@ async function courtesyBlocks(req: NextRequest): Promise<boolean> {
   }
 }
 
+/**
+ * Pagina servita come pubblicazione (sottodominio o dominio dell'autore): il layout lo legge da
+ * questa intestazione e toglie la barra e il piede di ZeroStack, lasciando la testata dell'autore.
+ */
+const PUBLICATION_HEADER = "x-zs-publication";
+
+function asPublication(req: NextRequest, target?: URL): NextResponse {
+  const headers = new Headers(req.headers);
+  headers.set(PUBLICATION_HEADER, "1");
+  return target ? NextResponse.rewrite(target, { request: { headers } }) : NextResponse.next({ request: { headers } });
+}
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   if (!COURTESY_OPEN_PAGES.has(url.pathname) && (await courtesyBlocks(req))) {
@@ -93,25 +105,25 @@ export async function middleware(req: NextRequest) {
   if (subdomain && subdomain !== "www") {
     // Se l'utente visita la homepage del sottodominio (es. dario.zerostack.it/)
     if (url.pathname === "/") {
-      return NextResponse.rewrite(new URL(`/p/${subdomain}`, req.url));
+      return asPublication(req, new URL(`/p/${subdomain}`, req.url));
     }
 
     // Se il percorso punta già a rotte speciali o al prefisso /p/
     if (url.pathname.startsWith("/p/") || url.pathname.startsWith("/checkout/")) {
-      return NextResponse.next();
+      return url.pathname.startsWith("/p/") ? asPublication(req) : NextResponse.next();
     }
 
     // Riscrive percorsi diretti (es. dario.zerostack.it/alternativa-substack -> /p/dario/alternativa-substack)
-    return NextResponse.rewrite(new URL(`/p/${subdomain}${url.pathname}`, req.url));
+    return asPublication(req, new URL(`/p/${subdomain}${url.pathname}`, req.url));
   }
 
   // 3. Dominio personalizzato di terzo livello o CNAME esterno (es. newsletter.mario.it)
   if (url.pathname === "/") {
-    return NextResponse.rewrite(new URL(`/p/${currentHost}`, req.url));
+    return asPublication(req, new URL(`/p/${currentHost}`, req.url));
   }
   if (!url.pathname.startsWith("/p/") && !url.pathname.startsWith("/checkout/")) {
-    return NextResponse.rewrite(new URL(`/p/${currentHost}${url.pathname}`, req.url));
+    return asPublication(req, new URL(`/p/${currentHost}${url.pathname}`, req.url));
   }
 
-  return NextResponse.next();
+  return url.pathname.startsWith("/p/") ? asPublication(req) : NextResponse.next();
 }

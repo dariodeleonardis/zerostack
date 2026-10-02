@@ -94,6 +94,11 @@ try {
   assert(savedLook.status === 200 && savedLook.json?.primaryColor === "#A8322D" && savedLook.json?.palette?.onAccent === "#FFFFFF", "Aspetto salvato dal proprietario, testo bianco sul rosso", savedLook.text);
   const lookPage = await getWithHost("/", `lancio-${run}.zerostack.it`);
   assert(lookPage.text.includes("--pub-accent:#A8322D") && lookPage.text.includes("--pub-bg:#F6F1E7"), "La pagina della pubblicazione usa subito i colori dell'autore");
+  const platformBar = 'aria-label="ZeroStack, pagina iniziale"';
+  const lookArticle = await getWithHost(`/${noEmailPublish.json?.post?.slug ?? ""}`, `lancio-${run}.zerostack.it`);
+  assert(!lookPage.text.includes(platformBar) && lookPage.text.includes("Pubblicato con"), "Sul sottodominio niente barra di ZeroStack, solo «Pubblicato con» in fondo");
+  assert(lookArticle.status === 200 && !lookArticle.text.includes(platformBar) && lookArticle.text.includes("Pubblicato con"), "Anche l'articolo sul sottodominio è solo dell'autore", `(${lookArticle.status})`);
+  assert((await call("GET", "/")).text.includes(platformBar) && (await call("GET", "/login")).text.includes(platformBar), "Sul dominio della piattaforma la barra resta");
   const badLook = await call("PUT", `/api/publications/${publicationId}/appearance`, { cookie: author, body: { ...appearance, fontStyle: "comic" } });
   const strangerLook = await call("PUT", `/api/publications/${publicationId}/appearance`, { cookie: await register("estraneo"), body: appearance });
   assert(badLook.status === 400 && strangerLook.status === 404, "Aspetto: caratteri inesistenti respinti, chi non è proprietario non lo cambia", `(${badLook.status} ${strangerLook.status})`);

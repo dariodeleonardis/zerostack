@@ -17,6 +17,8 @@ export interface PublicationViewProps {
   titleFont: string;
   bodyFont: string;
   subscriberCount: number;
+  /** Piede della pubblicazione, reso sul server (legge l'indirizzo della piattaforma). */
+  footer?: React.ReactNode;
   articles: {
     slug: string;
     title: string;
@@ -51,6 +53,7 @@ export function PublicationView({
   titleFont,
   bodyFont,
   subscriberCount,
+  footer,
   articles,
   tiers
 }: PublicationViewProps) {
@@ -244,6 +247,7 @@ export function PublicationView({
         )}
 
       </main>
+      {footer}
     </div>
   );
 }

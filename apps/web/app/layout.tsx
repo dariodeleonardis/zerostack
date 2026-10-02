@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Bodoni_Moda, Newsreader } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
@@ -22,15 +23,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Sottodominio o dominio di un autore (lo segna il middleware): la pagina è sua, con la sua
+  // testata e il suo piede; la barra e il piede di ZeroStack non compaiono.
+  const isPublication = headers().get("x-zs-publication") === "1";
   return (
     <html lang="it" className={`${archivo.variable} ${bodoni.variable} ${newsreader.variable}`}>
       <body className="flex min-h-screen flex-col pb-20">
         <a href="#contenuto" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-saffron focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:text-ink">
           Vai al contenuto
         </a>
-        <Navbar />
+        {!isPublication && <Navbar />}
         <main id="contenuto" className="flex-1">{children}</main>
-        <Footer />
+        {!isPublication && <Footer />}
         <AudioPlayer />
         <CookieConsent />
       </body>

@@ -5,6 +5,7 @@ import { PublicationView } from "./PublicationView";
 import { publicationWhere } from "../../../lib/publications";
 import { platformUrlFromEnv } from "@zerostack/shared";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../lib/colors";
+import { PublicationFooter } from "../../../components/PublicationFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
   if (!publication) notFound();
 
   const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
+  const palette = publicationPalette(publication.primaryColor, publication.backgroundColor);
 
   return (
     <PublicationView
@@ -72,7 +74,8 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
       description={publication.description}
       authorName={publication.owner.name}
       logoUrl={publication.logoUrl}
-      paletteStyle={paletteStyle(publicationPalette(publication.primaryColor, publication.backgroundColor))}
+      paletteStyle={paletteStyle(palette)}
+      footer={<PublicationFooter background={palette.bg} />}
       titleFont={publicationFont(publication.fontStyle).title}
       bodyFont={publicationFont(publication.fontStyle).body}
       subscriberCount={publication._count.subscribers}

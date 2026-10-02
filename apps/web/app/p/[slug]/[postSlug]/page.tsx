@@ -10,6 +10,7 @@ import { publicationWhere } from "../../../../lib/publications";
 import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../../lib/colors";
 import { ShareButton } from "./ShareButton";
+import { PublicationFooter } from "../../../../components/PublicationFooter";
 import { platformUrlFromEnv } from "@zerostack/shared";
 
 export const dynamic = "force-dynamic";
@@ -197,6 +198,7 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
           )}
         </section>
       </article>
+      <PublicationFooter background={palette.bg} />
     </div>
   );
 }
