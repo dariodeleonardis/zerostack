@@ -58,7 +58,7 @@ function StripeCard({ publication, stripeConfigured }: { publication: PanelPubli
           {status.icon} {status.label}
         </p>
         <p className="mt-1 text-xs text-gray-500">
-          Gli abbonamenti si incassano sul conto Stripe della pubblicazione: ZeroStack non trattiene nulla, restano solo le commissioni di Stripe.
+          Gli abbonamenti si incassano sul conto Stripe della pubblicazione.
         </p>
         {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
       </div>

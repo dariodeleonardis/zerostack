@@ -161,7 +161,9 @@ try {
   assert(price?.account === acct && price?.params.unit_amount === "650" && price?.params["recurring[interval]"] === "month", "Prezzo creato sul conto dell'autore (650 centesimi, mensile)");
   const session = stripe.requests.filter((r) => r.path === "/v1/checkout/sessions").pop();
   assert(session?.account === acct && session?.params.mode === "subscription" && session?.params.customer_email === readerEmail, "Sessione di checkout sul conto dell'autore, con l'email del lettore");
-  assert(session?.params["subscription_data[metadata][tierId]"] === tierId && !("application_fee_percent" in (session?.params ?? {})), "Metadati sull'abbonamento e nessuna commissione della piattaforma");
+  // Commissione di ZeroStack: 8% (PLATFORM_FEE_PERCENT non impostata nei test), decisione del 2/10/2026.
+  assert(session?.params["subscription_data[metadata][tierId]"] === tierId && session?.params["subscription_data[application_fee_percent]"] === "8", "Metadati sull'abbonamento e commissione della piattaforma all'8%", JSON.stringify(session?.params));
+  assert(session?.params["allow_promotion_codes"] === "true" && !("payment_intent_data[application_fee_amount]" in (session?.params ?? {})), "Abbonamento: commissione in percentuale e codici sconto ammessi");
 
   const before = await call("GET", postPath, { cookie: reader });
   assert(before.text.includes(`Inizio ${run}`) && !before.text.includes(secret), "Prima del webhook il lettore vede solo l'anteprima");

@@ -75,6 +75,8 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      # Commissione di ZeroStack sugli abbonamenti pagati, in percento (predefinita 8)
+      PLATFORM_FEE_PERCENT: ${PLATFORM_FEE_PERCENT:-8}
       LEGAL_ENTITY_NAME: ${LEGAL_ENTITY_NAME:-}
       LEGAL_VAT_NUMBER: ${LEGAL_VAT_NUMBER:-}
       LEGAL_ADDRESS: ${LEGAL_ADDRESS:-}

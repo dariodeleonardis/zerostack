@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { CookiePreferencesButton } from "./CookieConsent";
 import { Wordmark } from "./Wordmark";
+import { formatPercent, platformFeePercent } from "@zerostack/shared";
 
 /** Piè di pagina: fascia d'inchiostro con il filo zafferano sopra, come nella testata. */
 export function Footer() {
@@ -33,7 +34,7 @@ export function Footer() {
         </nav>
       </div>
       <div className="border-t border-ink-700">
-        <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-300 sm:px-6 lg:px-8">Fatto in Italia · zero commissioni sugli abbonamenti</p>
+        <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-300 sm:px-6 lg:px-8">Fatto in Italia · commissione del {formatPercent(platformFeePercent())} sugli abbonamenti, meno di Substack</p>
       </div>
     </footer>
   );

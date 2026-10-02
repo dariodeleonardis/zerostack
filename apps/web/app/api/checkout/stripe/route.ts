@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zerostack/database";
-import { ItalianBillingSchema, isSubscriptionActive, platformUrlFromEnv } from "@zerostack/shared";
+import { ItalianBillingSchema, isSubscriptionActive, platformFeeCents, platformFeePercent, platformUrlFromEnv } from "@zerostack/shared";
 import { getCurrentUser, isSameOriginJson } from "../../../../lib/auth";
 import { ensureStripePrice, isStripeConfigured, stripe } from "../../../../lib/stripe";
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const tier = tierId
     ? await prisma.tier.findFirst({
         where: { id: tierId, isActive: true },
-        select: { id: true, interval: true, publicationId: true, publication: { select: { id: true, stripeAccountId: true, stripeChargesEnabled: true, suspendedAt: true } } }
+        select: { id: true, interval: true, priceCents: true, publicationId: true, publication: { select: { id: true, stripeAccountId: true, stripeChargesEnabled: true, suspendedAt: true } } }
       })
     : null;
   if (!tier) {
@@ -79,16 +79,25 @@ export async function POST(req: Request) {
     const metadata = { userId: user.id, tierId: tier.id, publicationId: publication.id, billingInfoId };
     const knownCustomer = current.find((s) => s.stripeCustomerId)?.stripeCustomerId;
     const platform = platformUrlFromEnv();
+    const oneTime = tier.interval === "ONE_TIME";
+    // Commissione di ZeroStack (packages/shared/src/billing.ts): sugli abbonamenti in percentuale,
+    // sui pagamenti una tantum come importo fisso. Lì i codici sconto sono spenti, perché uno sconto
+    // forte porterebbe il totale sotto la commissione e Stripe rifiuterebbe il pagamento.
+    const fee = platformFeePercent();
 
     const session = await stripe().checkout.sessions.create(
       {
-        mode: tier.interval === "ONE_TIME" ? "payment" : "subscription",
+        mode: oneTime ? "payment" : "subscription",
         line_items: [{ price, quantity: 1 }],
         ...(knownCustomer ? { customer: knownCustomer } : { customer_email: user.email }),
         client_reference_id: user.id,
         metadata,
-        ...(tier.interval === "ONE_TIME" ? {} : { subscription_data: { metadata } }),
-        allow_promotion_codes: true,
+        ...(oneTime
+          ? fee > 0
+            ? { payment_intent_data: { application_fee_amount: platformFeeCents(tier.priceCents, fee) } }
+            : {}
+          : { subscription_data: { metadata, ...(fee > 0 ? { application_fee_percent: fee } : {}) } }),
+        allow_promotion_codes: !oneTime,
         locale: "it",
         success_url: `${platform}/checkout/${tier.id}?esito=ok`,
         cancel_url: `${platform}/checkout/${tier.id}`

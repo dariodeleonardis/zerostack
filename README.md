@@ -14,7 +14,7 @@
 
 | Funzionalità | Substack Tradizionale | ZeroStack (Il Tuo Competitor) |
 |---|---|---|
-| **Commissioni Piattaforma** | **10% fisso trattenuto** su tutti gli abbonati | **0% commissioni** (100% dell'incasso va a te via Stripe) |
+| **Commissioni Piattaforma** | **10% fisso trattenuto** su tutti gli abbonati | **8% di commissione** (configurabile con `PLATFORM_FEE_PERCENT`; 0 sulle pubblicazioni gratuite) |
 | **Fatturazione Elettronica** | Nessun supporto a SDI / PEC / Codice Fiscale | **Fatture elettroniche a nome dell'autore**: XML FatturaPA a ogni pagamento (rinnovi compresi), forfettario o ordinario, pronte per lo SdI |
 | **Domini Personalizzati** | Costo una tantum di **$50** per dominio | **Gratuiti e illimitati**: Caddy gestisce SSL Let's Encrypt on-demand |
 | **Email Deliverability** | IP condivisi con milioni di utenti | **Provider indipendente**: Brevo (server UE), Resend o proprio SMTP con DKIM |

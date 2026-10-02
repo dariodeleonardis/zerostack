@@ -13,7 +13,8 @@ export class StripeNotConfiguredError extends Error {
 /**
  * Client Stripe della piattaforma. Ogni pubblicazione ha il proprio conto collegato (Connect Express):
  * le chiamate per conto dell'autore passano `{ stripeAccount }`, così l'incasso va direttamente
- * sul suo conto e la piattaforma non trattiene nulla.
+ * sul suo conto; la piattaforma trattiene solo la sua commissione (application_fee, vedi
+ * platformFeePercent in packages/shared/src/billing.ts).
  * STRIPE_API_BASE (solo test) punta il client a un server finto compatibile.
  */
 export function stripe(): Stripe {

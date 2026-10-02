@@ -14,7 +14,7 @@ const newsreader = Newsreader({ subsets: ["latin"], variable: "--font-newsreader
 
 export const metadata: Metadata = {
   title: "ZeroStack: newsletter, blog e podcast indipendenti",
-  description: "La piattaforma italiana per chi scrive: newsletter, articoli e podcast con zero commissioni e fattura elettronica inclusa."
+  description: "La piattaforma italiana per chi scrive: newsletter, articoli e podcast con una commissione più bassa di Substack e la fattura elettronica inclusa."
 };
 
 export default function RootLayout({

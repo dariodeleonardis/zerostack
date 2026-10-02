@@ -3,6 +3,35 @@ import { z } from "zod";
 export type LocalSubscriptionStatus = "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED";
 
 /**
+ * Commissione di ZeroStack sugli abbonamenti pagati, in percento (decisione di Dario del 2/10/2026:
+ * lievemente sotto il 10% di Substack). Unico punto di verità: la usano il checkout Stripe
+ * (application_fee) e tutti i testi che la citano. Si cambia con PLATFORM_FEE_PERCENT.
+ */
+export const DEFAULT_PLATFORM_FEE_PERCENT = 8;
+/** Commissione trattenuta da Substack, per i confronti nei testi (verificata il 2/10/2026). */
+export const SUBSTACK_FEE_PERCENT = 10;
+
+export function platformFeePercent(env: Record<string, string | undefined> = process.env): number {
+  const raw = env.PLATFORM_FEE_PERCENT?.trim();
+  if (!raw) return DEFAULT_PLATFORM_FEE_PERCENT;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || value > 30) {
+    throw new Error(`PLATFORM_FEE_PERCENT="${raw}" non è valido: serve un numero fra 0 e 30`);
+  }
+  return value;
+}
+
+/** Commissione in centesimi su un importo (pagamenti una tantum: Stripe vuole un importo fisso). */
+export function platformFeeCents(amountCents: number, percent: number): number {
+  return Math.round((amountCents * percent) / 100);
+}
+
+/** "8%" o "7,5%", per i testi. */
+export function formatPercent(value: number): string {
+  return `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(value)}%`;
+}
+
+/**
  * Stato Stripe -> stato locale. Solo ACTIVE e TRIALING aprono il paywall (vedi isSubscriptionActive):
  * un pagamento non riuscito (past_due, unpaid, incomplete) chiude l'accesso finché Stripe non incassa.
  */

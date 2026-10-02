@@ -32,7 +32,7 @@ import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { clientIp, sessionCookieDomain } from "../apps/web/lib/auth";
 import { allowAttemptInMemory } from "../apps/web/lib/rate-limit";
-import { envNumber } from "../packages/shared/src/index";
+import { envNumber, SUBSTACK_FEE_PERCENT, formatPercent, platformFeeCents, platformFeePercent } from "../packages/shared/src/index";
 import { contrast, publicationFont, publicationPalette, readableOn, textSafe } from "../apps/web/lib/colors";
 import { AppearanceSchema } from "../packages/shared/src/index";
 import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
@@ -758,6 +758,18 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   let lowEnv = false;
   try { envNumber({ X: "0" }, "X", 5, { min: 1 }); } catch { lowEnv = true; }
   assert(badEnv.includes("WORKER_POLL_SECONDS") && lowEnv, "Variabili numeriche scritte male o fuori intervallo: errore che dice quale", badEnv);
+
+  // --------------------------------------------------------------------------
+  // Commissione della piattaforma (decisione del 2/10: lievemente sotto Substack)
+  // --------------------------------------------------------------------------
+  console.log("\n💶 Commissione della piattaforma");
+  assert(platformFeePercent({}) === 8 && platformFeePercent({ PLATFORM_FEE_PERCENT: "7.5" }) === 7.5, "Commissione: 8% di serie, configurabile");
+  assert(platformFeePercent({}) < SUBSTACK_FEE_PERCENT, "Commissione più bassa di Substack");
+  let badFee = false;
+  try { platformFeePercent({ PLATFORM_FEE_PERCENT: "otto" }); } catch { badFee = true; }
+  assert(badFee, "Commissione scritta male: errore, non un pagamento senza commissione");
+  assert(platformFeeCents(12000, 8) === 960 && platformFeeCents(650, 8) === 52 && platformFeeCents(999, 7.5) === 75, "Commissione in centesimi arrotondata");
+  assert(formatPercent(8) === "8%" && formatPercent(7.5) === "7,5%" && formatPercent(92) === "92%", "Percentuali scritte all'italiana");
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

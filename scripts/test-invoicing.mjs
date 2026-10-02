@@ -226,6 +226,12 @@ try {
   const reader2 = await register("sostenitrice");
   const azienda = { isCompany: true, ragioneSocialeOIntestatario: "Bianchi & Co. S.r.l.", codiceFiscale: "09876543210", partitaIva: "09876543210", codiceDestinatarioSDI: "m5uxcr1", indirizzo: "Corso Italia 5", cap: "00198", citta: "Roma", provincia: "RM", paese: "IT" };
   const c2 = await checkout(reader2, oneTimeTier, azienda);
+  const oneTimeSession = stripe.requests.filter((r) => r.path === "/v1/checkout/sessions").pop();
+  assert(
+    oneTimeSession?.params["payment_intent_data[application_fee_amount]"] === "960" && oneTimeSession?.params["allow_promotion_codes"] === "false",
+    "Pagamento una tantum da 120 €: commissione fissa di 9,60 € (8%) e niente codici sconto",
+    JSON.stringify(oneTimeSession?.params)
+  );
   await webhook({
     type: "checkout.session.completed",
     account: acct,

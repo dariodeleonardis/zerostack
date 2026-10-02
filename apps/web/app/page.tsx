@@ -2,14 +2,22 @@ import React from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { prisma } from "@zerostack/database";
-import { publicationBaseUrl } from "@zerostack/shared";
+import { SUBSTACK_FEE_PERCENT, formatPercent, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
 import { publicationPalette } from "../lib/colors";
 
 // Le pubblicazioni e gli articoli sono veri, letti dal database: niente esempi inventati.
 export const dynamic = "force-dynamic";
 
-const FACTS = [
-  { n: "01", title: "Zero commissioni", text: "Gli abbonamenti arrivano sul tuo conto Stripe. Noi non tratteniamo niente." },
+const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+// La commissione viene da un punto solo (packages/shared/src/billing.ts): i testi non possono
+// promettere una cifra diversa da quella che Stripe trattiene davvero.
+const facts = (fee: number) => [
+  {
+    n: "01",
+    title: `Commissione del ${formatPercent(fee)}`,
+    text: `Substack trattiene il ${formatPercent(SUBSTACK_FEE_PERCENT)}, noi il ${formatPercent(fee)}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
+  },
   { n: "02", title: "Fattura elettronica", text: "Codice fiscale, partita IVA, SDI e PEC dei lettori, e l'XML pronto per lo SdI." },
   { n: "03", title: "Newsletter, blog, podcast", text: "Un solo posto per scrivere, spedire e pubblicare gli episodi, con il feed per Apple e Spotify." },
   { n: "04", title: "I lettori restano tuoi", text: "Esporti iscritti e articoli quando vuoi. Il tuo dominio, i tuoi colori." }
@@ -47,10 +55,12 @@ const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long"
 
 export default async function HomePage() {
   const { publications, posts } = await loadShowcase();
+  const fee = platformFeePercent();
+  const keep = (rate: number) => 1000 - (1000 * rate) / 100;
 
   return (
     <div>
-      {/* Apertura: inchiostro, titolo in Bodoni, il cerchio zafferano dello 0% */}
+      {/* Apertura: inchiostro, titolo in Bodoni, il cerchio zafferano con quanto resta all'autore */}
       <section className="bg-ink text-paper">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:px-8 lg:pb-28 lg:pt-20">
           <div>
@@ -58,11 +68,11 @@ export default async function HomePage() {
             <h1 className="mt-5 font-display text-6xl font-extrabold leading-[0.92] tracking-tight sm:text-7xl lg:text-8xl">
               Scrivi.
               <br />
-              <span className="font-medium italic text-saffron">Incassa</span> tutto.
+              <span className="font-medium italic text-saffron">Incassa</span> di più.
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-paper-300">
               La piattaforma italiana per chi scrive: newsletter, articoli e podcast con i lettori che pagano te, la fattura elettronica già fatta
-              e nessuna commissione nel mezzo.
+              e una commissione più bassa di Substack.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link href="/register" className="inline-flex items-center gap-2 rounded-full bg-saffron px-7 py-3.5 text-base font-bold text-ink transition hover:bg-paper">
@@ -73,9 +83,9 @@ export default async function HomePage() {
               </a>
             </div>
           </div>
-          <div className="mx-auto flex aspect-square w-64 flex-col items-center justify-center rounded-full border-[10px] border-saffron bg-ink-700 text-center sm:w-80" aria-label="Zero per cento di commissioni">
-            <span className="font-display text-8xl font-extrabold leading-none sm:text-9xl">0%</span>
-            <span className="kicker mt-3 text-saffron">di commissioni</span>
+          <div className="mx-auto flex aspect-square w-64 flex-col items-center justify-center rounded-full border-[10px] border-saffron bg-ink-700 text-center sm:w-80">
+            <span className="font-display text-8xl font-extrabold leading-none sm:text-9xl">{formatPercent(100 - fee)}</span>
+            <span className="kicker mt-3 max-w-[12rem] text-saffron">di ogni abbonamento resta a te</span>
           </div>
         </div>
       </section>
@@ -84,7 +94,7 @@ export default async function HomePage() {
       <section id="come-funziona" className="border-y-2 border-ink bg-saffron">
         <h2 className="sr-only">Come funziona</h2>
         <ol className="mx-auto grid max-w-7xl gap-[2px] bg-ink sm:grid-cols-2 lg:grid-cols-4">
-          {FACTS.map((f) => (
+          {facts(fee).map((f) => (
             <li key={f.n} className="bg-saffron px-6 py-8 text-ink">
               <span className="font-display text-3xl font-extrabold">{f.n}</span>
               <h3 className="mt-3 text-lg font-bold">{f.title}</h3>
@@ -166,14 +176,16 @@ export default async function HomePage() {
           </div>
           <dl className="grid grid-cols-2 border-2 border-ink">
             <div className="border-r-2 border-ink p-6">
-              <dt className="kicker text-gray-600">Piattaforma al 10%</dt>
-              <dd className="mt-3 font-display text-5xl font-extrabold text-gray-500 line-through decoration-2">900 €</dd>
-              <dd className="mt-2 text-sm text-gray-600">100 € a ogni mille, per sempre</dd>
+              <dt className="kicker text-gray-600">Substack, {formatPercent(SUBSTACK_FEE_PERCENT)}</dt>
+              <dd className="mt-3 font-display text-5xl font-extrabold text-gray-500 line-through decoration-2">{euro.format(keep(SUBSTACK_FEE_PERCENT))}</dd>
+              <dd className="mt-2 text-sm text-gray-600">{euro.format(1000 - keep(SUBSTACK_FEE_PERCENT))} a ogni mille</dd>
             </div>
             <div className="bg-ink p-6 text-paper">
-              <dt className="kicker text-saffron">ZeroStack</dt>
-              <dd className="mt-3 font-display text-5xl font-extrabold">1.000 €</dd>
-              <dd className="mt-2 text-sm text-paper-300">nessuna trattenuta</dd>
+              <dt className="kicker text-saffron">ZeroStack, {formatPercent(fee)}</dt>
+              <dd className="mt-3 font-display text-5xl font-extrabold">{euro.format(keep(fee))}</dd>
+              <dd className="mt-2 text-sm text-paper-300">
+                {euro.format(keep(fee) - keep(SUBSTACK_FEE_PERCENT))} in più a te ogni mille, con la fattura elettronica inclusa
+              </dd>
             </div>
           </dl>
         </div>
