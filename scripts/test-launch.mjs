@@ -135,6 +135,18 @@ try {
   const audio = await upload(author, MP3, "puntata.mp3", "audio");
   const audioPath = new URL(audio.json?.media?.url ?? BASE).pathname;
   assert(audio.status === 201 && audio.json?.media?.contentType === "audio/mpeg", "Audio MP3 caricato");
+
+  // Limiti dell'audio con i file sul disco del VPS (3/10): 30 MB a file, 500 MB per autore.
+  const bigAudio = await upload(author, Buffer.concat([MP3, Buffer.alloc(31 * 1024 * 1024, 7)]), "lunga.mp3", "audio");
+  assert(bigAudio.status === 413 && bigAudio.json?.error?.includes("30 MB"), "Audio oltre 30 MB respinto (già dalla dimensione dichiarata), con il limite scritto", bigAudio.text);
+  // Un audio finto che porta l'autrice a un soffio dal tetto: il prossimo, anche piccolo, non entra.
+  const authorRow = await prisma.user.findUnique({ where: { email: email("autrice") }, select: { id: true } });
+  const filler = await prisma.media.create({ data: { ownerId: authorRow.id, key: `audio/2026/10/${crypto.randomUUID()}.mp3`, url: "http://x/finto.mp3", contentType: "audio/mpeg", size: 500 * 1024 * 1024 - 1000, kind: "audio" } });
+  const overQuota = await upload(author, MP3, "ancora.mp3", "audio");
+  assert(overQuota.status === 413 && overQuota.json?.error?.includes("500 MB"), "Oltre i 500 MB di audio per autore: respinto con un messaggio chiaro", overQuota.text);
+  assert((await upload(author, PNG, "foto2.png", "image")).status === 201, "Il tetto dell'audio non blocca le immagini");
+  await prisma.media.delete({ where: { id: filler.id } });
+
   const ranged = await call("GET", audioPath, { headers: { range: "bytes=10-19" } });
   assert(ranged.status === 206 && ranged.headers.get("content-range") === `bytes 10-19/${MP3.length}` && ranged.buf.length === 10, "Richieste a intervalli (Range) per i lettori podcast");
   const traversal = await call("GET", "/api/media/image/../../../../etc/passwd");

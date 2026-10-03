@@ -75,6 +75,9 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      # Limiti dell'audio con i file sul disco del VPS (STORAGE_DRIVER=local): 30 MB a file, 500 MB per autore.
+      MAX_AUDIO_MB: ${MAX_AUDIO_MB:-}
+      AUDIO_QUOTA_MB: ${AUDIO_QUOTA_MB:-}
       # Accesso con Google: credenziali OAuth (applicazione web) dalla Google Cloud Console, indirizzo
       # di ritorno https://zerostack.it/api/auth/google/callback. Vuote = pulsante nascosto.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zerostack/database";
 import { getCurrentUser } from "../../../lib/auth";
 import { allowAttempt } from "../../../lib/rate-limit";
-import { detectType, getStorage, MAX_BYTES, newKey } from "../../../lib/storage";
+import { detectType, formatMb, getStorage, mediaLimits, newKey } from "../../../lib/storage";
 
 /** Caricamento di un'immagine o di un audio (multipart, campo "file"). Risponde con l'URL pubblico. */
 export async function POST(req: Request) {
@@ -20,13 +20,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Troppi caricamenti in un'ora. Riprova più tardi." }, { status: 429 });
   }
 
+  const limits = mediaLimits();
+  const largest = Math.max(limits.maxBytes.image, limits.maxBytes.audio);
+  const tooBig = `File troppo grande: immagini fino a ${formatMb(limits.maxBytes.image)}, audio fino a ${formatMb(limits.maxBytes.audio)}`;
+  // Prima di leggere il corpo: un file enorme non deve nemmeno entrare in memoria (il VPS ha 4 GB).
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > largest + 1024 * 1024) {
+    return NextResponse.json({ error: tooBig }, { status: 413 });
+  }
+
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "Scegli un file" }, { status: 400 });
   }
-  if (file.size > MAX_BYTES.audio) {
-    return NextResponse.json({ error: "File troppo grande" }, { status: 413 });
+  if (file.size > largest) {
+    return NextResponse.json({ error: tooBig }, { status: 413 });
   }
 
   const data = new Uint8Array(await file.arrayBuffer());
@@ -34,12 +43,22 @@ export async function POST(req: Request) {
   if (!type) {
     return NextResponse.json({ error: "Formato non supportato: immagini JPG, PNG, GIF, WebP o audio MP3, M4A, OGG, WAV" }, { status: 415 });
   }
-  if (data.length > MAX_BYTES[type.kind]) {
-    return NextResponse.json({ error: type.kind === "image" ? "Immagine troppo grande (massimo 10 MB)" : "Audio troppo grande (massimo 150 MB)" }, { status: 413 });
+  if (data.length > limits.maxBytes[type.kind]) {
+    const max = formatMb(limits.maxBytes[type.kind]);
+    return NextResponse.json({ error: type.kind === "image" ? `Immagine troppo grande (massimo ${max})` : `Audio troppo grande (massimo ${max})` }, { status: 413 });
   }
   const wanted = form?.get("kind");
   if (typeof wanted === "string" && wanted && wanted !== type.kind) {
     return NextResponse.json({ error: wanted === "image" ? "Serve un'immagine" : "Serve un file audio" }, { status: 415 });
+  }
+  if (type.kind === "audio" && limits.audioQuotaBytes !== null) {
+    const used = await prisma.media.aggregate({ where: { ownerId: user.id, kind: "audio" }, _sum: { size: true } });
+    if ((used._sum.size ?? 0) + data.length > limits.audioQuotaBytes) {
+      return NextResponse.json(
+        { error: `Hai raggiunto lo spazio per l'audio (${formatMb(limits.audioQuotaBytes)} in tutto). Elimina qualche episodio o scrivici.` },
+        { status: 413 }
+      );
+    }
   }
 
   const key = newKey(type);

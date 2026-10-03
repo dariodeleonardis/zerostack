@@ -12,10 +12,36 @@ export interface DetectedType {
   contentType: string;
 }
 
-export const MAX_BYTES: Record<MediaKind, number> = {
-  image: 10 * 1024 * 1024,
-  audio: 150 * 1024 * 1024
-};
+const MB = 1024 * 1024;
+
+export interface MediaLimits {
+  /** Dimensione massima di un file, per tipo. */
+  maxBytes: Record<MediaKind, number>;
+  /** Audio complessivo per autore; null = nessun tetto (file su storage esterno). */
+  audioQuotaBytes: number | null;
+  localDisk: boolean;
+}
+
+/**
+ * Limiti dei caricamenti. Con i file sul disco del VPS (STORAGE_DRIVER=local, il caso di oggi) gli
+ * audio sono stretti, decisione del 3/10: il server ha 2 vCPU, 4 GB e 78 GB di disco, e l'audio è la
+ * cosa più pesante che ci si possa mettere. Con uno storage esterno (s3) tornano larghi.
+ * MAX_AUDIO_MB e AUDIO_QUOTA_MB li cambiano senza toccare il codice.
+ */
+export function mediaLimits(env: Record<string, string | undefined> = process.env): MediaLimits {
+  const localDisk = (env.STORAGE_DRIVER || "local").toLowerCase() !== "s3";
+  const number = (name: string, fallback: number) => {
+    const value = Number(env[name]);
+    return env[name]?.trim() && Number.isFinite(value) && value > 0 ? value : fallback;
+  };
+  return {
+    maxBytes: { image: 10 * MB, audio: number("MAX_AUDIO_MB", localDisk ? 30 : 150) * MB },
+    audioQuotaBytes: localDisk ? number("AUDIO_QUOTA_MB", 500) * MB : env.AUDIO_QUOTA_MB?.trim() ? number("AUDIO_QUOTA_MB", 500) * MB : null,
+    localDisk
+  };
+}
+
+export const formatMb = (bytes: number) => `${Math.round(bytes / MB)} MB`;
 
 const ascii = (buf: Uint8Array, start: number, end: number) => String.fromCharCode.apply(null, Array.from(buf.subarray(start, end)));
 
