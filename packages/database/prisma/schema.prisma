@@ -361,8 +361,15 @@ model Note {
 
   author          User         @relation("AuthorNotes", fields: [authorId], references: [id], onDelete: Cascade)
   publication     Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  // Note (T5, 3/10/2026): le risposte sono note con replyToNoteId, di un solo livello; cancellando
+  // la nota se ne vanno anche le risposte.
+  replyTo         Note?        @relation("NoteReplies", fields: [replyToNoteId], references: [id], onDelete: Cascade)
+  replies         Note[]       @relation("NoteReplies")
   comments        Comment[]
   likes           Like[]
+
+  @@index([publicationId, createdAt])
+  @@index([replyToNoteId, createdAt])
 }
 
 model Comment {

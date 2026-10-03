@@ -35,6 +35,9 @@ export interface PublicationViewProps {
     interval: string;
     benefits: string[];
   }[];
+  /** Le ultime note della pubblicazione (T5); i link vanno alla piattaforma, dove vivono le note. */
+  notes?: { id: string; url: string; author: string; content: string; date: string; replies: number }[];
+  notesUrl?: string;
 }
 
 /**
@@ -55,7 +58,9 @@ export function PublicationView({
   subscriberCount,
   footer,
   articles,
-  tiers
+  tiers,
+  notes = [],
+  notesUrl
 }: PublicationViewProps) {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -210,6 +215,37 @@ export function PublicationView({
             </ol>
           )}
         </section>
+
+        {/* Note: le ultime tre, testo breve */}
+        {notes.length > 0 && (
+          <section className="mt-16">
+            <div className="flex items-baseline justify-between gap-4 border-b-[3px] border-[color:var(--pub-text)] pb-3">
+              <h2 className={`text-3xl font-extrabold tracking-tight ${titleFont}`}>Note</h2>
+              {notesUrl && (
+                <a href={notesUrl} className="font-sans text-sm font-bold hover:underline">
+                  Tutte le note
+                </a>
+              )}
+            </div>
+            <ul className="divide-y divide-[color:var(--pub-text)]">
+              {notes.map((note) => (
+                <li key={note.id}>
+                  <a href={note.url} className="group block py-6">
+                    <p className="kicker flex flex-wrap gap-x-3 font-sans text-[color:var(--pub-accent-text)]">
+                      <span>{note.author}</span>
+                      <span aria-hidden>·</span>
+                      <span>{note.date}</span>
+                    </p>
+                    <p className="mt-2 whitespace-pre-line break-words text-lg leading-relaxed group-hover:underline">{note.content}</p>
+                    {note.replies > 0 && (
+                      <span className="mt-2 inline-block font-sans text-sm font-bold">{note.replies === 1 ? "1 risposta" : `${note.replies} risposte`}</span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Abbonamenti: solo quelli che l'autore ha davvero creato */}
         {tiers.length > 0 && (

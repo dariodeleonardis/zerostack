@@ -3,8 +3,24 @@
 import React, { useState } from "react";
 import { Heart } from "lucide-react";
 
-/** Mi piace all'articolo: si accende subito e si riallinea con la risposta del server. */
-export function LikeButton({ postId, initialLiked, initialCount, loginHref }: { postId: string; initialLiked: boolean; initialCount: number; loginHref: string | null }) {
+/**
+ * Mi piace all'articolo (o, con `url`, a una nota): si accende subito e si riallinea con la risposta
+ * del server. I colori vengono dalle variabili --pub-*.
+ */
+export function LikeButton({
+  postId,
+  url,
+  initialLiked,
+  initialCount,
+  loginHref
+}: {
+  postId?: string;
+  url?: string;
+  initialLiked: boolean;
+  initialCount: number;
+  loginHref: string | null;
+}) {
+  const endpoint = url ?? `/api/posts/${postId}/like`;
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const [pending, setPending] = useState(false);
@@ -25,7 +41,7 @@ export function LikeButton({ postId, initialLiked, initialCount, loginHref }: { 
     setPending(true);
     setLiked(next);
     setCount((c) => Math.max(0, c + (next ? 1 : -1)));
-    const res = await fetch(`/api/posts/${postId}/like`, { method: next ? "POST" : "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => null);
+    const res = await fetch(endpoint, { method: next ? "POST" : "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => null);
     const data = res?.ok ? await res.json().catch(() => null) : null;
     if (data) {
       setLiked(Boolean(data.liked));

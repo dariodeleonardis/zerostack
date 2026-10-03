@@ -89,6 +89,9 @@ export function NavbarUser() {
           </span>
         )}
       </Link>
+      <Link href="/notes" className="hidden text-sm font-semibold text-paper transition hover:text-saffron sm:inline">
+        Note
+      </Link>
       <Link href="/studio" className="hidden text-sm font-semibold text-paper transition hover:text-saffron sm:inline">
         Studio
       </Link>

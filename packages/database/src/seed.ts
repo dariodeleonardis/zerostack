@@ -141,10 +141,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Abbiamo appena rilasciato la prima versione di ZeroStack! Completamente open-source, con supporto nativo a SDI, PEC e 0% commissioni. Cosa ne pensate?",
-      likesCount: 0,
-      restacksCount: 15,
-      repliesCount: 6
+      content: "Abbiamo appena rilasciato la prima versione di ZeroStack, open source e con le fatture elettroniche già dentro. Cosa ne pensate?"
     }
   });
 
@@ -152,10 +149,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?",
-      likesCount: 0,
-      restacksCount: 4,
-      repliesCount: 8
+      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?"
     }
   });
 

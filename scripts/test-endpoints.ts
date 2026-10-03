@@ -35,7 +35,7 @@ async function testLiveEndpoints() {
   await check("Homepage ZeroStack", "/");
   // Posta, Note e Podcast erano pagine con contenuti finti: tolte il 2/10, tornano quando sono vere.
   await check("Posta senza sessione -> login", "/inbox", { redirect: "manual" }, toLogin);
-  await check("Note finte rimosse -> 404", "/notes", undefined, (res) => res.status === 404);
+  await check("Note leggibili senza accesso", "/notes", undefined, (res) => res.status === 200);
   await check("Podcast finti rimossi -> 404", "/podcasts", undefined, (res) => res.status === 404);
   await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
   await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>

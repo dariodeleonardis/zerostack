@@ -40,6 +40,12 @@ async function findPublication(slugOrDomain: string) {
         take: 20,
         select: { slug: true, title: true, excerpt: true, subtitle: true, contentHtml: true, access: true, likesCount: true, publishedAt: true }
       },
+      notes: {
+        where: { replyToNoteId: null },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: { id: true, content: true, createdAt: true, repliesCount: true, author: { select: { name: true } } }
+      },
       _count: { select: { subscribers: { where: { status: "ACTIVE" } } } }
     }
   });
@@ -86,6 +92,15 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
         date: post.publishedAt ? dateFormat.format(post.publishedAt) : "",
         readTime: readTime(post.contentHtml),
         isPaidOnly: post.access !== "FREE"
+      }))}
+      notesUrl={`${platformUrlFromEnv()}/notes?pubblicazione=${encodeURIComponent(publication.slug)}`}
+      notes={publication.notes.map((note) => ({
+        id: note.id,
+        url: `${platformUrlFromEnv()}/notes/${note.id}`,
+        author: note.author.name,
+        content: note.content.length > 280 ? `${note.content.slice(0, 277).trimEnd()}…` : note.content,
+        date: dateFormat.format(note.createdAt),
+        replies: note.repliesCount
       }))}
       tiers={publication.tiers.map((tier) => ({
         id: tier.id,

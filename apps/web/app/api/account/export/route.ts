@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Accedi prima" }, { status: 401 });
 
-  const [account, publications, posts, subscriptions, billing, newsletters, comments, media, payments] = await Promise.all([
+  const [account, publications, posts, subscriptions, billing, newsletters, comments, notes, media, payments] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { id: true, email: true, name: true, handle: true, bio: true, avatarUrl: true, role: true, emailVerified: true, createdAt: true }
@@ -43,6 +43,7 @@ export async function GET() {
       select: { status: true, createdAt: true, confirmedAt: true, publication: { select: { name: true, slug: true } } }
     }),
     prisma.comment.findMany({ where: { authorId: user.id }, select: { content: true, createdAt: true, postId: true } }),
+    prisma.note.findMany({ where: { authorId: user.id }, select: { id: true, content: true, createdAt: true, replyToNoteId: true, publication: { select: { slug: true } } } }),
     prisma.media.findMany({ where: { ownerId: user.id }, select: { url: true, kind: true, size: true, createdAt: true } }),
     prisma.payment.findMany({
       where: { userId: user.id },
@@ -51,7 +52,7 @@ export async function GET() {
   ]);
 
   const body = JSON.stringify(
-    { exportedAt: new Date().toISOString(), account, publications, posts, subscriptions, billing, payments, newsletters, comments, media },
+    { exportedAt: new Date().toISOString(), account, publications, posts, subscriptions, billing, payments, newsletters, comments, notes, media },
     null,
     2
   );
