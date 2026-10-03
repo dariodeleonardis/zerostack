@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { prisma } from "@zerostack/database";
-import { SUBSTACK_FEE_PERCENT, formatPercent, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
+import { SUBSTACK_FEE_PERCENT, formatPercent, percentWithArticle, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
 import { publicationPalette } from "../lib/colors";
 
 // Le pubblicazioni e gli articoli sono veri, letti dal database: niente esempi inventati.
@@ -15,8 +15,8 @@ const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR"
 const facts = (fee: number) => [
   {
     n: "01",
-    title: `Commissione del ${formatPercent(fee)}`,
-    text: `Substack trattiene il ${formatPercent(SUBSTACK_FEE_PERCENT)}, noi il ${formatPercent(fee)}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
+    title: `Commissione ${percentWithArticle(fee, "del")}`,
+    text: `Substack trattiene ${percentWithArticle(SUBSTACK_FEE_PERCENT, "il")}, noi ${percentWithArticle(fee, "il")}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
   },
   { n: "02", title: "Fattura elettronica", text: "Codice fiscale, partita IVA, SDI e PEC dei lettori, e l'XML pronto per lo SdI." },
   { n: "03", title: "Newsletter, blog, podcast", text: "Un solo posto per scrivere, spedire e pubblicare gli episodi, con il feed per Apple e Spotify." },

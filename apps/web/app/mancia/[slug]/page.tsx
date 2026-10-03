@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@zerostack/database";
-import { formatPercent, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
+import { percentWithArticle, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
 import { getCurrentUser } from "../../../lib/auth";
 import { isStripeConfigured } from "../../../lib/stripe";
 import { TipForm } from "./TipForm";
@@ -43,7 +43,7 @@ export default async function TipPage({ params, searchParams }: { params: { slug
       ) : (
         <>
           <p className="mt-4 text-lg text-gray-700">
-            Un grazie una tantum a {publication.owner.name}: non è un abbonamento e non si rinnova. Paghi con Stripe; ZeroStack trattiene il {formatPercent(platformFeePercent())}, il resto va all&apos;autore.
+            Un grazie una tantum a {publication.owner.name}: non è un abbonamento e non si rinnova. Paghi con Stripe; ZeroStack trattiene {percentWithArticle(platformFeePercent(), "il")}, il resto va all&apos;autore.
           </p>
           <div className="mt-8">
             <TipForm publicationId={publication.id} />

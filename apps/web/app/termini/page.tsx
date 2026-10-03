@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import { LegalPage } from "../../components/LegalPage";
 import { legalEntity } from "../../lib/legal";
-import { formatPercent, platformFeePercent } from "@zerostack/shared";
+import { percentWithArticle, platformFeePercent } from "@zerostack/shared";
 
 export const metadata: Metadata = { title: "Termini di servizio | ZeroStack" };
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function TermsPage() {
       <h2>Abbonamenti e pagamenti</h2>
       <p>
         Gli abbonamenti a pagamento si stipulano tra lettore e autore: il pagamento arriva direttamente sul conto Stripe dell&apos;autore, che è il venditore ed emette gli eventuali
-        documenti fiscali. Su ogni pagamento ZeroStack trattiene una commissione del {formatPercent(platformFeePercent())} dell&apos;importo, a titolo di corrispettivo per il
+        documenti fiscali. Su ogni pagamento ZeroStack trattiene una commissione {percentWithArticle(platformFeePercent(), "del")} dell&apos;importo, a titolo di corrispettivo per il
         servizio; Stripe applica le sue commissioni sui pagamenti. Le pubblicazioni gratuite e le iscrizioni gratuite non hanno costi. Le disdette valgono dalla fine del periodo già pagato.
       </p>
 

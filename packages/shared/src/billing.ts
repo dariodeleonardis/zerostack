@@ -32,6 +32,17 @@ export function formatPercent(value: number): string {
 }
 
 /**
+ * La percentuale con l'articolo giusto: "l'8%" ma "il 10%", "dell'8%" ma "del 10%". Si elide davanti
+ * ai numeri che si leggono con una vocale: uno, otto, undici, ottanta..., ottocento...
+ */
+export function percentWithArticle(value: number, form: "il" | "del"): string {
+  const n = Math.floor(value);
+  const vowel = n === 1 || n === 8 || n === 11 || (n >= 80 && n <= 89) || (n >= 800 && n <= 899);
+  const article = form === "il" ? (vowel ? "l'" : "il ") : vowel ? "dell'" : "del ";
+  return `${article}${formatPercent(value)}`;
+}
+
+/**
  * Stato Stripe -> stato locale. Solo ACTIVE e TRIALING aprono il paywall (vedi isSubscriptionActive):
  * un pagamento non riuscito (past_due, unpaid, incomplete) chiude l'accesso finché Stripe non incassa.
  */

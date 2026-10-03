@@ -5,7 +5,7 @@ Si aggiorna a ogni chiusura: la voce resta, con la data e come è stata chiusa, 
 Le voci sul server e sulla posta che non devono finire su GitHub (il repository è pubblico) stanno in
 `vps/IN-SOSPESO-SERVER.md`, nella cartella del progetto ma fuori da git.
 
-Ultimo aggiornamento: 2 ottobre 2026.
+Ultimo aggiornamento: 3 ottobre 2026.
 
 ## Aperte
 
@@ -29,11 +29,17 @@ Ultimo aggiornamento: 2 ottobre 2026.
 
 ### Da fare nel codice (rimandate)
 
-Le funzioni vere che sostituiscono quelle finte tolte il 2/10: commenti, mi piace, posta del lettore,
-squadra, note, Fediverso, mance e, in fondo (3/10: troppo pesanti per il VPS di oggi), podcast e trascrizione. Elenco e dettagli in
-[STATO-FUNZIONI-E-AUDIT.md](STATO-FUNZIONI-E-AUDIT.md), sezione 4 (T1-T9).
+Delle funzioni vere che sostituiscono quelle finte tolte il 2/10 restano solo podcast (T8) e trascrizione (T9),
+in fondo per scelta di Dario (3/10: troppo pesanti per il VPS di oggi). Commenti, mi piace, posta del lettore,
+squadra, note, Fediverso e mance sono fatti e in produzione dal 3/10. Dettagli in
+[STATO-FUNZIONI-E-AUDIT.md](STATO-FUNZIONI-E-AUDIT.md), sezione 4.
 
 Altre voci di codice:
+- Fediverso: mai provato con un Mastodon vero (solo con quello finto dei test). Da fare a dominio raggiungibile,
+  seguendo `@slug@<dominio>` da un account Mastodon.
+- Mance e abbonamenti: provati solo con lo Stripe finto. Da rifare con le chiavi vere in modalità test.
+- Barra in alto su telefono: «Note» e «Studio» non compaiono per mancanza di spazio (proposta: «Esci» nel menu
+  dell'avatar).
 - Certificato di un sottodominio d'autore: non ancora visto dal vivo, perché nessuna pubblicazione vera è stata creata sul sito.
   Da controllare alla prima pubblicazione.
 - Immagini: due `<img>` (logo nella home e nella pagina della pubblicazione) segnalate dal lint come più lente di
@@ -49,3 +55,4 @@ Altre voci di codice:
 | Audit esterno, blocchi 1-4 | 2/10 | Commit 33b7e77, dde50d4; dettagli in STATO-FUNZIONI-E-AUDIT.md |
 | Commissione lievemente sotto Substack | 2/10 | 8%, commit 799f6fd |
 | Prova di ripristino dei backup | 2/10 | `vps/zs-prova-ripristino.sh`: stesse righe della produzione |
+| Funzioni vere T1-T7 (commenti, mi piace, posta, squadra, note, Fediverso, mance) | 3/10 | Commit fino a 6ff4383, in produzione |

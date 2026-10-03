@@ -33,7 +33,7 @@ import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv
 import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
 import { clientIp, sessionCookieDomain } from "../apps/web/lib/auth";
 import { allowAttemptInMemory } from "../apps/web/lib/rate-limit";
-import { envNumber, SUBSTACK_FEE_PERCENT, formatPercent, platformFeeCents, platformFeePercent } from "../packages/shared/src/index";
+import { envNumber, SUBSTACK_FEE_PERCENT, formatPercent, percentWithArticle, platformFeeCents, platformFeePercent } from "../packages/shared/src/index";
 import { contrast, publicationFont, publicationPalette, readableOn, textSafe } from "../apps/web/lib/colors";
 import { AppearanceSchema } from "../packages/shared/src/index";
 import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
@@ -760,6 +760,10 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(badFee, "Commissione scritta male: errore, non un pagamento senza commissione");
   assert(platformFeeCents(12000, 8) === 960 && platformFeeCents(650, 8) === 52 && platformFeeCents(999, 7.5) === 75, "Commissione in centesimi arrotondata");
   assert(formatPercent(8) === "8%" && formatPercent(7.5) === "7,5%" && formatPercent(92) === "92%", "Percentuali scritte all'italiana");
+  assert(
+    percentWithArticle(8, "il") === "l'8%" && percentWithArticle(10, "il") === "il 10%" && percentWithArticle(8, "del") === "dell'8%" && percentWithArticle(7.5, "del") === "del 7,5%" && percentWithArticle(11, "il") === "l'11%",
+    "Articolo giusto davanti alla percentuale (l'8%, il 10%)"
+  );
 
   // --------------------------------------------------------------------------
   // REPORT FINALE

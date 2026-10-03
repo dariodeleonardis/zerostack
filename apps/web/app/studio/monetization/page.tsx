@@ -1,6 +1,6 @@
 import React from "react";
 import { prisma } from "@zerostack/database";
-import { SUBSTACK_FEE_PERCENT, formatPercent, platformFeePercent } from "@zerostack/shared";
+import { SUBSTACK_FEE_PERCENT, percentWithArticle, platformFeePercent } from "@zerostack/shared";
 import { requireUser } from "../../../lib/auth";
 import { isStripeConfigured, syncStripeAccount } from "../../../lib/stripe";
 import { MonetizationPanel } from "./MonetizationPanel";
@@ -61,7 +61,7 @@ export default async function MonetizationPage({ searchParams }: { searchParams:
         <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Monetizzazione</h1>
         <p className="text-xs text-gray-500">Collega Stripe e decidi i livelli di abbonamento delle tue pubblicazioni.</p>
         <p className="mt-2 text-sm text-gray-700">
-          Su ogni abbonamento pagato ZeroStack trattiene il {formatPercent(platformFeePercent())} (Substack il {formatPercent(SUBSTACK_FEE_PERCENT)}); Stripe applica le sue commissioni sui pagamenti. Su ciò che pubblichi gratis non tratteniamo niente.
+          Su ogni abbonamento pagato ZeroStack trattiene {percentWithArticle(platformFeePercent(), "il")} (Substack {percentWithArticle(SUBSTACK_FEE_PERCENT, "il")}); Stripe applica le sue commissioni sui pagamenti. Su ciò che pubblichi gratis non tratteniamo niente.
         </p>
       </div>
       <MonetizationPanel
