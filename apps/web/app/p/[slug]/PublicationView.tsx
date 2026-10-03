@@ -38,6 +38,8 @@ export interface PublicationViewProps {
   /** Le ultime note della pubblicazione (T5); i link vanno alla piattaforma, dove vivono le note. */
   notes?: { id: string; url: string; author: string; content: string; date: string; replies: number }[];
   notesUrl?: string;
+  /** @slug@dominio: il nome con cui seguirla da Mastodon (T6). */
+  fediverseHandle?: string;
 }
 
 /**
@@ -60,7 +62,8 @@ export function PublicationView({
   articles,
   tiers,
   notes = [],
-  notesUrl
+  notesUrl,
+  fediverseHandle
 }: PublicationViewProps) {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -141,6 +144,11 @@ export function PublicationView({
           </div>
           {description && <p className="mt-8 max-w-2xl text-xl leading-relaxed">{description}</p>}
           {subscriberCount > 0 && <p className="kicker mt-4 opacity-90">{subscriberCount} lettori iscritti</p>}
+          {fediverseHandle && (
+            <p className="mt-3 font-sans text-sm opacity-90">
+              Seguila da Mastodon e dal Fediverso: <span className="select-all font-mono font-bold">{fediverseHandle}</span>
+            </p>
+          )}
         </div>
       </header>
 

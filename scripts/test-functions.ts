@@ -1,3 +1,4 @@
+import * as ap from "../packages/shared/src/fediverse";
 import {
   ItalianBillingSchema,
   CreatePublicationSchema,
@@ -373,33 +374,22 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   // --------------------------------------------------------------------------
   console.log("\n📌 GRUPPO 8: Interoperabilità Fediverse (WebFinger & ActivityPub)");
 
-  const mockHandle = "tech-italia";
-  const mockDomain = "zerostack.it";
-  const webfingerResource = `acct:${mockHandle}@${mockDomain}`;
-
-  // Test parsing WebFinger resource
-  const parsedHandle = webfingerResource.replace(/^acct:/, "").split("@")[0];
-  const parsedDomain = webfingerResource.replace(/^acct:/, "").split("@")[1];
-  assert(parsedHandle === mockHandle, "WebFinger estrae l'handle corretto");
-  assert(parsedDomain === mockDomain, "WebFinger estrae il dominio corretto");
-
-  // Test struttura ActivityPub Actor JSON-LD
-  const actorJson = {
-    "@context": [
-      "https://www.w3.org/ns/activitystreams",
-      "https://w3id.org/security/v1"
-    ],
-    id: `https://${mockDomain}/api/activitypub/users/${mockHandle}`,
-    type: "Person",
-    preferredUsername: mockHandle,
-    inbox: `https://${mockDomain}/api/activitypub/users/${mockHandle}/inbox`,
-    outbox: `https://${mockDomain}/api/activitypub/users/${mockHandle}/outbox`
-  };
-
-  assert(actorJson["@context"].includes("https://www.w3.org/ns/activitystreams"), "ActivityPub Actor specifica il contesto ActivityStreams");
-  assert(actorJson.type === "Person", "Tipo Actor definito come Person");
-  assert(actorJson.inbox.endsWith("/inbox"), "Endpoint inbox presente per ricevere notifiche Mastodon");
-  assert(actorJson.outbox.endsWith("/outbox"), "Endpoint outbox presente per pubblicare post nel Fediverse");
+  // Firme HTTP vere (T6): firmate con una chiave, verificate con la sua pubblica, rifiutate se cambia qualcosa.
+  const apKeys = ap.generateActorKeys();
+  const apOther = ap.generateActorKeys();
+  const apUrl = "https://mastodon.example/users/alice/inbox";
+  const apBody = JSON.stringify({ type: "Follow" });
+  const apHeaders = ap.signedHeaders({ method: "POST", url: apUrl, body: apBody, keyId: "https://zerostack.it/api/ap/p/x#main-key", privateKeyPem: apKeys.privateKeyPem });
+  const apParsed = ap.parseSignatureHeader(apHeaders.Signature)!;
+  const apHeader = (n: string) => ({ host: apHeaders.Host, date: apHeaders.Date, digest: apHeaders.Digest } as Record<string, string>)[n] ?? null;
+  const apVerify = (over: Partial<Parameters<typeof ap.verifySignedRequest>[0]>) =>
+    ap.verifySignedRequest({ method: "POST", path: "/users/alice/inbox", header: apHeader, body: apBody, signature: apParsed, publicKeyPem: apKeys.publicKeyPem, ...over }).ok;
+  assert(apParsed.headers.join(" ") === "(request-target) host date digest", "La firma copre (request-target), host, date e digest");
+  assert(apVerify({}), "Firma valida verificata con la chiave pubblica");
+  assert(!apVerify({ publicKeyPem: apOther.publicKeyPem }), "Con un'altra chiave la firma non vale");
+  assert(!apVerify({ body: JSON.stringify({ type: "Undo" }) }), "Corpo cambiato: il digest non torna");
+  assert(!apVerify({ path: "/users/bob/inbox" }), "Indirizzo cambiato: la firma non vale");
+  assert(!apVerify({ now: new Date(Date.now() + 13 * 60 * 60 * 1000) }), "Richiesta di più di 12 ore fa: rifiutata");
 
   // --------------------------------------------------------------------------
   // TEST GRUPPO 9: Privacy-First Analytics (Zero-Cookie & Anonimizzazione)

@@ -1,6 +1,7 @@
 import { publishPost, type PrismaClient } from "@zerostack/database";
 import { buildNewsletterEmail, EmailSendError, type EmailTransport } from "@zerostack/email";
 import { envNumber, isSubscriptionActive, platformUrlFromEnv, publicationBaseUrl, splitAtPaywall } from "@zerostack/shared";
+import { deliverFediverse } from "./fediverse";
 
 export interface WorkerOptions {
   /** Email al secondo verso il provider (Brevo e Resend hanno limiti per piano). */
@@ -223,5 +224,6 @@ export async function runOnce(prisma: PrismaClient, transport: EmailTransport, o
     await processCampaign(prisma, transport, id, options);
     processed++;
   }
+  await deliverFediverse(prisma, options);
   return processed;
 }

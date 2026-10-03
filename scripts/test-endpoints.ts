@@ -134,7 +134,8 @@ async function testLiveEndpoints() {
   await check("Satispay finto rimosso -> 404", "/api/donations/satispay", post, (res) => res.status === 404);
   await check("Statistiche finte rimosse -> 404", "/api/analytics/collect", post, (res) => res.status === 404);
   await check("Trascrizione finta rimossa -> 404", "/api/podcasts/transcribe", post, (res) => res.status === 404);
-  await check("WebFinger finto rimosso -> 404", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res) => res.status === 404);
+  await check("WebFinger di una pubblicazione", `/.well-known/webfinger?resource=acct:tech-italia@${new URL(baseUrl).host}`, undefined, (res) => res.status === 200);
+  await check("WebFinger di un nome inesistente -> 404", "/.well-known/webfinger?resource=acct:non-esiste-davvero@localhost", undefined, (res) => res.status === 404);
   await check("Attore ActivityPub finto rimosso -> 404", "/api/activitypub/users/tech-italia", undefined, (res) => res.status === 404);
 
   console.log("\n========================================================");

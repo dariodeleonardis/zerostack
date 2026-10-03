@@ -25,6 +25,8 @@ export EMAIL_WEBHOOK_TOKEN=zs_email_test
 export GOOGLE_CLIENT_ID=zs-test.apps.googleusercontent.com
 export GOOGLE_CLIENT_SECRET=zs_google_test
 export GOOGLE_OAUTH_BASE=http://127.0.0.1:12113
+# Solo nei test: il finto Mastodon di test-fediverse.mjs sta su 127.0.0.1 e parla http.
+export AP_ALLOW_PRIVATE_HOSTS=1
 export RESEND_WEBHOOK_SECRET=whsec_dGVzdC1zZWdyZXRvLXJlc2VuZA==
 echo '{}' > "$ZS_FAKE_DNS_FILE"
 
@@ -69,6 +71,7 @@ for suite in \
   "node scripts/test-inbox.mjs" \
   "node scripts/test-team.mjs" \
   "node scripts/test-notes.mjs" \
+  "node scripts/test-fediverse.mjs" \
   "node scripts/test-courtesy.mjs"; do
   flush
   echo "::group::$suite"

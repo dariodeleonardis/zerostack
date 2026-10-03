@@ -6,6 +6,7 @@ import { publicationWhere } from "../../../lib/publications";
 import { platformUrlFromEnv } from "@zerostack/shared";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../lib/colors";
 import { PublicationFooter } from "../../../components/PublicationFooter";
+import { fediverseHandle } from "../../../lib/fediverse";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
         readTime: readTime(post.contentHtml),
         isPaidOnly: post.access !== "FREE"
       }))}
+      fediverseHandle={fediverseHandle(publication.slug)}
       notesUrl={`${platformUrlFromEnv()}/notes?pubblicazione=${encodeURIComponent(publication.slug)}`}
       notes={publication.notes.map((note) => ({
         id: note.id,

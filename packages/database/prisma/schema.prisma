@@ -173,6 +173,11 @@ model Publication {
   primaryColor           String   @default("#FF5722")
   backgroundColor        String   @default("#FBF8F2")
   fontStyle              String   @default("bodoni")
+
+  // Fediverso (T6): chiavi RSA dell'attore ActivityPub, create alla prima richiesta. Con la privata
+  // si firmano le consegne verso Mastodon e simili.
+  apPublicKeyPem         String?  @db.Text
+  apPrivateKeyPem        String?  @db.Text
   
   // Impostazioni integrazione pagamenti & email (indipendenza del creator)
   stripeAccountId        String?
@@ -192,6 +197,7 @@ model Publication {
   owner                  User                @relation("PublicationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members                PublicationMember[]
   invites                PublicationInvite[]
+  apFollowers            ApFollower[]
   tiers                  Tier[]
   posts                  Post[]
   notes                  Note[]
@@ -232,6 +238,22 @@ model PublicationInvite {
   invitedBy     User?       @relation(fields: [invitedById], references: [id], onDelete: SetNull)
 
   @@unique([publicationId, email])
+}
+
+// Chi segue una pubblicazione dal Fediverso (T6): l'attore remoto e dove consegnargli i post.
+model ApFollower {
+  id             String   @id @default(uuid())
+  publicationId  String
+  actorUrl       String
+  inboxUrl       String
+  sharedInboxUrl String?
+  // "nome@server", solo da mostrare
+  handle         String?
+  createdAt      DateTime @default(now())
+
+  publication    Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, actorUrl])
 }
 
 model Tier {
@@ -317,6 +339,8 @@ model Post {
   scheduledAt     DateTime?
   // Per i post programmati: all'uscita il worker crea anche la campagna email.
   emailOnPublish  Boolean     @default(false)
+  // Annunciato ai seguaci del Fediverso (T6): il worker lo fa una volta sola.
+  apDeliveredAt   DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -356,6 +380,8 @@ model Note {
   restacksCount   Int      @default(0)
   repliesCount    Int      @default(0)
   replyToNoteId   String?
+  // Annunciata ai seguaci del Fediverso (T6), solo le note principali.
+  apDeliveredAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
