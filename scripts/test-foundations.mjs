@@ -85,7 +85,8 @@ try {
 
   const unknown = await call("POST", "/api/auth/password/forgot", { body: { email: email("nessuno") } });
   const known = await call("POST", "/api/auth/password/forgot", { body: { email: email("autrice").toUpperCase() } });
-  assert(unknown.status === 200 && known.status === 200 && unknown.json?.message === known.json?.message, "Stessa risposta per email registrate e sconosciute");
+  assert(unknown.status === 404 && unknown.json?.code === "not_found", "Email sconosciuta: lo dice (decisione del 3/10)", unknown.text);
+  assert(known.status === 200 && (known.json?.message ?? "").includes(email("autrice")), "Email registrata: conferma l'invio e l'indirizzo", known.text);
   assert((await mailsTo(email("nessuno"))).length === 0, "A un indirizzo sconosciuto non parte nulla");
 
   const resetMail = (await mailsTo(email("autrice"))).find((m) => m.subject === "Imposta una nuova password");

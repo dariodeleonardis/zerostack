@@ -8,11 +8,13 @@ export default function ForgotPasswordPage() {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPending(true);
     setError(null);
+    setNotFound(false);
     try {
       const res = await fetch("/api/auth/password/forgot", {
         method: "POST",
@@ -20,8 +22,10 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) setError(data.error ?? "Richiesta non riuscita");
-      else setMessage(data.message);
+      if (!res.ok) {
+        setError(data.error ?? "Richiesta non riuscita");
+        setNotFound(data.code === "not_found");
+      } else setMessage(data.message);
     } catch {
       setError("Connessione non riuscita. Riprova.");
     } finally {
@@ -51,7 +55,16 @@ export default function ForgotPasswordPage() {
               required
             />
           </div>
-          {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
+          {error && (
+            <div role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+              <p>{error}</p>
+              {notFound && (
+                <Link href="/register" className="mt-1 inline-block font-bold text-ink underline underline-offset-2">
+                  Crea un account
+                </Link>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={pending}

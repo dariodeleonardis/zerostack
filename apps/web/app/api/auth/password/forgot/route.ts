@@ -8,8 +8,9 @@ import { allowAttempt } from "../../../../../lib/rate-limit";
 import { emailTransport } from "../../../../../lib/email";
 
 const VALID_MINUTES = 60;
-// Stessa risposta che l'email esista o no: la pagina non deve rivelare chi è registrato.
-const DONE = { ok: true, message: "Se l'indirizzo è registrato, riceverai un'email con il link per scegliere una nuova password." };
+// Si dice se l'indirizzo è registrato (decisione di Dario, 3/10/2026): la registrazione lo rivela già
+// ("Esiste già un account con questa email"), e un messaggio vago confondeva chi sbagliava indirizzo.
+// Contro chi prova indirizzi a raffica resta il limite per IP qui sotto.
 
 export async function POST(req: Request) {
   if (!isSameOriginJson(req)) {
@@ -28,11 +29,14 @@ export async function POST(req: Request) {
   if (!byIp) {
     return NextResponse.json({ error: "Troppe richieste da questa rete. Riprova tra un'ora." }, { status: 429 });
   }
-  // Oltre il limite per indirizzo si risponde come sempre, senza spedire: nessuno può sommergere una casella.
-  if (!byAddress) return NextResponse.json(DONE);
-
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, email: true } });
-  if (!user) return NextResponse.json(DONE);
+  if (!user) {
+    return NextResponse.json({ error: "Non c'è nessun account con questa email. Controlla di averla scritta giusta, oppure crea un account.", code: "not_found" }, { status: 404 });
+  }
+  // Oltre tre link all'ora per lo stesso indirizzo non si spedisce: nessuno può sommergere una casella.
+  if (!byAddress) {
+    return NextResponse.json({ error: "Ti abbiamo già mandato tre link nell'ultima ora: cercali nella posta, anche nello spam. Puoi chiederne un altro fra un'ora." }, { status: 429 });
+  }
 
   const token = randomBytes(32).toString("base64url");
   await prisma.passwordResetToken.create({
@@ -56,5 +60,8 @@ export async function POST(req: Request) {
     console.error("[password/forgot] email non inviata:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Non siamo riusciti a inviare l'email. Riprova tra poco." }, { status: 502 });
   }
-  return NextResponse.json(DONE);
+  return NextResponse.json({
+    ok: true,
+    message: `Ti abbiamo mandato il link a ${user.email}. Vale ${VALID_MINUTES} minuti: se non lo trovi, guarda anche nello spam.`
+  });
 }
