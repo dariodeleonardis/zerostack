@@ -4,6 +4,7 @@ import { SUBSTACK_FEE_PERCENT, formatPercent, platformFeePercent } from "@zerost
 import { requireUser } from "../../../lib/auth";
 import { isStripeConfigured, syncStripeAccount } from "../../../lib/stripe";
 import { MonetizationPanel } from "./MonetizationPanel";
+import { formatEuro } from "../../../lib/tips";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,16 @@ export default async function MonetizationPage({ searchParams }: { searchParams:
     }
   });
 
+  // Mance (T7): le ultime ricevute, con il messaggio del lettore.
+  const tips = await prisma.payment.findMany({
+    where: { publicationId: { in: ownedIds }, kind: "TIP" },
+    orderBy: { paidAt: "desc" },
+    take: 20,
+    select: { id: true, amountCents: true, paidAt: true, message: true, publication: { select: { name: true } } }
+  });
+  const tipsTotal = await prisma.payment.aggregate({ where: { publicationId: { in: ownedIds }, kind: "TIP" }, _sum: { amountCents: true }, _count: true });
+  const tipDate = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="border-b border-gray-200 pb-5">
@@ -70,6 +81,38 @@ export default async function MonetizationPage({ searchParams }: { searchParams:
           }))
         }))}
       />
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-display text-2xl font-extrabold">Mance ricevute</h2>
+          {tipsTotal._count > 0 && (
+            <p className="text-sm text-gray-600">
+              {tipsTotal._count} in tutto, {formatEuro(tipsTotal._sum.amountCents ?? 0)} lordi
+            </p>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-gray-600">
+          Con Stripe collegato, i lettori possono lasciarti una mancia una tantum dal pulsante «Mancia» della tua pubblicazione. Le mance non generano una fattura automatica: se ti serve, emettila tu.
+        </p>
+        {tips.length === 0 ? (
+          <p className="mt-4 text-base italic text-gray-600">Ancora nessuna mancia.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-gray-200 border-y border-gray-200">
+            {tips.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-500">
+                    {tipDate.format(t.paidAt)}
+                    {publications.length > 1 ? ` · ${t.publication.name}` : ""}
+                  </p>
+                  {t.message && <p className="mt-1 whitespace-pre-line break-words text-base">«{t.message}»</p>}
+                </div>
+                <span className="font-display text-xl font-extrabold">{formatEuro(t.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

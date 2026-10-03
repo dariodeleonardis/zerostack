@@ -610,6 +610,10 @@ model Payment {
   periodStart    DateTime?
   periodEnd      DateTime?
   description    String
+  // ACCESS (abbonamenti e accessi una tantum) o TIP (mancia, T7): la mancia non dà accesso e non
+  // genera fattura automatica; il messaggio è quello che il lettore lascia all'autore.
+  kind           String    @default("ACCESS")
+  message        String?   @db.VarChar(280)
   createdAt      DateTime  @default(now())
 
   publication    Publication   @relation(fields: [publicationId], references: [id], onDelete: Cascade)

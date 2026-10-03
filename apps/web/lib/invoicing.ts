@@ -26,6 +26,8 @@ export interface PaymentInput {
   periodStart?: Date | null;
   periodEnd?: Date | null;
   description: string;
+  kind?: "ACCESS" | "TIP";
+  message?: string | null;
 }
 
 /** Registra un incasso. Idempotente: lo stesso oggetto Stripe (evento ripetuto) non crea doppioni. */

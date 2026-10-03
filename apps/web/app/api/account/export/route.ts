@@ -47,7 +47,7 @@ export async function GET() {
     prisma.media.findMany({ where: { ownerId: user.id }, select: { url: true, kind: true, size: true, createdAt: true } }),
     prisma.payment.findMany({
       where: { userId: user.id },
-      select: { amountCents: true, currency: true, paidAt: true, description: true, publication: { select: { name: true } }, invoice: { select: { label: true } } }
+      select: { amountCents: true, currency: true, paidAt: true, description: true, kind: true, message: true, publication: { select: { name: true } }, invoice: { select: { label: true } } }
     })
   ]);
 

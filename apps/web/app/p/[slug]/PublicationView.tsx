@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Rss, Headphones, Share2, Check, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Rss, Headphones, Share2, Check, ArrowRight, CheckCircle2, Coffee } from "lucide-react";
 
 export interface PublicationViewProps {
   publicationId: string;
@@ -40,6 +40,8 @@ export interface PublicationViewProps {
   notesUrl?: string;
   /** @slug@dominio: il nome con cui seguirla da Mastodon (T6). */
   fediverseHandle?: string;
+  /** Pagina della mancia (T7), solo se la pubblicazione accetta pagamenti. */
+  tipUrl?: string | null;
 }
 
 /**
@@ -63,7 +65,8 @@ export function PublicationView({
   tiers,
   notes = [],
   notesUrl,
-  fediverseHandle
+  fediverseHandle,
+  tipUrl
 }: PublicationViewProps) {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -136,6 +139,11 @@ export function PublicationView({
               <Link href={`/api/feed/${slug}/podcast`} target="_blank" className={chip} title="Feed del podcast">
                 <Headphones className="h-3.5 w-3.5" aria-hidden /> Podcast
               </Link>
+              {tipUrl && (
+                <a href={tipUrl} className={chip} title="Lascia una mancia all'autore">
+                  <Coffee className="h-3.5 w-3.5" aria-hidden /> Mancia
+                </a>
+              )}
               <button type="button" onClick={handleShare} className={chip} aria-label="Copia il link della pubblicazione">
                 {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Share2 className="h-3.5 w-3.5" aria-hidden />}
                 {copied ? "Copiato" : "Condividi"}

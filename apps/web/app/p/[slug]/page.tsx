@@ -7,6 +7,7 @@ import { platformUrlFromEnv } from "@zerostack/shared";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../lib/colors";
 import { PublicationFooter } from "../../../components/PublicationFooter";
 import { fediverseHandle } from "../../../lib/fediverse";
+import { isStripeConfigured } from "../../../lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ async function findPublication(slugOrDomain: string) {
       backgroundColor: true,
       fontStyle: true,
       logoUrl: true,
+      stripeChargesEnabled: true,
       owner: { select: { name: true } },
       tiers: {
         where: { isActive: true },
@@ -95,6 +97,7 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
         isPaidOnly: post.access !== "FREE"
       }))}
       fediverseHandle={fediverseHandle(publication.slug)}
+      tipUrl={isStripeConfigured() && publication.stripeChargesEnabled ? `${platformUrlFromEnv()}/mancia/${publication.slug}` : null}
       notesUrl={`${platformUrlFromEnv()}/notes?pubblicazione=${encodeURIComponent(publication.slug)}`}
       notes={publication.notes.map((note) => ({
         id: note.id,

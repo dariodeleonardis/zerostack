@@ -10,7 +10,7 @@ function webhookSecrets(): string[] {
   return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter((s): s is string => Boolean(s));
 }
 
-type Metadata = { userId?: string; tierId?: string; publicationId?: string; billingInfoId?: string };
+type Metadata = { userId?: string; tierId?: string; publicationId?: string; billingInfoId?: string; kind?: string; message?: string };
 
 /**
  * I metadati li scriviamo noi alla creazione del checkout, ma vanno comunque confrontati con il conto
@@ -39,6 +39,24 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session, account: st
   if (session.payment_status === "unpaid") return;
   const ctx = await trustedContext(session.metadata as Metadata, account);
   if (!ctx) return;
+
+  // Mancia (T7): solo l'incasso, niente accesso né fattura automatica.
+  if ((session.metadata as Metadata | null)?.kind === "tip") {
+    if (session.mode !== "payment" || session.payment_status !== "paid" || !session.amount_total) return;
+    await recordPayment({
+      publicationId: ctx.publicationId,
+      subscriptionId: null,
+      userId: ctx.user.id,
+      stripeObjectId: session.id,
+      amountCents: session.amount_total,
+      currency: session.currency ?? "eur",
+      paidAt: session.created ? new Date(session.created * 1000) : new Date(),
+      description: "Mancia",
+      kind: "TIP",
+      message: (session.metadata as Metadata).message?.trim().slice(0, 280) || null
+    });
+    return;
+  }
 
   let subscriptionId: string;
   if (session.mode === "subscription" && session.subscription) {
