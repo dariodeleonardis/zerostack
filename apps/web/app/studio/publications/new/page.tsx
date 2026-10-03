@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Check, Globe, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
-import { slugify } from "@zerostack/shared";
+import { normalizeSlugInput, suggestSlugs, trimSlug } from "@zerostack/shared";
 
 type SlugState =
   | { status: "idle" }
@@ -23,12 +23,19 @@ export default function NewPublicationPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugState, setSlugState] = useState<SlugState>({ status: "idle" });
   const [description, setDescription] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#0066FF");
+  const [primaryColor, setPrimaryColor] = useState("#F2B705");
   const [customDomain, setCustomDomain] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<FieldErrors>({});
   const [created, setCreated] = useState<{ name: string; url: string } | null>(null);
+  const [handle, setHandle] = useState<string | undefined>(undefined);
+  // Disponibilità dei suggerimenti: true libero, false preso o riservato, assente = non ancora controllato.
+  const [suggestionStatus, setSuggestionStatus] = useState<Record<string, boolean>>({});
+
+  // Il titolo è libero; l'indirizzo no: dal titolo si propongono indirizzi brevi, senza articoli e
+  // preposizioni (prima l'indirizzo era il titolo intero, troncato a metà parola).
+  const suggestions = useMemo(() => suggestSlugs(name, handle), [name, handle]);
 
   // Serve un account: chi non ha fatto l'accesso va al login e poi torna qui.
   useEffect(() => {
@@ -36,6 +43,7 @@ export default function NewPublicationPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (data.rootDomain) setRootDomain(data.rootDomain);
+        if (data.user?.handle) setHandle(data.user.handle);
         if (res.status === 401) {
           router.replace("/login?next=/studio/publications/new");
           return;
@@ -45,16 +53,19 @@ export default function NewPublicationPage() {
       .catch(() => setAuthChecked(true));
   }, [router]);
 
+  // Lo slug come si salva: il trattino finale serve solo mentre si scrive la parola successiva.
+  const finalSlug = trimSlug(slug);
+
   // Disponibilità dello slug mentre si scrive (con una breve attesa per non chiedere a ogni tasto).
   useEffect(() => {
-    if (!slug) {
+    if (!finalSlug) {
       setSlugState({ status: "idle" });
       return;
     }
     setSlugState({ status: "checking" });
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetch(`/api/publications/slug-check?slug=${encodeURIComponent(slug)}`, { signal: controller.signal })
+      fetch(`/api/publications/slug-check?slug=${encodeURIComponent(finalSlug)}`, { signal: controller.signal })
         .then((res) => res.json())
         .then((data) =>
           setSlugState(data.available ? { status: "available", url: data.url } : { status: "unavailable", message: data.message })
@@ -67,16 +78,48 @@ export default function NewPublicationPage() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [slug]);
+  }, [finalSlug]);
+
+  // Disponibilità di tutti i suggerimenti insieme, con una breve attesa mentre si scrive il titolo.
+  useEffect(() => {
+    if (suggestions.length === 0) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      Promise.all(
+        suggestions.map((candidate) =>
+          fetch(`/api/publications/slug-check?slug=${encodeURIComponent(candidate)}`, { signal: controller.signal })
+            .then((res) => res.json())
+            .then((data) => [candidate, Boolean(data.available)] as const)
+        )
+      )
+        .then((entries) => setSuggestionStatus((prev) => ({ ...prev, ...Object.fromEntries(entries) })))
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [suggestions]);
+
+  // Finché l'autore non sceglie da sé, l'indirizzo è il primo suggerimento libero.
+  useEffect(() => {
+    if (slugTouched) return;
+    const firstFree = suggestions.find((candidate) => suggestionStatus[candidate] === true);
+    setSlug(firstFree ?? suggestions[0] ?? "");
+  }, [suggestions, suggestionStatus, slugTouched]);
 
   const handleNameChange = (val: string) => {
     setName(val);
-    if (!slugTouched) setSlug(slugify(val));
+  };
+
+  const chooseSuggestion = (candidate: string) => {
+    setSlugTouched(true);
+    setSlug(candidate);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !slug.trim()) return;
+    if (!name.trim() || !finalSlug) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -87,7 +130,7 @@ export default function NewPublicationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          slug,
+          slug: finalSlug,
           description: description || undefined,
           primaryColor,
           customDomain: customDomain || undefined
@@ -120,7 +163,7 @@ export default function NewPublicationPage() {
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
           <div className="flex items-center gap-2 text-emerald-800">
             <Check className="h-5 w-5" />
-            <h1 className="text-xl font-black">«{created.name}» è online</h1>
+            <h1 className="font-display text-xl font-extrabold">«{created.name}» è online</h1>
           </div>
           <p className="mt-2 text-sm text-emerald-900">
             Il suo indirizzo è{" "}
@@ -133,7 +176,7 @@ export default function NewPublicationPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/studio/posts/new" className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700">
+          <Link href="/studio/posts/new" className="rounded-xl bg-ink-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-ink-700">
             Scrivi il primo articolo
           </Link>
           <Link href="/studio" className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50">
@@ -155,30 +198,38 @@ export default function NewPublicationPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Crea una Nuova Pubblicazione</h1>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Crea una nuova pubblicazione</h1>
           <p className="text-xs text-gray-500">
             Lancia una nuova newsletter, rivista o podcast indipendente su ZeroStack.
           </p>
         </div>
       </div>
 
+      <p className="rounded-xl bg-saffron-50 px-4 py-3 text-xs text-ink-900">
+        Il tuo account è già attivo. Se non hai ancora deciso nome e indirizzo, puoi creare la pubblicazione più
+        tardi dallo Studio.{" "}
+        <Link href="/studio" className="font-bold underline">
+          Lo faccio dopo
+        </Link>
+      </p>
+
       <form onSubmit={handleCreate} className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div>
-          <label htmlFor="name" className="block text-xs font-bold text-gray-700">Nome della Pubblicazione</label>
+          <label htmlFor="name" className="block text-sm font-semibold text-ink">Nome della pubblicazione</label>
           <input
             id="name"
             type="text"
             placeholder="Es. Cronache di Design & AI"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base focus:border-ink focus:outline-none"
             required
           />
           {fieldError("name")}
         </div>
 
         <div>
-          <label htmlFor="slug" className="block text-xs font-bold text-gray-700">Indirizzo della tua newsletter</label>
+          <label htmlFor="slug" className="block text-sm font-semibold text-ink">Indirizzo della tua newsletter</label>
           <div className="mt-1 flex items-center rounded-xl border border-gray-200 px-3 py-2 text-sm bg-gray-50">
             <span className="text-gray-400">https://</span>
             <input
@@ -187,8 +238,13 @@ export default function NewPublicationPage() {
               value={slug}
               onChange={(e) => {
                 setSlugTouched(true);
-                setSlug(e.target.value.toLowerCase());
+                // Spazi e caratteri non ammessi diventano trattini mentre si scrive (Dario, 1/10).
+                setSlug(normalizeSlugInput(e.target.value));
               }}
+              onBlur={() => setSlug((current) => trimSlug(current))}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="min-w-0 flex-1 bg-transparent text-right font-bold text-gray-900 focus:outline-none"
               aria-describedby="slug-status"
               required
@@ -208,11 +264,45 @@ export default function NewPublicationPage() {
               </span>
             )}
           </p>
+          {suggestions.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-semibold text-gray-500">
+                Indirizzi brevi suggeriti dal nome (più facili da ricordare e da trovare):
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="Indirizzi suggeriti">
+                {suggestions.map((candidate) => {
+                  const status = suggestionStatus[candidate];
+                  const selected = candidate === slug;
+                  return (
+                    <button
+                      key={candidate}
+                      type="button"
+                      onClick={() => chooseSuggestion(candidate)}
+                      disabled={status === false}
+                      aria-pressed={selected}
+                      title={status === false ? "Già in uso" : `${candidate}.${rootDomain}`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                        selected
+                          ? "border-ink-600 bg-ink-600 text-white"
+                          : status === false
+                            ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 line-through"
+                            : "border-gray-300 bg-white text-gray-800 hover:border-ink-500 hover:text-ink-700"
+                      }`}
+                    >
+                      {status === true && !selected && <Check className="h-3 w-3 text-emerald-600" />}
+                      {status === false && <X className="h-3 w-3" />}
+                      {candidate}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {fieldError("slug")}
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-xs font-bold text-gray-700">Descrizione Breve / Tagline</label>
+          <label htmlFor="description" className="block text-sm font-semibold text-ink">Descrizione breve</label>
           <textarea
             id="description"
             placeholder="Spiega ai lettori di cosa parlerai e perché dovrebbero iscriversi..."
@@ -220,13 +310,13 @@ export default function NewPublicationPage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             maxLength={250}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-ink focus:outline-none"
           />
           {fieldError("description")}
         </div>
 
         <div>
-          <label htmlFor="customDomain" className="block text-xs font-bold text-gray-700">Dominio Personalizzato (Opzionale)</label>
+          <label htmlFor="customDomain" className="block text-sm font-semibold text-ink">Dominio Personalizzato (Opzionale)</label>
           <div className="mt-1 flex items-center gap-2">
             <Globe className="h-4 w-4 text-gray-400" />
             <input
@@ -235,7 +325,7 @@ export default function NewPublicationPage() {
               placeholder="Es. newsletter.tuobrand.it"
               value={customDomain}
               onChange={(e) => setCustomDomain(e.target.value)}
-              className="block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="block w-full rounded-xl border border-gray-200 px-3 py-2 text-xs focus:border-ink focus:outline-none"
             />
           </div>
           <p className="mt-1 text-[11px] text-gray-400">
@@ -245,9 +335,9 @@ export default function NewPublicationPage() {
         </div>
 
         <div>
-          <span className="block text-xs font-bold text-gray-700">Colore Primario del Brand</span>
+          <span className="block text-sm font-semibold text-ink">Colore principale (poi lo cambi da Studio › Aspetto)</span>
           <div className="mt-2 flex items-center gap-3">
-            {["#0066FF", "#7E22CE", "#059669", "#DC2626", "#D97706", "#111827"].map((color) => (
+            {["#F2B705", "#A8322D", "#1F4D3A", "#1C3F94", "#B4532A", "#141210"].map((color) => (
               <button
                 type="button"
                 key={color}
@@ -255,7 +345,7 @@ export default function NewPublicationPage() {
                 style={{ backgroundColor: color }}
                 aria-label={`Colore ${color}`}
                 aria-pressed={primaryColor === color}
-                className={`h-7 w-7 rounded-full transition ${
+                className={`h-9 w-9 rounded-full border border-gray-300 transition ${
                   primaryColor === color ? "ring-2 ring-offset-2 ring-gray-900" : ""
                 }`}
               />
@@ -273,10 +363,10 @@ export default function NewPublicationPage() {
           <button
             type="submit"
             disabled={isSubmitting || slugState.status === "unavailable"}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-ink-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4" />
-            {isSubmitting ? "Creazione in corso..." : "Lancia la tua Pubblicazione"}
+            {isSubmitting ? "Creazione in corso..." : "Crea la pubblicazione"}
           </button>
         </div>
       </form>

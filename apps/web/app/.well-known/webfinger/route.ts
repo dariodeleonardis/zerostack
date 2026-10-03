@@ -1,55 +1,40 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@zerostack/database";
+import { rootDomainFromEnv } from "@zerostack/shared";
+import { actorFor, platformHost } from "../../../lib/fediverse";
+
+export const dynamic = "force-dynamic";
 
 /**
- * RFC 7033 WebFinger endpoint per interoperabilità Fediverse (Mastodon, Threads, Lemmy)
- * Risponde a: /.well-known/webfinger?resource=acct:autore@dominio
+ * WebFinger (RFC 7033) per il Fediverso (T6): acct:<slug>@<dominio> porta all'attore della
+ * pubblicazione. Si accettano il dominio della piattaforma, il sottodominio della pubblicazione e il
+ * suo dominio personalizzato verificato; il nome canonico resta @slug@<dominio della piattaforma>.
  */
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const resource = searchParams.get("resource");
+  const resource = new URL(req.url).searchParams.get("resource") ?? "";
+  const match = resource.match(/^acct:([a-z0-9-]{1,63})@([a-z0-9.:-]{1,253})$/i);
+  if (!match) return NextResponse.json({ error: "resource deve essere acct:nome@dominio" }, { status: 400 });
+  const slug = match[1].toLowerCase();
+  const host = match[2].toLowerCase();
 
-  if (!resource || !resource.startsWith("acct:")) {
-    return NextResponse.json(
-      { error: "Parametro 'resource' mancante o non valido (es. acct:dario@zerostack.it)" },
-      { status: 400 }
-    );
-  }
-
-  // Estrae l'username e l'host: acct:dario@zerostack.it -> dario
-  const acctPart = resource.replace(/^acct:/, "");
-  const [handle, host] = acctPart.split("@");
-
-  if (!handle) {
-    return NextResponse.json({ error: "Handle non valido" }, { status: 400 });
-  }
-
-  const hostHeader = req.headers.get("host") || "zerostack.it";
-  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-  const baseUrl = `${protocol}://${hostHeader}`;
-  const actorUrl = `${baseUrl}/api/activitypub/users/${handle}`;
-
-  const webfingerResponse = {
-    subject: `acct:${handle}@${hostHeader}`,
-    aliases: [actorUrl, `${baseUrl}/@${handle}`],
-    links: [
-      {
-        rel: "http://webfinger.net/rel/profile-page",
-        type: "text/html",
-        href: `${baseUrl}/p/${handle}`
-      },
-      {
-        rel: "self",
-        type: "application/activity+json",
-        href: actorUrl
-      }
-    ]
-  };
-
-  return new Response(JSON.stringify(webfingerResponse), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/jrd+json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*"
-    }
+  const publication = await prisma.publication.findFirst({
+    where: { slug, suspendedAt: null },
+    select: { id: true, slug: true, customDomain: true, isDomainVerified: true }
   });
+  const hostOk =
+    publication &&
+    (host === platformHost() ||
+      host === `${publication.slug}.${rootDomainFromEnv()}` ||
+      (publication.isDomainVerified && publication.customDomain?.toLowerCase() === host));
+  if (!publication || !hostOk) return NextResponse.json({ error: "Non trovato" }, { status: 404 });
+
+  const actor = actorFor(publication.id).id;
+  return new NextResponse(
+    JSON.stringify({
+      subject: `acct:${publication.slug}@${platformHost()}`,
+      aliases: [actor],
+      links: [{ rel: "self", type: "application/activity+json", href: actor }]
+    }),
+    { headers: { "content-type": "application/jrd+json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "public, max-age=300" } }
+  );
 }

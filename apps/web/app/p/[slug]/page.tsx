@@ -2,6 +2,12 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@zerostack/database";
 import { PublicationView } from "./PublicationView";
+import { publicationWhere } from "../../../lib/publications";
+import { platformUrlFromEnv } from "@zerostack/shared";
+import { paletteStyle, publicationFont, publicationPalette } from "../../../lib/colors";
+import { PublicationFooter } from "../../../components/PublicationFooter";
+import { fediverseHandle } from "../../../lib/fediverse";
+import { isStripeConfigured } from "../../../lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +17,8 @@ interface PublicationPageProps {
   };
 }
 
-// Il middleware porta qui sia slug.zerostack.it (params.slug = "slug") sia i domini
-// personalizzati (params.slug = "newsletter.mario.it"): questi valgono solo se verificati.
 async function findPublication(slugOrDomain: string) {
-  const key = decodeURIComponent(slugOrDomain).toLowerCase();
-  const where = key.includes(".") ? { customDomain: key, isDomainVerified: true } : { slug: key };
+  const where = publicationWhere(slugOrDomain);
   return prisma.publication.findFirst({
     where,
     select: {
@@ -24,6 +27,10 @@ async function findPublication(slugOrDomain: string) {
       name: true,
       description: true,
       primaryColor: true,
+      backgroundColor: true,
+      fontStyle: true,
+      logoUrl: true,
+      stripeChargesEnabled: true,
       owner: { select: { name: true } },
       tiers: {
         where: { isActive: true },
@@ -35,6 +42,12 @@ async function findPublication(slugOrDomain: string) {
         orderBy: { publishedAt: "desc" },
         take: 20,
         select: { slug: true, title: true, excerpt: true, subtitle: true, contentHtml: true, access: true, likesCount: true, publishedAt: true }
+      },
+      notes: {
+        where: { replyToNoteId: null },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: { id: true, content: true, createdAt: true, repliesCount: true, author: { select: { name: true } } }
       },
       _count: { select: { subscribers: { where: { status: "ACTIVE" } } } }
     }
@@ -59,14 +72,21 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
   if (!publication) notFound();
 
   const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
+  const palette = publicationPalette(publication.primaryColor, publication.backgroundColor);
 
   return (
     <PublicationView
+      publicationId={publication.id}
+      checkoutBaseUrl={platformUrlFromEnv()}
       slug={publication.slug}
       name={publication.name}
       description={publication.description}
       authorName={publication.owner.name}
-      primaryColor={publication.primaryColor}
+      logoUrl={publication.logoUrl}
+      paletteStyle={paletteStyle(palette)}
+      footer={<PublicationFooter background={palette.bg} />}
+      titleFont={publicationFont(publication.fontStyle).title}
+      bodyFont={publicationFont(publication.fontStyle).body}
       subscriberCount={publication._count.subscribers}
       articles={publication.posts.map((post) => ({
         slug: post.slug,
@@ -74,8 +94,18 @@ export default async function PublicationHomePage({ params }: PublicationPagePro
         excerpt: post.excerpt ?? post.subtitle ?? "",
         date: post.publishedAt ? dateFormat.format(post.publishedAt) : "",
         readTime: readTime(post.contentHtml),
-        isPaidOnly: post.access !== "FREE",
-        likes: post.likesCount
+        isPaidOnly: post.access !== "FREE"
+      }))}
+      fediverseHandle={fediverseHandle(publication.slug)}
+      tipUrl={isStripeConfigured() && publication.stripeChargesEnabled ? `${platformUrlFromEnv()}/mancia/${publication.slug}` : null}
+      notesUrl={`${platformUrlFromEnv()}/notes?pubblicazione=${encodeURIComponent(publication.slug)}`}
+      notes={publication.notes.map((note) => ({
+        id: note.id,
+        url: `${platformUrlFromEnv()}/notes/${note.id}`,
+        author: note.author.name,
+        content: note.content.length > 280 ? `${note.content.slice(0, 277).trimEnd()}…` : note.content,
+        date: dateFormat.format(note.createdAt),
+        replies: note.repliesCount
       }))}
       tiers={publication.tiers.map((tier) => ({
         id: tier.id,

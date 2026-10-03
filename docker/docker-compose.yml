@@ -1,7 +1,9 @@
-version: '3.8'
+# SOLO SVILUPPO LOCALE. I valori predefiniti (password del database, NEXTAUTH_SECRET) sono di prova
+# e pubblici: non usare questo file su un server. La produzione è docker-compose.coolify.yml, dove i
+# segreti li genera Coolify (audit C1, 2/10/2026).
 
 services:
-  # Web Application (Next.js 15 Standalone)
+  # Web Application (Next.js 14 standalone)
   web:
     build:
       context: ..
@@ -9,23 +11,54 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - uploads_data:/data/uploads
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD:-zerostack_secret}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-super_secret_zerostack_jwt_key_2026}
       - NEXTAUTH_URL=${APP_URL:-http://localhost:3000}
+      - APP_URL=${APP_URL:-http://localhost:3000}
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
+      - UPLOAD_DIR=/data/uploads
+      - S3_BUCKET=${S3_BUCKET:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_ENDPOINT=${S3_ENDPOINT:-}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
+      - LEGAL_ENTITY_NAME=${LEGAL_ENTITY_NAME:-}
+      - LEGAL_VAT_NUMBER=${LEGAL_VAT_NUMBER:-}
+      - LEGAL_ADDRESS=${LEGAL_ADDRESS:-}
+      - LEGAL_CONTACT_EMAIL=${LEGAL_CONTACT_EMAIL:-}
+      - SDI_ID_TRASMITTENTE=${SDI_ID_TRASMITTENTE:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_CONNECT_WEBHOOK_SECRET=${STRIPE_CONNECT_WEBHOOK_SECRET:-}
+      - EMAIL_WEBHOOK_TOKEN=${EMAIL_WEBHOOK_TOKEN:-}
+      - RESEND_WEBHOOK_SECRET=${RESEND_WEBHOOK_SECRET:-}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-log}
+      - EMAIL_FROM=${EMAIL_FROM:-}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - TURBOSMTP_CONSUMER_KEY=${TURBOSMTP_CONSUMER_KEY:-}
+      - TURBOSMTP_CONSUMER_SECRET=${TURBOSMTP_CONSUMER_SECRET:-}
+      - TURBOSMTP_API_BASE=${TURBOSMTP_API_BASE:-https://api.eu.turbo-smtp.com/api/v2}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
+      - HEALTH_REQUIRE_BACKUP=${HEALTH_REQUIRE_BACKUP:-true}
     depends_on:
       - postgres
       - redis
     networks:
       - zerostack-net
 
-  # Asynchronous Background Worker (Email Blasts, BullMQ, Podcast Transcripts)
+  # Worker: newsletter e post programmati (la coda è il database)
   worker:
     build:
       context: ..
@@ -34,12 +67,67 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD:-zerostack_secret}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
-      - REDIS_URL=redis://redis:6379
+      - APP_URL=${APP_URL:-http://localhost:3000}
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-log}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - EMAIL_RATE_PER_SECOND=${EMAIL_RATE_PER_SECOND:-10}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - TURBOSMTP_CONSUMER_KEY=${TURBOSMTP_CONSUMER_KEY:-}
+      - TURBOSMTP_CONSUMER_SECRET=${TURBOSMTP_CONSUMER_SECRET:-}
+      - TURBOSMTP_API_BASE=${TURBOSMTP_API_BASE:-https://api.eu.turbo-smtp.com/api/v2}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
     depends_on:
       - postgres
-      - redis
+    networks:
+      - zerostack-net
+
+  # Backup giornaliero di database e file caricati (cifrato; copia su S3 esterno con BACKUP_S3_BUCKET)
+  backup:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    command: ["npm", "run", "backup", "--workspace=@zerostack/worker", "--", "--loop"]
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-zerostack}:${POSTGRES_PASSWORD:-zerostack_secret}@postgres:5432/${POSTGRES_DB:-zerostack}?schema=public
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
+      - UPLOAD_DIR=/data/uploads
+      - BACKUP_DIR=/backups
+      - BACKUP_PASSPHRASE=${BACKUP_PASSPHRASE:-}
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      - BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - BACKUP_S3_PREFIX=${BACKUP_S3_PREFIX:-zerostack/}
+      - BACKUP_S3_REGION=${BACKUP_S3_REGION:-auto}
+      - BACKUP_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - BACKUP_S3_ACCESS_KEY=${BACKUP_S3_ACCESS_KEY:-}
+      - BACKUP_S3_SECRET_KEY=${BACKUP_S3_SECRET_KEY:-}
+      - BACKUP_S3_FORCE_PATH_STYLE=${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      - ERROR_REPORTING_DSN=${ERROR_REPORTING_DSN:-}
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-log}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - TURBOSMTP_CONSUMER_KEY=${TURBOSMTP_CONSUMER_KEY:-}
+      - TURBOSMTP_CONSUMER_SECRET=${TURBOSMTP_CONSUMER_SECRET:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+    volumes:
+      - uploads_data:/data/uploads:ro
+      - backups_data:/backups
+    depends_on:
+      - postgres
     networks:
       - zerostack-net
 
@@ -83,6 +171,8 @@ services:
       - zerostack-net
 
 volumes:
+  uploads_data:
+  backups_data:
   postgres_data:
   redis_data:
   caddy_data:

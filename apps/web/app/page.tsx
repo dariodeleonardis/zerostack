@@ -1,222 +1,206 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, ShieldCheck, Mail, Radio, MessageSquare, TrendingUp, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { prisma } from "@zerostack/database";
+import { SUBSTACK_FEE_PERCENT, formatPercent, percentWithArticle, platformFeePercent, publicationBaseUrl } from "@zerostack/shared";
+import { publicationPalette } from "../lib/colors";
 
-export default function HomePage() {
+// Le pubblicazioni e gli articoli sono veri, letti dal database: niente esempi inventati.
+export const dynamic = "force-dynamic";
+
+const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+// La commissione viene da un punto solo (packages/shared/src/billing.ts): i testi non possono
+// promettere una cifra diversa da quella che Stripe trattiene davvero.
+const facts = (fee: number) => [
+  {
+    n: "01",
+    title: `Commissione ${percentWithArticle(fee, "del")}`,
+    text: `Substack trattiene ${percentWithArticle(SUBSTACK_FEE_PERCENT, "il")}, noi ${percentWithArticle(fee, "il")}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
+  },
+  { n: "02", title: "Fattura elettronica", text: "Codice fiscale, partita IVA, SDI e PEC dei lettori, e l'XML pronto per lo SdI." },
+  { n: "03", title: "Newsletter, blog, podcast", text: "Un solo posto per scrivere, spedire e pubblicare gli episodi, con il feed per Apple e Spotify." },
+  { n: "04", title: "I lettori restano tuoi", text: "Esporti iscritti e articoli quando vuoi. Il tuo dominio, i tuoi colori." }
+];
+
+async function loadShowcase() {
+  try {
+    const [publications, posts] = await Promise.all([
+      prisma.publication.findMany({
+        where: { suspendedAt: null, posts: { some: { status: "PUBLISHED" } } },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: { name: true, slug: true, description: true, logoUrl: true, primaryColor: true, customDomain: true, isDomainVerified: true }
+      }),
+      prisma.post.findMany({
+        where: { status: "PUBLISHED", publication: { suspendedAt: null } },
+        orderBy: { publishedAt: "desc" },
+        take: 5,
+        select: {
+          title: true, subtitle: true, slug: true, publishedAt: true,
+          author: { select: { name: true } },
+          publication: { select: { name: true, slug: true, customDomain: true, isDomainVerified: true } }
+        }
+      })
+    ]);
+    return { publications, posts };
+  } catch (err) {
+    // La home resta in piedi anche col database in difficoltà: mostra solo la parte fissa.
+    console.error("[home] vetrina non caricata:", err instanceof Error ? err.message : err);
+    return { publications: [], posts: [] };
+  }
+}
+
+const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
+
+export default async function HomePage() {
+  const { publications, posts } = await loadShowcase();
+  const fee = platformFeePercent();
+  const keep = (rate: number) => 1000 - (1000 * rate) / 100;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 px-6 py-16 text-center text-white shadow-2xl sm:px-12 sm:py-24">
-        <div className="mx-auto max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/20 px-4 py-1.5 text-xs font-semibold text-blue-200 border border-blue-400/30">
-            <Sparkles className="h-4 w-4" /> La Piattaforma Publishing Indipendente per l'Italia
-          </div>
-
-          <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-6xl sm:leading-none">
-            Scrivi, pubblica e monetizza. <br />
-            <span className="bg-gradient-to-r from-blue-300 via-teal-200 to-emerald-300 bg-clip-text text-transparent">
-              Senza cedere il 10% a Substack.
-            </span>
-          </h1>
-
-          <p className="mt-6 text-lg text-blue-100/90 leading-relaxed sm:text-xl">
-            Tutte le funzionalità di Substack, ottimizzate per il mercato italiano ed europeo: supporto fatturazione elettronica con SDI/PEC, zero commissioni trattenute, server VPS sotto il tuo controllo e app mobile inclusa.
-          </p>
-
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/studio"
-              className="flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-bold text-blue-900 shadow-lg transition hover:bg-blue-50"
-            >
-              Crea la tua Pubblicazione <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/p/tech-italia"
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              Esplora Tech & Futuro Italia
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature comparison highlights */}
-      <section className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 font-bold">
-            0%
-          </div>
-          <h3 className="mt-4 font-bold text-gray-900">Zero Commissioni</h3>
-          <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-            Substack trattiene il 10% fisso su ogni abbonamento. Su ZeroStack ricevi il 100% degli incassi direttamente sul tuo conto Stripe.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <h3 className="mt-4 font-bold text-gray-900">Fattura Elettronica & SDI</h3>
-          <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-            Campi integrati per Codice Fiscale, Partita IVA, PEC e Codice SDI a 7 caratteri per la deducibilità aziendale dei tuoi abbonati in Italia.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
-            <Radio className="h-5 w-5" />
-          </div>
-          <h3 className="mt-4 font-bold text-gray-900">Podcast & Note Integrati</h3>
-          <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-            Player audio persistente, generazione feed RSS compatibile Apple/Spotify e feed social "Note" per dialogare con i tuoi lettori.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-            <Mail className="h-5 w-5" />
-          </div>
-          <h3 className="mt-4 font-bold text-gray-900">Deliverability Senza Limiti</h3>
-          <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-            Collega il tuo account Brevo, Resend o Amazon SES con domini verificati per recapitare il 100% delle email nella inbox primaria.
-          </p>
-        </div>
-      </section>
-
-      {/* Main Content Grid: Latest Articles & Notes Feed */}
-      <div className="mt-16 grid grid-cols-1 gap-10 lg:grid-cols-3">
-        {/* Articles Column (2 spans) */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <span>In Primo Piano su ZeroStack</span>
-            </div>
-            <Link href="/p/tech-italia" className="text-xs font-semibold text-blue-600 hover:underline">
-              Vedi archivio &rarr;
-            </Link>
-          </div>
-
-          <div className="mt-6 space-y-8">
-            <article className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                <span className="font-bold text-blue-600">Tech & Futuro Italia</span>
-                <span>&bull;</span>
-                <span>25 Settembre 2026</span>
-                <span>&bull;</span>
-                <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">Edizione Libera</span>
-              </div>
-
-              <h2 className="mt-3 text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition">
-                <Link href="/p/tech-italia/alternativa-italiana-a-substack">
-                  Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack
-                </Link>
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                Commissioni al 10%, assenza di fatturazione elettronica e server oltreoceano: come riconquistare la sovranità dei propri lettori con una soluzione self-hosted su VPS.
-              </p>
-
-              <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500">
-                <span>Di Dario De Leonardis &bull; 4 min di lettura</span>
-                <Link
-                  href="/p/tech-italia/alternativa-italiana-a-substack"
-                  className="font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  Leggi articolo completo &rarr;
-                </Link>
-              </div>
-            </article>
-
-            {/* Podcast Article Card */}
-            <article className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                <span className="font-bold text-purple-600">Podcast Ep. 01</span>
-                <span>&bull;</span>
-                <span>Durata: 6 min</span>
-              </div>
-
-              <h2 className="mt-3 text-xl font-bold text-gray-900 group-hover:text-purple-600 transition">
-                <Link href="/podcasts">
-                  🎙️ Podcast Ep. 01: L'evoluzione dell'AI applicata allo sviluppo web
-                </Link>
-              </h2>
-
-              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                Conversazione aperta sulle novità dello sviluppo web moderno, la containerizzazione su VPS e l'architettura tecnica di ZeroStack.
-              </p>
-
-              <div className="mt-4">
-                <Link
-                  href="/podcasts"
-                  className="inline-flex items-center gap-2 rounded-lg bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition"
-                >
-                  Ascolta l'episodio &rarr;
-                </Link>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        {/* Sidebar: Notes & Dispacci teaser */}
-        <div>
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <div className="flex items-center gap-2 font-bold text-xl text-gray-900">
-              <MessageSquare className="h-5 w-5 text-indigo-600" />
-              <span>Note & Dispacci</span>
-            </div>
-            <Link href="/notes" className="text-xs font-semibold text-indigo-600 hover:underline">
-              Vedi tutte &rarr;
-            </Link>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-900">
-                <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                  D
-                </span>
-                <span>Dario De Leonardis</span>
-                <span className="text-gray-400 font-normal">@dario</span>
-              </div>
-              <p className="mt-2 text-xs text-gray-700 leading-relaxed">
-                Abbiamo appena rilasciato la prima versione di ZeroStack! Completamente open-source, con supporto nativo a SDI, PEC e 0% commissioni. Cosa ne pensate?
-              </p>
-              <div className="mt-3 flex items-center gap-4 text-[11px] text-gray-400">
-                <span>❤️ 42 mi piace</span>
-                <span>🔁 15 rilanci</span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-900">
-                <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                  D
-                </span>
-                <span>Dario De Leonardis</span>
-                <span className="text-gray-400 font-normal">@dario</span>
-              </div>
-              <p className="mt-2 text-xs text-gray-700 leading-relaxed">
-                Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?
-              </p>
-              <div className="mt-3 flex items-center gap-4 text-[11px] text-gray-400">
-                <span>❤️ 19 mi piace</span>
-                <span>🔁 4 rilanci</span>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-blue-50/60 p-4 border border-blue-100 text-center">
-              <p className="text-xs font-bold text-blue-900">Vuoi condividere un pensiero?</p>
-              <Link
-                href="/notes"
-                className="mt-2 inline-block rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-              >
-                Apri Feed Note
+    <div>
+      {/* Apertura: inchiostro, titolo in Bodoni, il cerchio zafferano con quanto resta all'autore */}
+      <section className="bg-ink text-paper">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:px-8 lg:pb-28 lg:pt-20">
+          <div>
+            <p className="kicker text-saffron">Newsletter · Blog · Podcast</p>
+            <h1 className="mt-5 font-display text-6xl font-extrabold leading-[0.92] tracking-tight sm:text-7xl lg:text-8xl">
+              Scrivi.
+              <br />
+              <span className="font-medium italic text-saffron">Incassa</span> di più.
+            </h1>
+            <p className="mt-8 max-w-xl text-lg leading-relaxed text-paper-300">
+              La piattaforma italiana per chi scrive: newsletter, articoli e podcast con i lettori che pagano te, la fattura elettronica già fatta
+              e una commissione più bassa di Substack.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <Link href="/register" className="inline-flex items-center gap-2 rounded-full bg-saffron px-7 py-3.5 text-base font-bold text-ink transition hover:bg-paper">
+                Apri la tua pubblicazione <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
+              <a href="#come-funziona" className="text-base font-semibold text-paper underline decoration-saffron decoration-2 underline-offset-8 hover:text-saffron">
+                Come funziona
+              </a>
             </div>
           </div>
+          <div className="mx-auto flex aspect-square w-64 flex-col items-center justify-center rounded-full border-[10px] border-saffron bg-ink-700 text-center sm:w-80">
+            <span className="font-display text-8xl font-extrabold leading-none sm:text-9xl">{formatPercent(100 - fee)}</span>
+            <span className="kicker mt-3 max-w-[12rem] text-saffron">di ogni abbonamento resta a te</span>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* I quattro punti: griglia con filetti, alla milanese */}
+      <section id="come-funziona" className="border-y-2 border-ink bg-saffron">
+        <h2 className="sr-only">Come funziona</h2>
+        <ol className="mx-auto grid max-w-7xl gap-[2px] bg-ink sm:grid-cols-2 lg:grid-cols-4">
+          {facts(fee).map((f) => (
+            <li key={f.n} className="bg-saffron px-6 py-8 text-ink">
+              <span className="font-display text-3xl font-extrabold">{f.n}</span>
+              <h3 className="mt-3 text-lg font-bold">{f.title}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed">{f.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Le pubblicazioni: cerchi col colore di ciascun autore */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <h2 className="text-center font-display text-4xl font-extrabold tracking-tight sm:text-5xl">Le pubblicazioni.</h2>
+        {publications.length === 0 ? (
+          <div className="mx-auto mt-10 max-w-xl border-y border-ink py-10 text-center">
+            <p className="font-display text-2xl italic">La prima pagina è ancora bianca.</p>
+            <p className="mt-3 text-gray-600">Le pubblicazioni compaiono qui appena escono i loro primi articoli. Può essere la tua.</p>
+            <Link href="/register" className="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-bold text-paper transition hover:bg-ink-700">
+              Apri la tua pubblicazione <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        ) : (
+          <ul className="mt-12 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-6">
+            {publications.map((p) => {
+              const palette = publicationPalette(p.primaryColor, null);
+              return (
+                <li key={p.slug} className="text-center">
+                  <a href={publicationBaseUrl(p)} className="group block">
+                    <span
+                      className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] font-display text-4xl font-extrabold transition group-hover:scale-105"
+                      style={{ borderColor: palette.accent, backgroundColor: p.logoUrl ? undefined : palette.accent, color: palette.onAccent }}
+                    >
+                      {p.logoUrl ? <img src={p.logoUrl} alt="" className="h-full w-full object-cover" /> : p.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="mt-4 block font-bold leading-tight group-hover:underline">{p.name}</span>
+                    {p.description && <span className="mt-1 line-clamp-2 block text-sm text-gray-600">{p.description}</span>}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Gli ultimi articoli: sommario da giornale */}
+      {posts.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between border-b-[3px] border-ink pb-3">
+            <h2 className="font-display text-3xl font-extrabold tracking-tight">Usciti da poco</h2>
+          </div>
+          <ol className="divide-y divide-gray-300">
+            {posts.map((post) => (
+              <li key={`${post.publication.slug}/${post.slug}`}>
+                <a href={`${publicationBaseUrl(post.publication)}/${post.slug}`} className="group grid gap-2 py-6 sm:grid-cols-[12rem_1fr] sm:gap-8">
+                  <span className="kicker text-saffron-800">{post.publication.name}</span>
+                  <span>
+                    <span className="block font-display text-2xl font-bold leading-snug group-hover:underline sm:text-3xl">{post.title}</span>
+                    {post.subtitle && <span className="mt-1 block text-gray-600">{post.subtitle}</span>}
+                    <span className="mt-2 block text-sm text-gray-500">
+                      {post.author.name}
+                      {post.publishedAt && ` · ${dateFmt.format(post.publishedAt)}`}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* Il confronto, detto chiaro */}
+      <section className="border-y-2 border-ink bg-paper">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1.2fr] lg:px-8">
+          <div>
+            <p className="kicker text-saffron-800">Il conto</p>
+            <h2 className="mt-3 font-display text-4xl font-extrabold leading-tight tracking-tight">
+              Su 1.000 € di abbonamenti, <span className="italic">quanto resta a te?</span>
+            </h2>
+            <p className="mt-4 text-gray-600">In tutti e due i casi Stripe applica le sue commissioni sui pagamenti. La differenza è quello che si prende la piattaforma.</p>
+          </div>
+          <dl className="grid grid-cols-2 border-2 border-ink">
+            <div className="border-r-2 border-ink p-6">
+              <dt className="kicker text-gray-600">Substack, {formatPercent(SUBSTACK_FEE_PERCENT)}</dt>
+              <dd className="mt-3 font-display text-5xl font-extrabold text-gray-500 line-through decoration-2">{euro.format(keep(SUBSTACK_FEE_PERCENT))}</dd>
+              <dd className="mt-2 text-sm text-gray-600">{euro.format(1000 - keep(SUBSTACK_FEE_PERCENT))} a ogni mille</dd>
+            </div>
+            <div className="bg-ink p-6 text-paper">
+              <dt className="kicker text-saffron">ZeroStack, {formatPercent(fee)}</dt>
+              <dd className="mt-3 font-display text-5xl font-extrabold">{euro.format(keep(fee))}</dd>
+              <dd className="mt-2 text-sm text-paper-300">
+                {euro.format(keep(fee) - keep(SUBSTACK_FEE_PERCENT))} in più a te ogni mille, con la fattura elettronica inclusa
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* Chiusura */}
+      <section className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6">
+        <h2 className="font-display text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+          La tua firma, <span className="italic">il tuo stile.</span>
+        </h2>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-gray-600">Scegli i colori della tua pubblicazione, collega il tuo dominio e comincia a scrivere. Bastano pochi minuti.</p>
+        <Link href="/register" className="mt-8 inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 text-base font-bold text-paper transition hover:bg-ink-700">
+          Apri la tua pubblicazione <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </section>
     </div>
   );
 }

@@ -48,7 +48,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-5">
       <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
-        <FileText className="h-4 w-4 text-blue-600" />
+        <FileText className="h-4 w-4 text-ink-600" />
         <h4 className="text-sm font-bold text-gray-900">
           Dati Fiscali & Fatturazione Elettronica (Italia)
         </h4>
@@ -65,7 +65,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
               setIsCompany(false);
               handleFieldChange("isCompany", false);
             }}
-            className="text-blue-600 focus:ring-blue-500"
+            className="text-ink-600 focus:ring-ink-500"
           />
           <User className="h-3.5 w-3.5" /> Privato (Codice Fiscale)
         </label>
@@ -79,7 +79,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
               setIsCompany(true);
               handleFieldChange("isCompany", true);
             }}
-            className="text-blue-600 focus:ring-blue-500"
+            className="text-ink-600 focus:ring-ink-500"
           />
           <Building2 className="h-3.5 w-3.5" /> Azienda / P.IVA (Fattura SDI)
         </label>
@@ -96,7 +96,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
             placeholder={isCompany ? "Es. Acme Solutions S.r.l." : "Es. Mario Rossi"}
             value={formData.ragioneSocialeOIntestatario}
             onChange={(e) => handleFieldChange("ragioneSocialeOIntestatario", e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
           />
           {errors.ragioneSocialeOIntestatario && (
             <p className="mt-1 text-xs text-red-600">{errors.ragioneSocialeOIntestatario}</p>
@@ -112,7 +112,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
             maxLength={16}
             value={formData.codiceFiscale}
             onChange={(e) => handleFieldChange("codiceFiscale", e.target.value.toUpperCase())}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
           />
           {errors.codiceFiscale && (
             <p className="mt-1 text-xs text-red-600">{errors.codiceFiscale}</p>
@@ -129,7 +129,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
               maxLength={11}
               value={formData.partitaIva}
               onChange={(e) => handleFieldChange("partitaIva", e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
             />
             {errors.partitaIva && (
               <p className="mt-1 text-xs text-red-600">{errors.partitaIva}</p>
@@ -153,7 +153,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
                 maxLength={7}
                 value={formData.codiceDestinatarioSDI}
                 onChange={(e) => handleFieldChange("codiceDestinatarioSDI", e.target.value.toUpperCase())}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
               />
             </div>
             <div>
@@ -163,7 +163,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
                 placeholder="azienda@pec.it"
                 value={formData.pec}
                 onChange={(e) => handleFieldChange("pec", e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
               />
             </div>
           </>
@@ -177,7 +177,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
             placeholder="Via / Piazza e Numero Civico"
             value={formData.indirizzo}
             onChange={(e) => handleFieldChange("indirizzo", e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
           />
         </div>
 
@@ -189,7 +189,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
             maxLength={5}
             value={formData.cap}
             onChange={(e) => handleFieldChange("cap", e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
           />
         </div>
 
@@ -201,7 +201,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
               placeholder="Es. Milano"
               value={formData.citta}
               onChange={(e) => handleFieldChange("citta", e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
             />
           </div>
           <div>
@@ -212,7 +212,7 @@ export const ItalianFiscalForm: React.FC<ItalianFiscalFormProps> = ({ onChange }
               maxLength={2}
               value={formData.provincia}
               onChange={(e) => handleFieldChange("provincia", e.target.value.toUpperCase())}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink-500"
             />
           </div>
         </div>

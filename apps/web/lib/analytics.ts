@@ -1,5 +1,7 @@
 import crypto from "crypto";
 
+const PROCESS_SALT = crypto.randomBytes(32).toString("hex");
+
 /**
  * Sistema di Analitiche Privacy-First GDPR-Compliant senza Cookie
  * Crea un hash univoco giornaliero con salt rotante a 24 ore:
@@ -11,8 +13,9 @@ export function generateDailyVisitorHash(
   publicationSlug: string,
   dateIsoDay: string = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 ): string {
-  // Salt giornaliero segreto o derivato per anonimizzazione crittografica irreversibile
-  const salt = process.env.ANALYTICS_SALT || "zerostack-privacy-salt-2026";
+  // Il sale deve restare segreto: con uno noto (il repository è pubblico) basterebbe provare
+  // tutti gli IPv4 per risalire all'indirizzo. Senza variabili, un sale casuale per processo.
+  const salt = process.env.ANALYTICS_SALT || process.env.NEXTAUTH_SECRET || PROCESS_SALT;
   const rawString = `${ip}-${userAgent}-${publicationSlug}-${dateIsoDay}-${salt}`;
 
   return crypto

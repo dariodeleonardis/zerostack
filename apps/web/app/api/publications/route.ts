@@ -3,6 +3,7 @@ import { prisma, Prisma } from "@zerostack/database";
 import { CreatePublicationSchema } from "@zerostack/shared";
 import { clientIp, getCurrentUser, isSameOriginJson } from "../../../lib/auth";
 import { allowAttempt } from "../../../lib/rate-limit";
+import { newVerifyToken } from "../../../lib/domains";
 import { checkSlugAvailability, publicationUrl, rootDomain, SLUG_REASON_MESSAGES } from "../../../lib/publications";
 
 export async function POST(req: Request) {
@@ -13,11 +14,6 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Accedi per creare una pubblicazione" }, { status: 401 });
   }
-  // Ogni sottodominio nuovo costa un certificato Let's Encrypt: il limite protegge anche quella quota.
-  if (!(await allowAttempt(`publication-create:${user.id}:${clientIp(req)}`, 5, 24 * 60 * 60))) {
-    return NextResponse.json({ error: "Hai creato troppe pubblicazioni oggi. Riprova domani." }, { status: 429 });
-  }
-
   const parsed = CreatePublicationSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Dati non validi", fields: parsed.error.flatten().fieldErrors }, { status: 400 });
@@ -35,6 +31,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: SLUG_REASON_MESSAGES[availability.reason], fields: { slug: [SLUG_REASON_MESSAGES[availability.reason]] } }, { status });
   }
 
+  // Ogni sottodominio nuovo costa un certificato Let's Encrypt: il limite protegge anche quella quota.
+  // Si conta dopo i controlli, così uno slug già preso o un dato sbagliato non consumano i tentativi del giorno.
+  if (!(await allowAttempt(`publication-create:${user.id}:${clientIp(req)}`, 5, 24 * 60 * 60))) {
+    return NextResponse.json({ error: "Hai creato troppe pubblicazioni oggi. Riprova domani." }, { status: 429 });
+  }
+
   try {
     const publication = await prisma.$transaction(async (tx) => {
       const created = await tx.publication.create({
@@ -47,6 +49,7 @@ export async function POST(req: Request) {
           // Il dominio personalizzato resta non verificato: Caddy non emette certificati finché non lo è.
           customDomain,
           isDomainVerified: false,
+          domainVerifyToken: customDomain ? newVerifyToken() : null,
           members: { create: { userId: user.id, role: "OWNER" } }
         },
         select: { id: true, slug: true, name: true }

@@ -9,6 +9,16 @@ export function publicationUrl(slug: string): string {
   return `https://${slug}.${rootDomain()}`;
 }
 
+/**
+ * Il middleware porta su /p/<chiave> sia slug.zerostack.it (chiave = "slug") sia i domini
+ * personalizzati (chiave = "newsletter.mario.it"): questi valgono solo se verificati.
+ */
+export function publicationWhere(slugOrDomain: string) {
+  const key = decodeURIComponent(slugOrDomain).toLowerCase();
+  // Le pubblicazioni sospese dall'amministrazione spariscono da pagine e feed.
+  return key.includes(".") ? { customDomain: key, isDomainVerified: true, suspendedAt: null } : { slug: key, suspendedAt: null };
+}
+
 export type SlugAvailability =
   | { available: true }
   | { available: false; reason: "format" | "reserved" | "taken" };

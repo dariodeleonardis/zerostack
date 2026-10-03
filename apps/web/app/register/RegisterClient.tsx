@@ -1,0 +1,198 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { UserPlus } from "lucide-react";
+import { normalizeSlugInput, slugify, trimSlug } from "@zerostack/shared";
+import { safeNext } from "../../lib/safe-next";
+
+type FieldErrors = Partial<Record<"name" | "email" | "handle" | "password", string[]>>;
+
+export default function RegisterClient({ google }: { google?: React.ReactNode }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleTouched, setHandleTouched] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<FieldErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!handleTouched) setHandle(slugify(value));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setFields({});
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, handle: trimSlug(handle), password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const fieldErrors: FieldErrors = data.fields ?? {};
+        setFields(fieldErrors);
+        // Il messaggio va sotto il campo sbagliato. Il riquadro generale, che sta sotto la password,
+        // resta per gli errori senza campo: ripeterci l'errore del nome utente lo faceva sembrare
+        // un errore della password (segnalato da Dario il 1/10).
+        const firstField = (["name", "email", "handle", "password"] as const).find((key) => fieldErrors[key]?.length);
+        if (firstField) {
+          document.getElementById(firstField)?.focus();
+        } else {
+          setError(data.error ?? "Registrazione non riuscita");
+        }
+        return;
+      }
+      // Chi arriva da un checkout torna lì; chi si registra da zero va a creare la sua pubblicazione.
+      router.push(safeNext(new URLSearchParams(window.location.search).get("next"), "/studio/publications/new"));
+      router.refresh();
+    } catch {
+      setError("Connessione non riuscita. Riprova.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const fieldError = (key: keyof FieldErrors) =>
+    fields[key]?.[0] ? <p id={`${key}-errore`} className="mt-1 text-[11px] font-semibold text-rose-600">{fields[key]?.[0]}</p> : null;
+
+  // Bordo rosso e collegamento al messaggio per chi usa un lettore di schermo.
+  const fieldState = (key: keyof FieldErrors) =>
+    fields[key]?.length
+      ? { "aria-invalid": true, "aria-describedby": `${key}-errore` }
+      : { "aria-invalid": false };
+  // Chi corregge un campo non deve continuare a vedere il vecchio errore.
+  const clearField = (key: keyof FieldErrors) => {
+    if (fields[key]?.length) setFields((prev) => ({ ...prev, [key]: undefined }));
+  };
+  const inputClass = (key: keyof FieldErrors, extra = "") =>
+    `mt-1 block w-full rounded-xl border px-3 py-2 text-sm focus:outline-none ${extra} ${
+      fields[key]?.length ? "border-rose-400 bg-rose-50/40 focus:border-rose-500" : "border-gray-200 focus:border-ink"
+    }`;
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-14">
+      <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">Crea il tuo account</h1>
+      <p className="mt-1 text-xs text-gray-500">
+        Prima crei l&apos;account. La tua newsletter, con un indirizzo tutto suo tipo <strong>tuonome.zerostack.it</strong>,
+        la crei subito dopo oppure quando vuoi dallo <strong>Studio</strong>.
+      </p>
+      {google}
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div>
+          <label htmlFor="name" className="block text-sm font-semibold text-ink">Nome e cognome</label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => {
+              clearField("name");
+              handleNameChange(e.target.value);
+            }}
+            {...fieldState("name")}
+            className={inputClass("name")}
+            required
+          />
+          {fieldError("name")}
+        </div>
+
+        <div>
+          <label htmlFor="email" className="block text-sm font-semibold text-ink">Email</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => {
+              clearField("email");
+              setEmail(e.target.value);
+            }}
+            {...fieldState("email")}
+            className={inputClass("email")}
+            required
+          />
+          {fieldError("email")}
+        </div>
+
+        <div>
+          <label htmlFor="handle" className="block text-sm font-semibold text-ink">Nome utente</label>
+          <input
+            id="handle"
+            type="text"
+            autoComplete="username"
+            value={handle}
+            onChange={(e) => {
+              clearField("handle");
+              setHandleTouched(true);
+              // Come per l'indirizzo della pubblicazione: spazi e caratteri non ammessi diventano trattini.
+              setHandle(normalizeSlugInput(e.target.value));
+            }}
+            onBlur={() => setHandle((current) => trimSlug(current))}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            {...fieldState("handle")}
+            className={inputClass("handle", "font-bold")}
+            required
+          />
+          <p className="mt-1 text-[11px] text-gray-400">Lettere minuscole, numeri e trattini. Nessun altro potrà usarlo come indirizzo.</p>
+          {fieldError("handle")}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-semibold text-ink">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={10}
+            value={password}
+            onChange={(e) => {
+              clearField("password");
+              setPassword(e.target.value);
+            }}
+            {...fieldState("password")}
+            className={inputClass("password")}
+            required
+          />
+          <p className="mt-1 text-[11px] text-gray-400">Almeno 10 caratteri.</p>
+          {fieldError("password")}
+        </div>
+
+        {error && (
+          <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {error}
+          </p>
+        )}
+
+        <p className="text-[11px] leading-relaxed text-gray-500">
+          Creando l&apos;account accetti i <Link href="/termini" className="underline">Termini di servizio</Link> e dichiari di aver letto
+          l&apos;<Link href="/privacy" className="underline">Informativa privacy</Link>.
+        </p>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-ink-700 transition disabled:opacity-50"
+        >
+          <UserPlus className="h-4 w-4" />
+          {isSubmitting ? "Creazione in corso..." : "Crea account"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-xs text-gray-500">
+        Hai già un account? <Link href="/login" className="font-bold text-ink-600 hover:text-ink-700">Accedi</Link>
+      </p>
+    </div>
+  );
+}

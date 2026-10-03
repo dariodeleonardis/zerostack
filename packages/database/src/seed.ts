@@ -15,6 +15,7 @@ async function main() {
       name: "Dario De Leonardis",
       handle: "dario",
       role: "ADMIN",
+      emailVerified: new Date(),
       passwordHash: "hash_demo_zerostack_2026",
       bio: "Fondatore di ZeroStack. Appassionato di software libero, publishing e sovranità digitale.",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
@@ -84,7 +85,7 @@ async function main() {
       status: "PUBLISHED",
       publishedAt: new Date(),
       viewsCount: 1420,
-      likesCount: 88,
+      likesCount: 0,
       commentsCount: 14,
       contentHtml: `
         <p class="lead">Negli ultimi anni, Substack ha rivoluzionato il modo in cui scrittori e divulgatori monetizzano la propria penna. Tuttavia, per chi opera in Italia e in Europa, i limiti strutturali sono diventati insostenibili.</p>
@@ -118,7 +119,7 @@ async function main() {
       status: "PUBLISHED",
       publishedAt: new Date(),
       viewsCount: 950,
-      likesCount: 65,
+      likesCount: 0,
       contentHtml: "<p>In questa prima puntata esploriamo come costruire piattaforme moderne scalabili con architetture containerizzate.</p>"
     }
   });
@@ -140,10 +141,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Abbiamo appena rilasciato la prima versione di ZeroStack! Completamente open-source, con supporto nativo a SDI, PEC e 0% commissioni. Cosa ne pensate?",
-      likesCount: 42,
-      restacksCount: 15,
-      repliesCount: 6
+      content: "Abbiamo appena rilasciato la prima versione di ZeroStack, open source e con le fatture elettroniche già dentro. Cosa ne pensate?"
     }
   });
 
@@ -151,10 +149,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?",
-      likesCount: 19,
-      restacksCount: 4,
-      repliesCount: 8
+      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?"
     }
   });
 

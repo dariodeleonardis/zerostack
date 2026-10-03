@@ -27,35 +27,40 @@ async function testLiveEndpoints() {
     }
   }
 
+  // Le aree riservate, visitate senza sessione, rimandano al login dal server.
+  const toLogin = (res: Response) => res.status === 307 && (res.headers.get("location") ?? "").includes("/login?next=");
+
   // 1. Pagine Web Pubbliche
   console.log("📌 1. Test Pagine Portale Pubblico & Lettori:");
   await check("Homepage ZeroStack", "/");
-  await check("Feed Lettore (La Tua Posta)", "/inbox");
-  await check("Timeline Note & Dispacci", "/notes");
-  await check("Catalogo Podcast", "/podcasts");
+  // Posta, Note e Podcast erano pagine con contenuti finti: tolte il 2/10, tornano quando sono vere.
+  await check("Posta senza sessione -> login", "/inbox", { redirect: "manual" }, toLogin);
+  await check("Note leggibili senza accesso", "/notes", undefined, (res) => res.status === 200);
+  await check("Podcast finti rimossi -> 404", "/podcasts", undefined, (res) => res.status === 404);
   await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
-  await check("Lettore Articolo con Paywall", "/p/tech-italia/alternativa-italiana-a-substack");
-  await check("Schermata Checkout Fiscale IT", "/checkout/premium-monthly");
+  await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>
+    res.status === 200 && text.includes("Sovranità dei dati") && !text.includes("paywall-divider"));
+  await check("Articolo inesistente -> 404", "/p/tech-italia/articolo-che-non-esiste", undefined, (res) => res.status === 404);
+  await check("Checkout di un piano inesistente -> 404", "/checkout/premium-monthly", undefined, (res) => res.status === 404);
 
   // 2. Pannello Creator & Switcher
   console.log("\n📌 2. Test Studio Creator & Gestione Multi-Tenant:");
-  await check("Studio Creator Dashboard", "/studio");
-  await check("Editor Nuovo Post / Newsletter", "/studio/posts/new");
-  await check("Monetizzazione Stripe Connect & Tiers", "/studio/monetization");
-  await check("Creazione Nuova Pubblicazione", "/studio/publications/new");
-  await check("Squadra & Collaboratori", "/studio/team");
+  await check("Studio Creator Dashboard senza sessione -> login", "/studio", { redirect: "manual" }, toLogin);
+  await check("Editor Nuovo Post / Newsletter senza sessione -> login", "/studio/posts/new", { redirect: "manual" }, toLogin);
+  await check("Monetizzazione Stripe Connect & Tiers senza sessione -> login", "/studio/monetization", { redirect: "manual" }, toLogin);
+  await check("Creazione Nuova Pubblicazione senza sessione -> login", "/studio/publications/new", { redirect: "manual" }, toLogin);
+  await check("Squadra senza accesso -> login", "/studio/team", { redirect: "manual" }, toLogin);
 
   // 3. Pannello SuperAdmin & Staff
   console.log("\n📌 3. Test Pannello SuperAdmin & Moderazione Staff:");
-  await check("SuperAdmin Dashboard Globale", "/admin");
-  await check("Gestione Utenti & Ruoli", "/admin/users");
-  await check("Moderazione Pubblicazioni & Domini", "/admin/publications");
-  await check("Impostazioni Piattaforma & Stripe", "/admin/settings");
+  await check("SuperAdmin Dashboard Globale senza sessione -> login", "/admin", { redirect: "manual" }, toLogin);
+  await check("Gestione Utenti & Ruoli senza sessione -> login", "/admin/users", { redirect: "manual" }, toLogin);
+  await check("Moderazione Pubblicazioni & Domini senza sessione -> login", "/admin/publications", { redirect: "manual" }, toLogin);
 
   // 4. Profilo & Abbonamenti Utente
   console.log("\n📌 4. Test Area Personale Utente:");
-  await check("Modifica Profilo Autore", "/account/profile");
-  await check("Gestione Abbonamenti & Ricevute", "/account/subscriptions");
+  await check("Modifica Profilo Autore senza sessione -> login", "/account/profile", { redirect: "manual" }, toLogin);
+  await check("Gestione Abbonamenti & Ricevute senza sessione -> login", "/account/subscriptions", { redirect: "manual" }, toLogin);
 
   // 5. API Endpoints
   console.log("\n📌 5. Test API Endpoints, RSS, PDF & Webhooks:");
@@ -92,93 +97,46 @@ async function testLiveEndpoints() {
     return res.status === 403;
   });
 
-  // 5.4 Invio Newsletter API
-  await check("Invio Newsletter Batch API", "/api/newsletter/send", {
+  // 5.4 Salvataggio post dallo studio: senza sessione niente
+  await check("Salvataggio post senza sessione -> 401", "/api/posts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: "Test Live Newsletter",
-      contentHtml: "<p>Contenuto inviato dal test live.</p>",
-      sendEmail: true
-    })
-  }, (res, text) => {
-    return text.includes('"success":true');
-  });
+    body: JSON.stringify({ publicationId: "00000000-0000-0000-0000-000000000000", title: "x", contentHtml: "<p>x</p>", action: "draft" })
+  }, (res) => res.status === 401);
 
   // 5.5 Checkout Stripe API
-  await check("Stripe Checkout Session API", "/api/checkout/stripe", {
+  await check("Checkout Stripe senza sessione -> 401", "/api/checkout/stripe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tierId: "premium-monthly",
-      paymentMethod: "card",
-      fiscalData: {
-        isCompany: false,
-        ragioneSocialeOIntestatario: "Mario Rossi",
-        codiceFiscale: "RSSMRA85M01H501Z"
-      }
-    })
-  }, (res, text) => {
-    return text.includes('"success":true');
-  });
+    body: JSON.stringify({ tierId: "premium-monthly" })
+  }, (res) => res.status === 401);
 
-  // 5.6 Generazione Ricevuta Fiscale PDF Stream
-  await check("Download Ricevuta Fiscale PDF", "/api/receipts/pdf/sub_test_live_99", undefined, (res, text) => {
-    const isPdf = res.headers.get("content-type")?.includes("application/pdf");
-    const hasPdfHeader = text.startsWith("%PDF-");
-    return !!isPdf && hasPdfHeader;
-  });
-
-  // 5.7 Download FatturaPA XML v1.2
-  await check("Download FatturaPA XML per SDI", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res, text) => {
-    return text.includes('versione="FPR12"') && text.includes("<FatturaElettronica");
-  });
-
-  // 5.8 Donazione e Micro-pagamento Satispay
-  await check("Satispay Micro-donation API", "/api/donations/satispay", {
+  await check("Webhook Stripe senza firma respinto", "/api/stripe/webhook", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amountEur: 2.5,
-      publicationSlug: "tech-italia"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes("satispay://pay");
-  });
+    body: JSON.stringify({ type: "checkout.session.completed" })
+  }, (res) => res.status === 400 || res.status === 503);
 
-  // 5.9 RFC 7033 WebFinger Fediverse Discovery
-  await check("WebFinger RFC 7033 Discovery", "/.well-known/webfinger?resource=acct:tech-italia@localhost", undefined, (res, text) => {
-    return text.includes("application/activity+json") && text.includes("tech-italia");
-  });
+  // 5.6 Le ricevute e le fatture finte (dati inventati, senza login) sono state tolte:
+  // tornano con la fatturazione vera verso lo SdI.
+  await check("Ricevuta PDF finta rimossa -> 404", "/api/receipts/pdf/sub_test_live_99", undefined, (res) => res.status === 404);
+  await check("FatturaPA XML finta rimossa -> 404", "/api/invoices/sub_test_live_99/fatturapa.xml", undefined, (res) => res.status === 404);
 
-  // 5.10 ActivityPub Actor W3C JSON-LD
-  await check("ActivityPub Actor Profile", "/api/activitypub/users/tech-italia", undefined, (res, text) => {
-    return text.includes("activitystreams") && text.includes('"type":"Person"');
-  });
-
-  // 5.11 Telemetria Analitiche Privacy-First (GDPR)
-  await check("Raccolta Analitiche Zero-Cookie", "/api/analytics/collect", {
+  await check("Stripe Connect senza sessione -> 401", "/api/stripe/connect", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      path: "/p/tech-italia/test",
-      publicationSlug: "tech-italia"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes('"visitorHash"');
-  });
+    body: JSON.stringify({ publicationId: "x" })
+  }, (res) => res.status === 401);
 
-  // 5.12 Trascrizione Podcast & Sottotitoli WebVTT
-  await check("Trascrizione Podcast API", "/api/podcasts/transcribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audioUrl: "https://zerostack.it/sample.mp3"
-    })
-  }, (res, text) => {
-    return text.includes('"success":true') && text.includes("WEBVTT");
-  });
-
+  // API finte tolte il 2/10 (vedi docs/STATO-FUNZIONI-E-AUDIT.md): Satispay con ID inventati,
+  // statistiche che non salvavano, trascrizione con testo d'esempio, Fediverso con chiave finta.
+  const post = { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" };
+  await check("Satispay finto rimosso -> 404", "/api/donations/satispay", post, (res) => res.status === 404);
+  await check("Statistiche finte rimosse -> 404", "/api/analytics/collect", post, (res) => res.status === 404);
+  await check("Trascrizione finta rimossa -> 404", "/api/podcasts/transcribe", post, (res) => res.status === 404);
+  await check("WebFinger di una pubblicazione", `/.well-known/webfinger?resource=acct:tech-italia@${new URL(baseUrl).host}`, undefined, (res) => res.status === 200);
+  await check("WebFinger di un nome inesistente -> 404", "/.well-known/webfinger?resource=acct:non-esiste-davvero@localhost", undefined, (res) => res.status === 404);
+  await check("Attore ActivityPub finto rimosso -> 404", "/api/activitypub/users/tech-italia", undefined, (res) => res.status === 404);
 
   console.log("\n========================================================");
   console.log(`📊 RISULTATO TEST LIVE ENDPOINTS: ${passed}/${passed + failed} SUPERATI`);
