@@ -78,13 +78,13 @@ con i suoi test.
 |---|---|---|---|
 | T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | Lo schema `Comment` c'è; oggi si leggono solo |
 | T2 | **Mi piace** | API metti/togli, contatore coerente | Prima correggere il vincolo (A9): `@@unique` con colonne NULL non blocca i doppioni; servono vincoli separati per articolo, nota, commento |
-| T3 | **Podcast** | Pagina `/podcasts` con gli episodi veri dal database (`PodcastEpisode`) e il lettore audio | I dati e il feed RSS ci sono già |
-| T4 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
-| T5 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |
-| T6 | **Note** | Feed di note brevi dei creatori (`Note`), scrittura dallo Studio, mi piace e risposte | Dopo T2 |
-| T7 | **Trascrizione** | Whisper (o altro servizio) con chiave nel compose, quota per autore, solo per i propri episodi | `lib/transcription.ts` oggi restituisce un testo d'esempio |
-| T8 | **Fediverso** | WebFinger e attore ActivityPub veri: chiavi per pubblicazione, inbox/outbox, firma delle richieste | Ultimo, il più complesso |
-| T9 | **Mance** | Solo con un pagamento vero via Stripe (Checkout una tantum), commissione come gli abbonamenti | Il TipJar simulato è stato cancellato |
+| T3 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
+| T4 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |
+| T5 | **Note** | Feed di note brevi dei creatori (`Note`), scrittura dallo Studio, mi piace e risposte | Dopo T2 |
+| T6 | **Fediverso** | WebFinger e attore ActivityPub veri: chiavi per pubblicazione, inbox/outbox, firma delle richieste | Il più complesso fra quelli leggeri |
+| T7 | **Mance** | Solo con un pagamento vero via Stripe (Checkout una tantum), commissione come gli abbonamenti | Il TipJar simulato è stato cancellato |
+| T8 | **Podcast** | Pagina `/podcasts` con gli episodi veri dal database (`PodcastEpisode`) e il lettore audio | **In fondo per scelta di Dario (3/10):** l'audio pesa troppo per il VPS di oggi (2 vCPU, 4 GB, 78 GB di disco). Da fare con i file audio su uno storage esterno (`STORAGE_DRIVER=s3`), non sul server. I dati e il feed RSS ci sono già |
+| T9 | **Trascrizione** | Whisper con chiave nel compose (servizio esterno, mai un modello sul VPS), quota per autore, solo per i propri episodi | Dopo T8, per lo stesso motivo. `lib/transcription.ts` oggi restituisce un testo d'esempio |
 
 ## 5. Altro in sospeso
 

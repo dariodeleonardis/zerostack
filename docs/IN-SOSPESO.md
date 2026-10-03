@@ -29,8 +29,8 @@ Ultimo aggiornamento: 2 ottobre 2026.
 
 ### Da fare nel codice (rimandate)
 
-Le funzioni vere che sostituiscono quelle finte tolte il 2/10: commenti, mi piace, podcast, posta del lettore,
-squadra, note, trascrizione, Fediverso, mance. Elenco e dettagli in
+Le funzioni vere che sostituiscono quelle finte tolte il 2/10: commenti, mi piace, posta del lettore,
+squadra, note, Fediverso, mance e, in fondo (3/10: troppo pesanti per il VPS di oggi), podcast e trascrizione. Elenco e dettagli in
 [STATO-FUNZIONI-E-AUDIT.md](STATO-FUNZIONI-E-AUDIT.md), sezione 4 (T1-T9).
 
 Altre voci di codice:
