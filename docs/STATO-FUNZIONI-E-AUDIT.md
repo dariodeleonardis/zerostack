@@ -76,7 +76,7 @@ con i suoi test.
 
 | # | Funzione | Cosa serve | Note |
 |---|---|---|---|
-| T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | Lo schema `Comment` c'è; oggi si leggono solo |
+| T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | **Fatto il 3/10**: risposte di un livello, nascondi/cancella, avviso all'autore, 10 ogni 10 minuti; test-comments.mjs |
 | T2 | **Mi piace** | API metti/togli, contatore coerente | Prima correggere il vincolo (A9): `@@unique` con colonne NULL non blocca i doppioni; servono vincoli separati per articolo, nota, commento |
 | T3 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
 | T4 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |

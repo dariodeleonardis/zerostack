@@ -350,11 +350,18 @@ model Comment {
   parentId  String?
   content   String   @db.Text
   likesCount Int     @default(0)
+  // Nascosto da chi modera la pubblicazione (proprietario o editor): resta per loro, sparisce per gli altri.
+  hiddenAt  DateTime?
   createdAt DateTime @default(now())
 
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  // Risposte di un solo livello: cancellando il commento se ne vanno anche le risposte.
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Replies")
+
+  @@index([postId, createdAt])
 }
 
 model Like {

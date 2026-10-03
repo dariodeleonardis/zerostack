@@ -7,7 +7,9 @@ import { prisma } from "@zerostack/database";
 import { PaywallGate } from "../../../../components/PaywallGate";
 import { getCurrentUser } from "../../../../lib/auth";
 import { publicationWhere } from "../../../../lib/publications";
-import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
+import { canReadFullPost, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
+import { canModerate, readerAccess } from "../../../../lib/comments";
+import { Comments } from "./Comments";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../../lib/colors";
 import { ShareButton } from "./ShareButton";
 import { PublicationFooter } from "../../../../components/PublicationFooter";
@@ -59,10 +61,9 @@ async function findPost(slugOrDomain: string, postSlug: string) {
       },
       comments: {
         orderBy: { createdAt: "asc" },
-        take: 100,
-        select: { id: true, content: true, createdAt: true, author: { select: { name: true } } }
-      },
-      _count: { select: { comments: true } }
+        take: 300,
+        select: { id: true, content: true, parentId: true, hiddenAt: true, authorId: true, createdAt: true, author: { select: { name: true } } }
+      }
     }
   });
 }
@@ -73,25 +74,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   return { title: `${post.title} | ${post.publication.name}`, description: post.subtitle ?? post.excerpt ?? undefined };
 }
 
-async function readerAccess(userId: string | undefined, publicationId: string) {
-  if (!userId) return { isMember: false, hasPaidSubscription: false };
-  const [member, subscriptions] = await Promise.all([
-    prisma.publicationMember.findUnique({ where: { publicationId_userId: { publicationId, userId } }, select: { id: true } }),
-    prisma.subscription.findMany({
-      where: { publicationId, userId },
-      select: { status: true, isPaid: true, currentPeriodEnd: true }
-    })
-  ]);
-  return { isMember: Boolean(member), hasPaidSubscription: subscriptions.some((s) => isSubscriptionActive(s)) };
-}
-
 export default async function ArticleReaderPage({ params }: ArticlePageProps) {
   const post = await findPost(params.slug, params.postSlug);
   if (!post) notFound();
 
   const publication = post.publication;
   const user = await getCurrentUser();
-  const hasAccess = canReadFullPost(post.access, await readerAccess(user?.id, publication.id));
+  const [access, moderator] = await Promise.all([readerAccess(user?.id, publication.id), canModerate(user?.id, publication.id)]);
+  const hasAccess = canReadFullPost(post.access, access);
 
   // Il testo riservato non lascia mai il server se chi legge non ha accesso.
   const { preview, rest } = splitAtPaywall(post.contentHtml);
@@ -171,23 +161,28 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
             </p>
           ))}
 
-        {/* Commenti: si mostrano quelli che ci sono (per esempio importati), ma scriverne non si può
-            ancora, quindi niente invito a commentare finché il modulo non esiste. */}
-        {post.comments.length > 0 && (
-        <section className="mt-14 border-t-[3px] border-[color:var(--pub-text)] pt-6">
-          <h2 className={`text-2xl font-extrabold tracking-tight ${font.title}`}>Commenti dei lettori ({post._count.comments})</h2>
-            <ul className="mt-6 divide-y divide-[color:var(--pub-text)]">
-              {post.comments.map((comment) => (
-                <li key={comment.id} className="py-5">
-                  <p className="text-sm font-bold">
-                    {comment.author.name}
-                    <span className="ml-2 font-normal opacity-80">{dateFormat.format(comment.createdAt)}</span>
-                  </p>
-                  <p className={`mt-2 whitespace-pre-line text-base ${font.body}`}>{comment.content}</p>
-                </li>
-              ))}
-            </ul>
-        </section>
+        {/* Commenti: dentro l'articolo, quindi solo per chi lo legge intero (un riservato li mostra agli abbonati). */}
+        {hasAccess && (
+          <Comments
+            postId={post.id}
+            titleFont={font.title}
+            viewer={{
+              state: !user ? "anonymous" : user.emailVerified ? "ok" : "unverified",
+              canModerate: moderator,
+              loginHref: `${platformUrlFromEnv()}/login`
+            }}
+            comments={post.comments
+              .filter((c) => moderator || !c.hiddenAt)
+              .map((c) => ({
+                id: c.id,
+                content: c.content,
+                parentId: c.parentId,
+                createdAt: c.createdAt.toISOString(),
+                authorName: c.author.name,
+                mine: c.authorId === user?.id,
+                hidden: Boolean(c.hiddenAt)
+              }))}
+          />
         )}
       </article>
       <PublicationFooter background={palette.bg} />
