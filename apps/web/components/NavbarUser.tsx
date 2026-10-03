@@ -15,6 +15,7 @@ interface Me {
 export function NavbarUser() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [courtesy, setCourtesy] = useState(false);
+  const [unread, setUnread] = useState(0);
   const pathname = usePathname();
 
   // Si rilegge a ogni cambio di pagina: il layout resta montato durante la navigazione, e leggendo
@@ -28,6 +29,7 @@ export function NavbarUser() {
         if (!attivo) return;
         setMe(data.user ?? null);
         setCourtesy(data.courtesy === true);
+        setUnread(Number(data.unread) || 0);
       })
       .catch(() => {
         if (attivo) setMe(null);
@@ -75,7 +77,19 @@ export function NavbarUser() {
           Admin
         </Link>
       )}
-      <Link href="/studio" className="text-sm font-semibold text-paper transition hover:text-saffron">
+      <Link
+        href="/inbox"
+        className="flex items-center gap-1.5 text-sm font-semibold text-paper transition hover:text-saffron"
+        aria-label={unread > 0 ? `Posta, ${unread} da leggere` : "Posta"}
+      >
+        Posta
+        {unread > 0 && (
+          <span className="min-w-[1.25rem] rounded-full bg-saffron px-1.5 text-center text-xs font-bold text-ink" aria-hidden>
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </Link>
+      <Link href="/studio" className="hidden text-sm font-semibold text-paper transition hover:text-saffron sm:inline">
         Studio
       </Link>
       <Link href="/account/subscriptions" className="hidden text-sm font-semibold text-paper-300 transition hover:text-saffron lg:inline">

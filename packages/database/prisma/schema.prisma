@@ -92,6 +92,7 @@ model User {
   passwordResets     PasswordResetToken[]
   emailVerifications EmailVerificationToken[]
   media              Media[]
+  reads              PostRead[]
 }
 
 // Sessioni di login: nel cookie viaggia un token casuale, qui solo il suo SHA-256.
@@ -305,6 +306,7 @@ model Post {
   likes           Like[]
   bookmarks       Bookmark[]
   campaigns       EmailCampaign[]
+  reads           PostRead[]
 
   @@unique([publicationId, slug])
 }
@@ -382,6 +384,19 @@ model Like {
   @@unique([userId, postId])
   @@unique([userId, noteId])
   @@unique([userId, commentId])
+}
+
+// Articoli già aperti da un lettore: servono alla Posta per "letto / da leggere" (T3, 3/10/2026).
+model PostRead {
+  userId    String
+  postId    String
+  readAt    DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
 }
 
 model Bookmark {

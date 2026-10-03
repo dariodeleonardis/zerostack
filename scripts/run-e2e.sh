@@ -66,6 +66,7 @@ for suite in \
   "node scripts/test-invoicing.mjs" \
   "node scripts/test-google.mjs" \
   "node scripts/test-comments.mjs" \
+  "node scripts/test-inbox.mjs" \
   "node scripts/test-courtesy.mjs"; do
   flush
   echo "::group::$suite"

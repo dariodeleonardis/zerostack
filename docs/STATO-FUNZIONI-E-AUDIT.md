@@ -78,7 +78,7 @@ con i suoi test.
 |---|---|---|---|
 | T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | **Fatto il 3/10**: risposte di un livello, nascondi/cancella, avviso all'autore, 10 ogni 10 minuti; test-comments.mjs |
 | T2 | **Mi piace** | API metti/togli, contatore coerente | **Fatto il 3/10**: vincoli separati per articolo, nota e commento (A9 chiuso), contatore nella stessa transazione, prova con richieste in contemporanea; test in test-comments.mjs |
-| T3 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
+| T3 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | **Fatto il 3/10**: modello PostRead, segue chi ha l'iscrizione confermata o un abbonamento attivo, letto all'apertura (solo con accesso al testo), "Segna tutto come letto", numero da leggere nella barra; test-inbox.mjs |
 | T4 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |
 | T5 | **Note** | Feed di note brevi dei creatori (`Note`), scrittura dallo Studio, mi piace e risposte | Dopo T2 |
 | T6 | **Fediverso** | WebFinger e attore ActivityPub veri: chiavi per pubblicazione, inbox/outbox, firma delle richieste | Il più complesso fra quelli leggeri |

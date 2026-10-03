@@ -11,6 +11,7 @@ import { canReadFullPost, sanitizePostHtml, splitAtPaywall } from "../../../../l
 import { canModerate, readerAccess } from "../../../../lib/comments";
 import { Comments } from "./Comments";
 import { LikeButton } from "./LikeButton";
+import { markRead } from "../../../../lib/inbox";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../../lib/colors";
 import { ShareButton } from "./ShareButton";
 import { PublicationFooter } from "../../../../components/PublicationFooter";
@@ -88,6 +89,8 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
   ]);
   const liked = Boolean(myLike);
   const hasAccess = canReadFullPost(post.access, access);
+  // Per la Posta: letto solo se lo si è potuto leggere intero (l'anteprima di un riservato non conta).
+  if (user && hasAccess) await markRead(user.id, post.id);
 
   // Il testo riservato non lascia mai il server se chi legge non ha accesso.
   const { preview, rest } = splitAtPaywall(post.contentHtml);
