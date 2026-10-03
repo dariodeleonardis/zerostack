@@ -81,6 +81,7 @@ model User {
 
   ownedPublications  Publication[]        @relation("PublicationOwner")
   memberships        PublicationMember[]
+  invitesSent        PublicationInvite[]
   posts              Post[]               @relation("AuthorPosts")
   notes              Note[]               @relation("AuthorNotes")
   comments           Comment[]
@@ -190,6 +191,7 @@ model Publication {
 
   owner                  User                @relation("PublicationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members                PublicationMember[]
+  invites                PublicationInvite[]
   tiers                  Tier[]
   posts                  Post[]
   notes                  Note[]
@@ -211,6 +213,25 @@ model PublicationMember {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([publicationId, userId])
+}
+
+// Inviti alla squadra (T4, 3/10/2026): il proprietario invita un indirizzo come editor o collaboratore.
+// Nel database solo l'hash del token spedito per email; un invito per indirizzo (rinnovarlo cambia il
+// token), valido 7 giorni. Accettato diventa un PublicationMember e la riga sparisce.
+model PublicationInvite {
+  id            String                @id @default(uuid())
+  publicationId String
+  email         String
+  role          PublicationMemberRole @default(CONTRIBUTOR)
+  tokenHash     String                @unique
+  invitedById   String?
+  expiresAt     DateTime
+  createdAt     DateTime              @default(now())
+
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  invitedBy     User?       @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([publicationId, email])
 }
 
 model Tier {

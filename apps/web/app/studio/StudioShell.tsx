@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { PenSquare, LayoutDashboard, DollarSign, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe, FileText, Palette } from "lucide-react";
+import { PenSquare, LayoutDashboard, DollarSign, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe, FileText, Palette, Users } from "lucide-react";
+import { ROLE_LABEL } from "../../lib/team-roles";
 
 export interface StudioPublication {
   id: string;
@@ -39,7 +40,7 @@ export function StudioShell({
               <div className="truncate">
                 <p className="truncate text-xs font-extrabold">{currentPub?.name ?? "Nessuna pubblicazione"}</p>
                 <p className="text-[10px] text-gray-400 font-normal">
-                  {currentPub ? `Ruolo: ${currentPub.role}` : "Creane una per iniziare"}
+                  {currentPub ? `Ruolo: ${ROLE_LABEL[currentPub.role]}` : "Creane una per iniziare"}
                 </p>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
@@ -118,6 +119,14 @@ export function StudioShell({
             >
               <Palette className="h-4 w-4 text-gray-500" />
               Aspetto
+            </Link>
+
+            <Link
+              href="/studio/team"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
+            >
+              <Users className="h-4 w-4 text-gray-500" />
+              Squadra
             </Link>
 
             <Link

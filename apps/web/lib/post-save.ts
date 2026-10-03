@@ -45,7 +45,7 @@ export async function savePost(req: Request, postId?: string): Promise<Response>
   const input = parsed.data;
 
   const existing = postId
-    ? await prisma.post.findUnique({ where: { id: postId }, select: { id: true, publicationId: true, status: true, slug: true, title: true } })
+    ? await prisma.post.findUnique({ where: { id: postId }, select: { id: true, publicationId: true, authorId: true, status: true, slug: true, title: true } })
     : null;
   if (postId && (!existing || existing.publicationId !== input.publicationId)) {
     return NextResponse.json({ error: "Post non trovato" }, { status: 404 });
@@ -55,7 +55,8 @@ export async function savePost(req: Request, postId?: string): Promise<Response>
     where: { publicationId_userId: { publicationId: input.publicationId, userId: user.id } },
     select: { role: true }
   });
-  if (!membership) {
+  // Il collaboratore lavora solo sui suoi pezzi: quelli degli altri, per lui, non esistono.
+  if (!membership || (existing && membership.role === "CONTRIBUTOR" && existing.authorId !== user.id)) {
     return NextResponse.json({ error: postId ? "Post non trovato" : "Pubblicazione non trovata" }, { status: 404 });
   }
   if (input.action !== "draft" && membership.role === "CONTRIBUTOR") {

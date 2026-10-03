@@ -16,6 +16,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     select: {
       id: true,
       publicationId: true,
+      authorId: true,
       title: true,
       subtitle: true,
       slug: true,
@@ -35,7 +36,9 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     }
   });
   // Un post di una pubblicazione di cui non si fa parte è, per chi guarda, inesistente.
-  if (!post || !publications.some((p) => p.id === post.publicationId)) notFound();
+  // Il collaboratore apre solo i suoi pezzi.
+  const membership = post ? publications.find((p) => p.id === post.publicationId) : undefined;
+  if (!post || !membership || (membership.role === "CONTRIBUTOR" && post.authorId !== user.id)) notFound();
 
   return (
     <PostEditor

@@ -49,7 +49,7 @@ async function testLiveEndpoints() {
   await check("Editor Nuovo Post / Newsletter senza sessione -> login", "/studio/posts/new", { redirect: "manual" }, toLogin);
   await check("Monetizzazione Stripe Connect & Tiers senza sessione -> login", "/studio/monetization", { redirect: "manual" }, toLogin);
   await check("Creazione Nuova Pubblicazione senza sessione -> login", "/studio/publications/new", { redirect: "manual" }, toLogin);
-  await check("Squadra finta rimossa -> 404", "/studio/team", { redirect: "manual" }, (res) => res.status === 404 || toLogin(res));
+  await check("Squadra senza accesso -> login", "/studio/team", { redirect: "manual" }, toLogin);
 
   // 3. Pannello SuperAdmin & Staff
   console.log("\n📌 3. Test Pannello SuperAdmin & Moderazione Staff:");
