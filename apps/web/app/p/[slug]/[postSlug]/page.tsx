@@ -10,6 +10,7 @@ import { publicationWhere } from "../../../../lib/publications";
 import { canReadFullPost, sanitizePostHtml, splitAtPaywall } from "../../../../lib/posts";
 import { canModerate, readerAccess } from "../../../../lib/comments";
 import { Comments } from "./Comments";
+import { LikeButton } from "./LikeButton";
 import { paletteStyle, publicationFont, publicationPalette } from "../../../../lib/colors";
 import { ShareButton } from "./ShareButton";
 import { PublicationFooter } from "../../../../components/PublicationFooter";
@@ -80,7 +81,12 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
 
   const publication = post.publication;
   const user = await getCurrentUser();
-  const [access, moderator] = await Promise.all([readerAccess(user?.id, publication.id), canModerate(user?.id, publication.id)]);
+  const [access, moderator, myLike] = await Promise.all([
+    readerAccess(user?.id, publication.id),
+    canModerate(user?.id, publication.id),
+    user ? prisma.like.findUnique({ where: { userId_postId: { userId: user.id, postId: post.id } }, select: { id: true } }) : null
+  ]);
+  const liked = Boolean(myLike);
   const hasAccess = canReadFullPost(post.access, access);
 
   // Il testo riservato non lascia mai il server se chi legge non ha accesso.
@@ -120,8 +126,17 @@ export default async function ArticleReaderPage({ params }: ArticlePageProps) {
                 </p>
               </div>
             </div>
-            {/* Il contatore dei mi piace tornerà quando i lettori potranno metterli davvero. */}
-            <ShareButton />
+            <div className="flex items-center gap-2">
+              {hasAccess && (
+                <LikeButton
+                  postId={post.id}
+                  initialCount={post.likesCount}
+                  initialLiked={liked}
+                  loginHref={user ? null : `${platformUrlFromEnv()}/login`}
+                />
+              )}
+              <ShareButton />
+            </div>
           </div>
         </header>
 

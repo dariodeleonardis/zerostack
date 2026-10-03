@@ -50,7 +50,7 @@ due compose con i fine riga cambiati: ripristinati con `git checkout` il 2/10.
 | A6 | Satispay senza verifica | Confermato (F4) | Chiuso il 2/10: API cancellata |
 | A7 | TipJar simulato | Confermato (F7) | Tolto dalle pagine il 2/10 |
 | A8 | AudioPlayer rotto nell'app mobile | App mobile non in uso (F13) | Bassa priorità |
-| A9 | Vincoli deboli sui mi piace | Confermato: `@@unique([userId, postId, noteId, commentId])` con colonne NULL, che Postgres non considera uguali, quindi i doppioni passano. Oggi nessuno scrive mi piace (F10) | Da sistemare quando si costruiscono i mi piace |
+| A9 | Vincoli deboli sui mi piace | Confermato: `@@unique([userId, postId, noteId, commentId])` con colonne NULL, che Postgres non considera uguali, quindi i doppioni passano. Oggi nessuno scrive mi piace (F10) | Chiuso il 3/10: un vincolo unico per articolo, nota e commento (migrazione 20261003120000) |
 | A10 | Metriche della dashboard finte | Non confermato sul web: Studio e pannello usano conteggi veri. Finte le pagine F1, F8, F9 e l'app mobile | Coperto dalla sezione 1 |
 | A11 | Build dell'app mobile non configurata | Vero, app non in uso | Bassa priorità |
 | A12 | Variabili numeriche del worker non controllate | Confermato: `Number(process.env.WORKER_POLL_SECONDS ...)` e `BACKUP_INTERVAL_HOURS`; un valore sbagliato dà NaN, e `setTimeout(NaN)` gira a vuoto senza pausa | Chiuso il 2/10: envNumber in packages/shared, errore all avvio con il nome della variabile |
@@ -77,7 +77,7 @@ con i suoi test.
 | # | Funzione | Cosa serve | Note |
 |---|---|---|---|
 | T1 | **Commenti** | API per scrivere (solo utenti con accesso, abbonati se l'articolo è riservato), moderazione dell'autore (nascondi, elimina), limite di frequenza, sanificazione, notifica all'autore | **Fatto il 3/10**: risposte di un livello, nascondi/cancella, avviso all'autore, 10 ogni 10 minuti; test-comments.mjs |
-| T2 | **Mi piace** | API metti/togli, contatore coerente | Prima correggere il vincolo (A9): `@@unique` con colonne NULL non blocca i doppioni; servono vincoli separati per articolo, nota, commento |
+| T2 | **Mi piace** | API metti/togli, contatore coerente | **Fatto il 3/10**: vincoli separati per articolo, nota e commento (A9 chiuso), contatore nella stessa transazione, prova con richieste in contemporanea; test in test-comments.mjs |
 | T3 | **Posta del lettore** | `/inbox`: gli articoli delle pubblicazioni a cui è iscritto o abbonato, con "letto/non letto" | Serve un modello per lo stato di lettura |
 | T4 | **Squadra** | Inviti per email ai collaboratori (`PublicationMember`), ruoli editor e collaboratore, accettazione, revoca | Rimettere la voce nello Studio |
 | T5 | **Note** | Feed di note brevi dei creatori (`Note`), scrittura dallo Studio, mi piace e risposte | Dopo T2 |

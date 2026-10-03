@@ -114,6 +114,26 @@ try {
   // L'estraneo ha già usato due tentativi (la risposta e quella al commento nascosto): ne restano otto.
   assert(statuses.slice(0, 8).every((s) => s === 201) && statuses.slice(8).every((s) => s === 429), "Oltre 10 commenti in 10 minuti: rallentato (429)", statuses.join(","));
 
+  // --- Mi piace (T2)
+  const likeUrl = `/api/posts/${freePost.id}/like`;
+  assert((await call("POST", likeUrl, { body: {} })).status === 401, "Mi piace: senza accesso no (401)");
+  assert((await call("POST", `/api/posts/${paidPost.id}/like`, { cookie: author, body: {} })).status === 200, "Mi piace: l'autrice può sul suo riservato");
+  assert((await call("POST", `/api/posts/${paidPost.id}/like`, { cookie: stranger, body: {} })).status === 404, "Mi piace: su un riservato solo chi lo legge intero");
+  const liked = await call("POST", likeUrl, { cookie: author, body: {} });
+  assert(liked.status === 200 && liked.json?.liked === true && liked.json?.likesCount === 1, "Mi piace messo: contatore a 1", liked.text);
+  assert((await call("POST", likeUrl, { cookie: author, body: {} })).json?.likesCount === 1, "Rimetterlo non lo raddoppia");
+  // Tre richieste in contemporanea dallo stesso utente: un solo mi piace, contatore coerente.
+  const strangerAuthor = await register("veloce");
+  await Promise.all([1, 2, 3].map(() => call("POST", likeUrl, { cookie: strangerAuthor, body: {} })));
+  const afterRace = await prisma.post.findUnique({ where: { id: freePost.id }, select: { likesCount: true } });
+  const rows = await prisma.like.count({ where: { postId: freePost.id } });
+  assert(afterRace?.likesCount === 2 && rows === 2, "Tre mi piace in contemporanea dalla stessa persona: ne conta uno", `(${afterRace?.likesCount} contatore, ${rows} righe)`);
+  const likePage = await call("GET", freePath, { cookie: author });
+  assert(likePage.text.includes('aria-pressed="true"') && likePage.text.includes("Ti piace (2 mi piace)"), "La pagina mostra il mi piace acceso e il conteggio");
+  const unliked = await call("DELETE", likeUrl, { cookie: author, body: {} });
+  assert(unliked.json?.liked === false && unliked.json?.likesCount === 1, "Mi piace tolto: contatore a 1");
+  assert((await call("DELETE", likeUrl, { cookie: author, body: {} })).json?.likesCount === 1, "Toglierlo due volte non va sotto");
+
   // --- Sospesi
   await prisma.user.update({ where: { email: email("lettrice") }, data: { suspendedAt: new Date() } });
   assert((await call("POST", commentsUrl, { cookie: reader, body: { content: "Ci sono ancora?" } })).status === 401, "Un account sospeso non commenta");
