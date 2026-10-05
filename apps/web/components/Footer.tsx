@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { CookiePreferencesButton } from "./CookieConsent";
 import { Wordmark } from "./Wordmark";
-import { percentWithArticle, platformFeePercent } from "@zerostack/shared";
+import { formatPercent, platformFeePercent } from "@zerostack/shared";
 
 /** Piè di pagina: fascia d'inchiostro con il filo zafferano sopra, come nella testata. */
 export function Footer() {
@@ -46,7 +46,7 @@ export function Footer() {
             </a>{" "}
             di Dario De Leonardis
           </p>
-          <p>Fatto in Italia · commissione {percentWithArticle(platformFeePercent(), "del")} sugli abbonamenti</p>
+          <p>Fatto in Italia · commissione solo {formatPercent(platformFeePercent())}. La più bassa sul mercato</p>
         </div>
       </div>
     </footer>
