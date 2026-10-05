@@ -34,7 +34,20 @@ export function Footer() {
         </nav>
       </div>
       <div className="border-t border-ink-700">
-        <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-300 sm:px-6 lg:px-8">Fatto in Italia · commissione {percentWithArticle(platformFeePercent(), "del")} sugli abbonamenti, meno di Substack</p>
+        {/* Copyright come sulle altre app di AbsoluteZero: absolutezero.agency in arancione. */}
+        <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-x-6 gap-y-1 px-4 py-4 text-xs text-ink-300 sm:px-6 lg:px-8">
+          <p>
+            © {new Date().getFullYear()}{" "}
+            <a
+              href="https://absolutezero.agency/"
+              className="font-semibold text-[#CC6A00] underline underline-offset-2 transition hover:text-[#E8862A]"
+            >
+              absolutezero.agency
+            </a>{" "}
+            di Dario De Leonardis
+          </p>
+          <p>Fatto in Italia · commissione {percentWithArticle(platformFeePercent(), "del")} sugli abbonamenti</p>
+        </div>
       </div>
     </footer>
   );
