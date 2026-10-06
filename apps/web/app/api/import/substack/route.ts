@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   const report = await importSubstackExport({ publicationId, authorId: user.id, files });
   if (report.subscribersFound === 0 && report.postsImported + report.postsDrafts + report.postsSkippedExisting === 0) {
-    return NextResponse.json({ error: "Nel file non ci sono né iscritti né articoli di Substack", report }, { status: 422 });
+    return NextResponse.json({ error: "Nel file non ci sono né iscritti né articoli da importare", report }, { status: 422 });
   }
   return NextResponse.json({ report });
 }

@@ -62,7 +62,7 @@ export function ImportForm({ publications }: { publications: { id: string; name:
           </select>
         </label>
         <label className="block text-xs font-semibold text-gray-700">
-          Export di Substack (.zip) oppure CSV degli iscritti
+          Export della tua piattaforma (.zip) oppure CSV degli iscritti
           <input
             type="file"
             accept=".zip,.csv,application/zip,text/csv"
@@ -83,7 +83,7 @@ export function ImportForm({ publications }: { publications: { id: string; name:
             <li>{report.subscribersImported} nuovi iscritti attivi (su {report.subscribersFound} nel file)</li>
             {report.subscribersReactivated > 0 && <li>{report.subscribersReactivated} iscritti in attesa di conferma ora attivi</li>}
             {report.subscribersKeptUnsubscribed > 0 && <li>{report.subscribersKeptUnsubscribed} restano disiscritti perché si erano disiscritti qui</li>}
-            {report.subscribersSkippedDisabled > 0 && <li>{report.subscribersSkippedDisabled} saltati: su Substack non ricevevano più email</li>}
+            {report.subscribersSkippedDisabled > 0 && <li>{report.subscribersSkippedDisabled} saltati: sulla vecchia piattaforma non ricevevano più email</li>}
             <li>
               {report.postsImported} articoli pubblicati e {report.postsDrafts} bozze importati
               {report.postsSkippedExisting > 0 && ` (${report.postsSkippedExisting} già presenti, lasciati com'erano)`}
@@ -92,8 +92,8 @@ export function ImportForm({ publications }: { publications: { id: string; name:
           </ul>
           {report.paidOnSubstack > 0 && (
             <p className="mt-4 rounded-xl bg-white/70 p-3 text-xs text-emerald-900">
-              {report.paidOnSubstack} lettori erano abbonati a pagamento su Substack. Sono stati importati come iscritti; il loro
-              abbonamento resta su Stripe/Substack finché non si abbonano qui: scrivi loro con il link al tuo nuovo piano.
+              {report.paidOnSubstack} lettori erano abbonati a pagamento sulla vecchia piattaforma. Sono stati importati come iscritti; il loro
+              abbonamento resta lì finché non si abbonano qui: scrivi loro con il link al tuo nuovo piano.
             </p>
           )}
         </div>

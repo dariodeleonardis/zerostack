@@ -38,7 +38,7 @@ async function testLiveEndpoints() {
   await check("Note leggibili senza accesso", "/notes", undefined, (res) => res.status === 200);
   await check("Podcast finti rimossi -> 404", "/podcasts", undefined, (res) => res.status === 404);
   await check("Home Pubblicazione / Sottodominio", "/p/tech-italia");
-  await check("Lettore Articolo dal database", "/p/tech-italia/alternativa-italiana-a-substack", undefined, (res, text) =>
+  await check("Lettore Articolo dal database", "/p/tech-italia/una-piattaforma-italiana", undefined, (res, text) =>
     res.status === 200 && text.includes("Sovranità dei dati") && !text.includes("paywall-divider"));
   await check("Articolo inesistente -> 404", "/p/tech-italia/articolo-che-non-esiste", undefined, (res) => res.status === 404);
   await check("Checkout di un piano inesistente -> 404", "/checkout/premium-monthly", undefined, (res) => res.status === 404);

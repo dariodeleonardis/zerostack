@@ -16,7 +16,7 @@ const facts = (fee: number) => [
   {
     n: "01",
     title: `Commissione ${percentWithArticle(fee, "del")}`,
-    text: `Substack trattiene ${percentWithArticle(SUBSTACK_FEE_PERCENT, "il")}, noi ${percentWithArticle(fee, "il")}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
+    text: `Le piattaforme più note trattengono ${percentWithArticle(SUBSTACK_FEE_PERCENT, "il")}, noi ${percentWithArticle(fee, "il")}. Su ciò che pubblichi gratis, niente. Gli abbonamenti arrivano sul tuo conto Stripe.`
   },
   { n: "02", title: "Fattura elettronica", text: "Codice fiscale, partita IVA, SDI e PEC dei lettori, e l'XML pronto per lo SdI." },
   { n: "03", title: "Newsletter, blog, podcast", text: "Un solo posto per scrivere, spedire e pubblicare gli episodi, con il feed per Apple e Spotify." },
@@ -72,7 +72,7 @@ export default async function HomePage() {
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-paper-300">
               La piattaforma italiana per chi scrive: newsletter, articoli e podcast con i lettori che pagano te, la fattura elettronica già fatta
-              e una commissione più bassa di Substack.
+              e la commissione più bassa sul mercato.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link href="/register" className="inline-flex items-center gap-2 rounded-full bg-saffron px-7 py-3.5 text-base font-bold text-ink transition hover:bg-paper">
@@ -176,7 +176,7 @@ export default async function HomePage() {
           </div>
           <dl className="grid grid-cols-2 border-2 border-ink">
             <div className="border-r-2 border-ink p-6">
-              <dt className="kicker text-gray-600">Substack, {formatPercent(SUBSTACK_FEE_PERCENT)}</dt>
+              <dt className="kicker text-gray-600">Le altre piattaforme, {formatPercent(SUBSTACK_FEE_PERCENT)}</dt>
               <dd className="mt-3 font-display text-5xl font-extrabold text-gray-500 line-through decoration-2">{euro.format(keep(SUBSTACK_FEE_PERCENT))}</dd>
               <dd className="mt-2 text-sm text-gray-600">{euro.format(1000 - keep(SUBSTACK_FEE_PERCENT))} a ogni mille</dd>
             </div>
