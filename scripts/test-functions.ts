@@ -30,7 +30,8 @@ import { canReadFullPost, isSubscriptionActive, sanitizePostHtml, splitAtPaywall
 import { verifyStripeSignature } from "../apps/web/lib/stripe-signature";
 import { createHash, createHmac } from "crypto";
 import { SavePostSchema, SubscribeSchema, publicationBaseUrl, platformUrlFromEnv, parseCsv, parseCsvRecords, mapStripeSubscriptionStatus, eurToCents, TierInputSchema } from "../packages/shared/src/index";
-import { convertSubstackPaywall } from "../apps/web/lib/substack-import";
+import { convertSubstackPaywall, convertGhostPaywall, decodeEntities, parseExport, readExport, wpAutoParagraphs } from "../apps/web/lib/import-parsers";
+import { strToU8, zipSync } from "fflate";
 import { clientIp, sessionCookieDomain } from "../apps/web/lib/auth";
 import { allowAttemptInMemory } from "../apps/web/lib/rate-limit";
 import { envNumber, SUBSTACK_FEE_PERCENT, formatPercent, percentWithArticle, platformFeeCents, platformFeePercent } from "../packages/shared/src/index";
@@ -638,6 +639,115 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(multiline.length === 3 && multiline[1][0] === "uno, due" && multiline[1][1] === "tre\nquattro" && multiline[2][0] === 'con "virgolette"', "CSV con virgole, a capo e virgolette nei campi");
   assert(parseCsvRecords("\uFEFFEmail,Plan\nx@y.it,paid\n")[0]?.email === "x@y.it", "CSV con BOM e intestazioni maiuscole");
   assert(convertSubstackPaywall('<p>a</p><div class="paywall-jump" data-component-name="PaywallToDOM"></div><p>b</p>') === '<p>a</p><hr class="paywall-divider" data-paywall="true"><p>b</p>', "Paywall di Substack convertito nel divisore");
+
+  // Import dalle altre piattaforme: i lettori degli export, senza database
+  assert(decodeEntities("&#8217;&amp;&#x41;&bogus;") === "’&A&bogus;", "Entità HTML decodificate, quelle sconosciute lasciate com'erano");
+  assert(wpAutoParagraphs("<p>già</p>") === "<p>già</p>" && wpAutoParagraphs("Uno\n\nDue\ntre") === "<p>Uno</p>\n<p>Due<br>tre</p>", "Paragrafi dell'editor classico di WordPress");
+  assert(convertGhostPaywall("<p>a</p><!--members-only--><p>b</p>") === '<p>a</p><hr class="paywall-divider" data-paywall="true"><p>b</p>', "Paywall di Ghost convertito nel divisore");
+
+  const wxr = `<?xml version="1.0"?><rss><channel><title>Blog</title>
+<item><title>Ciao &amp; benvenuti</title><pubDate>Mon, 01 Jan 2024 10:00:00 +0000</pubDate>
+<content:encoded><![CDATA[Primo paragrafo.
+
+Secondo]]]]><![CDATA[>paragrafo
+a capo.]]></content:encoded><excerpt:encoded><![CDATA[Il riassunto]]></excerpt:encoded>
+<wp:post_id>10</wp:post_id><wp:post_date><![CDATA[2024-01-01 11:00:00]]></wp:post_date><wp:post_date_gmt><![CDATA[2024-01-01 10:00:00]]></wp:post_date_gmt>
+<wp:post_name><![CDATA[ciao-benvenuti]]></wp:post_name><wp:status><![CDATA[publish]]></wp:status><wp:post_type><![CDATA[post]]></wp:post_type><wp:post_password><![CDATA[]]></wp:post_password></item>
+<item><title>Una bozza</title><content:encoded><![CDATA[<!-- wp:paragraph --><p>Bozza</p><!-- /wp:paragraph -->]]></content:encoded>
+<wp:post_id>11</wp:post_id><wp:post_date_gmt><![CDATA[0000-00-00 00:00:00]]></wp:post_date_gmt><wp:post_name><![CDATA[]]></wp:post_name><wp:status><![CDATA[draft]]></wp:status><wp:post_type><![CDATA[post]]></wp:post_type></item>
+<item><title>Chi siamo</title><content:encoded><![CDATA[<p>Pagina</p>]]></content:encoded><wp:status><![CDATA[publish]]></wp:status><wp:post_type><![CDATA[page]]></wp:post_type></item>
+<item><title>foto.jpg</title><content:encoded><![CDATA[]]></content:encoded><wp:status><![CDATA[inherit]]></wp:status><wp:post_type><![CDATA[attachment]]></wp:post_type></item>
+<item><title>Riservato</title><content:encoded><![CDATA[<p>Segreto</p>]]></content:encoded><wp:post_name><![CDATA[riservato]]></wp:post_name><wp:status><![CDATA[publish]]></wp:status><wp:post_type><![CDATA[post]]></wp:post_type><wp:post_password><![CDATA[1234]]></wp:post_password></item>
+<item><title>Cestinato</title><content:encoded><![CDATA[<p>Via</p>]]></content:encoded><wp:status><![CDATA[trash]]></wp:status><wp:post_type><![CDATA[post]]></wp:post_type></item>
+</channel></rss>`;
+  const wp = parseExport("wordpress", new Map([["blog.WordPress.2024-01-01.xml", wxr]]));
+  const wpBySlug = Object.fromEntries(wp.posts.map((p) => [p.slug, p]));
+  assert(wp.posts.length === 3, "WordPress: solo gli articoli (niente pagine, allegati e cestino)", JSON.stringify(wp.posts.map((p) => p.slug)));
+  const welcome = wpBySlug["ciao-benvenuti"];
+  assert(
+    welcome?.title === "Ciao & benvenuti" && welcome.subtitle === "Il riassunto" && welcome.published && welcome.date?.toISOString() === "2024-01-01T10:00:00.000Z",
+    "WordPress: titolo decodificato, riassunto, data GMT",
+    JSON.stringify(welcome)
+  );
+  assert(welcome?.html === "<p>Primo paragrafo.</p>\n<p>Secondo]]>paragrafo<br>a capo.</p>", "WordPress: CDATA spezzato ricucito e paragrafi ricostruiti", welcome?.html);
+  assert(wpBySlug["una-bozza"]?.published === false && wpBySlug["una-bozza"]?.date === null, "WordPress: bozza senza data, slug dal titolo");
+  assert(wpBySlug["riservato"]?.published === false, "WordPress: un articolo con password arriva come bozza");
+
+  const ghostJson = JSON.stringify({
+    db: [
+      {
+        meta: { version: "5.80.0" },
+        data: {
+          posts: [
+            { title: "Pezzo libero", slug: "pezzo-libero", html: "<p>Tutti</p>", type: "post", status: "published", visibility: "public", published_at: "2024-02-01T09:00:00.000Z", custom_excerpt: "Sotto" },
+            { title: "Per abbonati", slug: "per-abbonati", html: "<p>Anteprima</p><!--members-only--><p>Riservato</p>", type: "post", status: "published", visibility: "paid", published_at: "2024-02-02T09:00:00.000Z" },
+            { title: "Chi siamo", slug: "about", html: "<p>Pagina</p>", type: "page", status: "published", visibility: "public" },
+            { title: "Solo lexical", slug: "solo-lexical", html: null, type: "post", status: "draft", visibility: "public" }
+          ]
+        }
+      }
+    ]
+  });
+  const ghostMembers = [
+    "id,email,name,note,subscribed_to_emails,complimentary_plan,stripe_customer_id,created_at,deleted_at,labels,tiers",
+    "1,a@ghost.it,A,,true,false,,2024-01-01,,,",
+    "2,B@ghost.it,B,,true,false,cus_123,2024-01-01,,,Premium",
+    "3,c@ghost.it,C,,false,false,,2024-01-01,,,"
+  ].join("\n");
+  const ghost = parseExport("ghost", new Map([["sito.ghost.2024.json", ghostJson], ["members.csv", ghostMembers]]));
+  const paidGhost = ghost.posts.find((p) => p.slug === "per-abbonati");
+  assert(ghost.posts.length === 2 && ghost.postsWithoutHtml === 1, "Ghost: articoli sì, pagine no, senza HTML contati", JSON.stringify(ghost.posts.map((p) => p.slug)));
+  assert(paidGhost?.access === "PAID_SUBSCRIBERS" && paidGhost.html.includes('data-paywall="true"'), "Ghost: articolo a pagamento con il divisore al posto di members-only");
+  assert(
+    ghost.subscribers.length === 2 && ghost.subscribers.find((s) => s.email === "b@ghost.it")?.paid === true && ghost.subscribersSkippedDisabled === 1,
+    "Ghost: membri (chi non riceveva le email resta fuori, chi paga è segnalato)",
+    JSON.stringify(ghost)
+  );
+
+  const mediumPost = `<!DOCTYPE html><html><head><title>Il pezzo</title></head><body><article class="h-entry"><header><h1 class="p-name">Il pezzo &amp; altro</h1></header>
+<section data-field="subtitle" class="p-summary">Un sottotitolo</section>
+<section data-field="body" class="e-content"><section name="a1" class="section"><div class="section-inner"><h3 name="t" class="graf graf--h3 graf--leading graf--title">Il pezzo &amp; altro</h3><p name="p" class="graf graf--p">Corpo del testo</p></div></section></section>
+<footer><p>By <a href="https://medium.com/@dario" class="p-author h-card">Dario</a> on <a href="https://medium.com/p/1a2b3c4d5e6f"><time class="dt-published" datetime="2024-03-01T08:00:00.000Z">March 1, 2024</time></a>.</p><p><a href="https://medium.com/@dario/il-pezzo-altro-1a2b3c4d5e6f" class="p-canonical">Canonical link</a></p></footer></article></body></html>`;
+  const mediumDraft = `<html><body><article><header><h1 class="p-name">Bozza in corso</h1></header><section data-field="body" class="e-content"><p>Da finire</p></section>
+<footer><p>By Dario</p></footer></article></body></html>`;
+  const mediumZip = zipSync({
+    "posts/2024-03-01_Il-pezzo-1a2b3c4d5e6f.html": strToU8(mediumPost),
+    "posts/draft_Bozza-in-corso-abc.html": strToU8(mediumDraft),
+    "profile/profile.html": strToU8("<p>Profilo</p>"),
+    "images/foto.png": strToU8("png")
+  });
+  const medium = parseExport("medium", readExport(mediumZip, "medium-export.zip"));
+  const mediumMain = medium.posts.find((p) => p.published);
+  assert(medium.posts.length === 2, "Medium: solo i file della cartella posts", JSON.stringify(medium.posts.map((p) => p.slug)));
+  assert(
+    mediumMain?.title === "Il pezzo & altro" && mediumMain.slug === "il-pezzo-altro" && mediumMain.subtitle === "Un sottotitolo" && mediumMain.date?.toISOString() === "2024-03-01T08:00:00.000Z",
+    "Medium: titolo, slug dal link canonico, sottotitolo e data",
+    JSON.stringify(mediumMain)
+  );
+  assert(!!mediumMain && !mediumMain.html.includes("graf--title") && mediumMain.html.includes("Corpo del testo"), "Medium: il titolo ripetuto nel corpo viene tolto");
+  assert(medium.posts.some((p) => !p.published && p.slug === "bozza-in-corso"), "Medium: i file draft_ diventano bozze");
+
+  const mailchimp = parseExport(
+    "mailchimp",
+    readExport(
+      zipSync({
+        "subscribed_members_export_abc.csv": strToU8("Email Address,First Name\nm1@x.it,M\n"),
+        "unsubscribed_members_export_abc.csv": strToU8("Email Address,UNSUB_TIME\nm2@x.it,2024-01-01\n"),
+        "cleaned_members_export_abc.csv": strToU8("Email Address\nm3@x.it\n")
+      }),
+      "export.zip"
+    )
+  );
+  assert(mailchimp.subscribers.map((s) => s.email).join() === "m1@x.it", "Mailchimp: dallo ZIP solo il file degli iscritti", JSON.stringify(mailchimp));
+  const buttondown = parseExport("buttondown", new Map([["subs.csv", "email,subscriber_type\nb1@x.it,regular\nb2@x.it,premium\nb3@x.it,unsubscribed\nb4@x.it,unactivated\nb1@x.it,regular\n"]]));
+  assert(
+    buttondown.subscribers.length === 2 && buttondown.subscribers.filter((s) => s.paid).length === 1 && buttondown.subscribersSkippedDisabled === 2,
+    "Buttondown: disiscritti e mai attivati fuori, premium segnalato, doppioni tolti",
+    JSON.stringify(buttondown)
+  );
+  const beehiiv = parseExport("beehiiv", new Map([["subs.csv", "email,status,subscription_tier\nh1@x.it,active,free\nh2@x.it,active,premium\nh3@x.it,inactive,free\n"]]));
+  assert(beehiiv.subscribers.length === 2 && beehiiv.subscribers.find((s) => s.email === "h2@x.it")?.paid === true && beehiiv.subscribersSkippedDisabled === 1, "beehiiv: attivi e premium");
+  assert(parseExport("altro", new Map([["note.csv", "nome,telefono\nAnna,123\n"]])).subscribersFound === 0, "Un CSV senza colonna email non importa niente");
 
   // --------------------------------------------------------------------------
   // TEST GRUPPO 17: Trasporto turboSMTP (contro un server finto)

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Upload } from "lucide-react";
+import { IMPORT_PLATFORMS, importPlatform, type ImportPlatformId } from "../../../lib/import-platforms";
 
 interface Report {
   subscribersFound: number;
@@ -9,19 +10,28 @@ interface Report {
   subscribersReactivated: number;
   subscribersKeptUnsubscribed: number;
   subscribersSkippedDisabled: number;
-  paidOnSubstack: number;
+  paidElsewhere: number;
   postsImported: number;
   postsDrafts: number;
   postsSkippedExisting: number;
   postsWithoutHtml: number;
 }
 
-export function ImportForm({ publications }: { publications: { id: string; name: string }[] }) {
+export function ImportForm({ publications, initialPlatform }: { publications: { id: string; name: string }[]; initialPlatform: ImportPlatformId }) {
+  const [platformId, setPlatformId] = useState<ImportPlatformId>(initialPlatform);
   const [publicationId, setPublicationId] = useState(publications[0]?.id ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
+  const platform = importPlatform(platformId) ?? IMPORT_PLATFORMS[0];
+
+  const choose = (id: ImportPlatformId) => {
+    setPlatformId(id);
+    setFile(null);
+    setError(null);
+    setReport(null);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +43,7 @@ export function ImportForm({ publications }: { publications: { id: string; name:
     body.set("publicationId", publicationId);
     body.set("file", file);
     try {
-      const res = await fetch("/api/import/substack", { method: "POST", body });
+      const res = await fetch(`/api/import/${platform.id}`, { method: "POST", body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data.error ?? "Importazione non riuscita");
       else setReport(data.report);
@@ -50,7 +60,35 @@ export function ImportForm({ publications }: { publications: { id: string; name:
 
   return (
     <div className="space-y-6">
+      <div role="radiogroup" aria-label="Piattaforma di provenienza" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {IMPORT_PLATFORMS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={p.id === platform.id}
+            onClick={() => choose(p.id)}
+            className={`rounded-xl border px-3 py-2.5 text-xs font-bold transition ${
+              p.id === platform.id ? "border-ink bg-ink text-paper" : "border-gray-200 bg-white text-gray-700 hover:border-gray-400"
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={submit} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink">
+            {platform.id === "altro" ? "Importa da un altro servizio" : `Importa da ${platform.name}`}
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">{platform.brings}</p>
+          <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-gray-700">
+            {platform.steps.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ol>
+        </div>
         <label className="block text-xs font-semibold text-gray-700">
           Pubblicazione di destinazione
           <select value={publicationId} onChange={(e) => setPublicationId(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
@@ -62,10 +100,11 @@ export function ImportForm({ publications }: { publications: { id: string; name:
           </select>
         </label>
         <label className="block text-xs font-semibold text-gray-700">
-          Export della tua piattaforma (.zip) oppure CSV degli iscritti
+          {platform.fileLabel}
           <input
+            key={platform.id}
             type="file"
-            accept=".zip,.csv,application/zip,text/csv"
+            accept={platform.accept}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="mt-1 block w-full text-sm text-gray-700"
           />
@@ -80,19 +119,26 @@ export function ImportForm({ publications }: { publications: { id: string; name:
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-950">
           <h2 className="font-bold">Importazione completata</h2>
           <ul className="mt-3 list-disc space-y-1 pl-5">
-            <li>{report.subscribersImported} nuovi iscritti attivi (su {report.subscribersFound} nel file)</li>
+            {report.subscribersFound > 0 && <li>{report.subscribersImported} nuovi iscritti attivi (su {report.subscribersFound} nel file)</li>}
             {report.subscribersReactivated > 0 && <li>{report.subscribersReactivated} iscritti in attesa di conferma ora attivi</li>}
             {report.subscribersKeptUnsubscribed > 0 && <li>{report.subscribersKeptUnsubscribed} restano disiscritti perché si erano disiscritti qui</li>}
             {report.subscribersSkippedDisabled > 0 && <li>{report.subscribersSkippedDisabled} saltati: sulla vecchia piattaforma non ricevevano più email</li>}
-            <li>
-              {report.postsImported} articoli pubblicati e {report.postsDrafts} bozze importati
-              {report.postsSkippedExisting > 0 && ` (${report.postsSkippedExisting} già presenti, lasciati com'erano)`}
-            </li>
-            {report.postsWithoutHtml > 0 && <li>{report.postsWithoutHtml} articoli senza file HTML nell&apos;export, non importati</li>}
+            {report.postsImported + report.postsDrafts + report.postsSkippedExisting > 0 && (
+              <li>
+                {report.postsImported} articoli pubblicati e {report.postsDrafts} bozze importati
+                {report.postsSkippedExisting > 0 && ` (${report.postsSkippedExisting} già presenti, lasciati com'erano)`}
+              </li>
+            )}
+            {report.postsWithoutHtml > 0 && <li>{report.postsWithoutHtml} articoli senza testo nell&apos;export, non importati</li>}
           </ul>
-          {report.paidOnSubstack > 0 && (
+          {report.postsImported + report.postsDrafts > 0 && (
+            <p className="mt-4 text-xs text-emerald-900">
+              Le immagini restano dove erano: controlla gli articoli prima di chiudere il vecchio sito.
+            </p>
+          )}
+          {report.paidElsewhere > 0 && (
             <p className="mt-4 rounded-xl bg-white/70 p-3 text-xs text-emerald-900">
-              {report.paidOnSubstack} lettori erano abbonati a pagamento sulla vecchia piattaforma. Sono stati importati come iscritti; il loro
+              {report.paidElsewhere} lettori erano abbonati a pagamento sulla vecchia piattaforma. Sono stati importati come iscritti; il loro
               abbonamento resta lì finché non si abbonano qui: scrivi loro con il link al tuo nuovo piano.
             </p>
           )}

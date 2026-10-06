@@ -29,11 +29,11 @@ async function register(label) {
   return res.headers.get("set-cookie")?.split(";")[0];
 }
 
-async function upload(cookie, publicationId, bytes, filename) {
+async function upload(cookie, publicationId, bytes, filename, platform = "substack") {
   const form = new FormData();
   form.set("publicationId", publicationId);
   form.set("file", new Blob([bytes]), filename);
-  const res = await fetch(`${BASE}/api/import/substack`, { method: "POST", headers: cookie ? { cookie } : {}, body: form });
+  const res = await fetch(`${BASE}/api/import/${platform}`, { method: "POST", headers: cookie ? { cookie } : {}, body: form });
   return { status: res.status, json: await res.json().catch(() => null) };
 }
 
@@ -94,7 +94,7 @@ try {
   assert(r.subscribersFound === 5 && r.subscribersImported === 2, "5 indirizzi validi nel file (quello non valido scartato), 2 nuovi: anna e bruno", JSON.stringify(r));
   assert(r.subscribersSkippedDisabled === 1, "Chi su Substack non riceveva più email (carla) non viene importato");
   assert(r.subscribersKeptUnsubscribed === 1 && r.subscribersReactivated === 1, "Il disiscritto resta fuori, quello in attesa diventa attivo");
-  assert(r.paidOnSubstack === 1, "Segnalato l'abbonato a pagamento di Substack");
+  assert(r.paidElsewhere === 1, "Segnalato l'abbonato a pagamento di Substack");
   assert(r.postsImported === 2 && r.postsDrafts === 1 && r.postsWithoutHtml === 1, "2 articoli pubblicati, 1 bozza, 1 senza file; thread ignorato", JSON.stringify(r));
 
   const statuses = Object.fromEntries(
@@ -121,6 +121,22 @@ try {
 
   const csvOnly = await upload(author, publicationId, strToU8(`email\n${e("franco")}\n`), "subscribers.csv");
   assert(csvOnly.status === 200 && csvOnly.json?.report?.subscribersImported === 1, "Anche un CSV di soli iscritti funziona");
+
+  const unknown = await upload(author, publicationId, strToU8("email\nx@y.it\n"), "x.csv", "myspace");
+  assert(unknown.status === 404, "Una piattaforma che non esiste viene respinta", String(unknown.status));
+  const wxr = `<rss><channel><item><title>Dal blog ${run}</title><content:encoded><![CDATA[Testo ${run}
+
+<script>alert(1)</script>]]></content:encoded><wp:post_name><![CDATA[dal-blog]]></wp:post_name><wp:status><![CDATA[publish]]></wp:status><wp:post_type><![CDATA[post]]></wp:post_type><wp:post_date_gmt><![CDATA[2023-06-01 10:00:00]]></wp:post_date_gmt></item></channel></rss>`;
+  const fromWp = await upload(author, publicationId, strToU8(wxr), "blog.xml", "wordpress");
+  const wpPost = await prisma.post.findFirst({ where: { publicationId, slug: "dal-blog" }, select: { status: true, contentHtml: true, publishedAt: true } });
+  assert(fromWp.status === 200 && fromWp.json?.report?.postsImported === 1, "Import da WordPress", JSON.stringify(fromWp.json));
+  assert(
+    wpPost?.status === "PUBLISHED" && wpPost.publishedAt?.toISOString() === "2023-06-01T10:00:00.000Z" && wpPost.contentHtml.includes(`<p>Testo ${run}</p>`) && !/<script/i.test(wpPost.contentHtml),
+    "L'articolo di WordPress arriva pubblicato, con la sua data e l'HTML ripulito",
+    JSON.stringify(wpPost)
+  );
+  const wpCampaigns = await prisma.emailCampaign.count({ where: { publicationId } });
+  assert(wpCampaigns === 0, "Neanche l'import da WordPress spedisce newsletter");
 } finally {
   await prisma.$disconnect();
 }

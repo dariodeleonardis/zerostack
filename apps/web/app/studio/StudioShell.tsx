@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { PenSquare, LayoutDashboard, DollarSign, Settings, Plus, ChevronDown, Check, ArrowLeft, Upload, Globe, FileText, Palette, Users, MessageSquare, AtSign } from "lucide-react";
 import { ROLE_LABEL } from "../../lib/team-roles";
+import { IMPORT_PLATFORMS } from "../../lib/import-platforms";
 
 export interface StudioPublication {
   id: string;
@@ -21,6 +22,7 @@ export function StudioShell({
 }) {
   const [currentPub, setCurrentPub] = useState<StudioPublication | null>(publications[0] ?? null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -153,13 +155,29 @@ export function StudioShell({
               Dominio personalizzato
             </Link>
 
-            <Link
-              href="/studio/import"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
+            <button
+              type="button"
+              onClick={() => setIsImportOpen(!isImportOpen)}
+              aria-expanded={isImportOpen}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition"
             >
               <Upload className="h-4 w-4 text-gray-500" />
-              Importa iscritti e articoli
-            </Link>
+              <span className="flex-1">Importa</span>
+              <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition ${isImportOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isImportOpen && (
+              <div className="ml-7 space-y-0.5 border-l border-gray-100 pl-2">
+                {IMPORT_PLATFORMS.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/studio/import?da=${p.id}`}
+                    className="block rounded-lg px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+                  >
+                    {p.id === "altro" ? "Altro (CSV)" : `da ${p.name}`}
+                  </Link>
+                ))}
+              </div>
+            )}
           </nav>
         </div>
 
