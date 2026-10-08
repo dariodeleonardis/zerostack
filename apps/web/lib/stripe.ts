@@ -82,10 +82,15 @@ export async function upsertSubscriptionFromStripe(
   sub: Stripe.Subscription,
   context: { publicationId: string; userId: string; tierId: string | null }
 ): Promise<string> {
+  // Dalla versione 2025-03-31 dell'API la fine del periodo sta sulle voci dell'abbonamento, non più
+  // sull'abbonamento: i webhook arrivano nella versione scelta sulla destinazione (2026-08-26 dal 8/10).
+  const periodEnd =
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    (sub.items?.data?.[0] as unknown as { current_period_end?: number } | undefined)?.current_period_end;
   const data = {
     status: mapStripeSubscriptionStatus(sub.status),
     isPaid: true,
-    currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+    currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     stripeCustomerId: typeof sub.customer === "string" ? sub.customer : sub.customer.id
   };
