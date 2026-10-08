@@ -15,6 +15,7 @@ async function main() {
       name: "Dario De Leonardis",
       handle: "dario",
       role: "ADMIN",
+      emailVerified: new Date(),
       passwordHash: "hash_demo_zerostack_2026",
       bio: "Fondatore di ZeroStack. Appassionato di software libero, publishing e sovranità digitale.",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
@@ -75,31 +76,31 @@ async function main() {
     data: {
       publicationId: techPub.id,
       authorId: author.id,
-      title: "Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack",
+      title: "Perché l'ecosistema creator italiano ha bisogno di una piattaforma sua",
       subtitle: "Commissioni al 10%, assenza di fatturazione elettronica e server oltreoceano: come riconquistare la sovranità dei propri lettori.",
-      slug: "alternativa-italiana-a-substack",
+      slug: "una-piattaforma-italiana",
       coverImageUrl: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80",
       access: "FREE",
       format: "ARTICLE",
       status: "PUBLISHED",
       publishedAt: new Date(),
       viewsCount: 1420,
-      likesCount: 88,
+      likesCount: 0,
       commentsCount: 14,
       contentHtml: `
-        <p class="lead">Negli ultimi anni, Substack ha rivoluzionato il modo in cui scrittori e divulgatori monetizzano la propria penna. Tuttavia, per chi opera in Italia e in Europa, i limiti strutturali sono diventati insostenibili.</p>
+        <p class="lead">Negli ultimi anni, le piattaforme americane di newsletter hanno rivoluzionato il modo in cui scrittori e divulgatori monetizzano la propria penna. Tuttavia, per chi opera in Italia e in Europa, i limiti strutturali sono diventati insostenibili.</p>
         
         <h2>1. Il costo nascosto: 10% di commissioni a vita</h2>
-        <p>Ogni creator che fattura 2.000€ al mese dona 200€ al mese (2.400€ l'anno!) a Substack, oltre alle normali tariffe di transazione di Stripe. Con una soluzione self-hosted su VPS come ZeroStack, il creator paga solo il costo server fisso (5-10€/mese) trattenendo il 100% degli utili.</p>
+        <p>Ogni creator che fattura 2.000€ al mese dona 200€ al mese (2.400€ l'anno!) alla piattaforma, oltre alle normali tariffe di transazione di Stripe. Con una soluzione self-hosted su VPS come ZeroStack, il creator paga solo il costo server fisso (5-10€/mese) trattenendo il 100% degli utili.</p>
 
         <h2>2. Il labirinto fiscale italiano</h2>
-        <p>In Italia, professionisti e aziende che si abbonano a una pubblicazione per aggiornamento professionale hanno diritto alla fattura elettronica con Codice Univoco SDI o PEC per dedurre il costo. Substack non ha mai implementato questi campi, costringendo i creator a compilare note a mano o perdere clienti B2B.</p>
+        <p>In Italia, professionisti e aziende che si abbonano a una pubblicazione per aggiornamento professionale hanno diritto alla fattura elettronica con Codice Univoco SDI o PEC per dedurre il costo. Le piattaforme americane non hanno mai implementato questi campi, costringendo i creator a compilare note a mano o perdere clienti B2B.</p>
 
         <!-- PAYWALL DIVIDER: Da questo punto in poi solo per abbonati paganti -->
         <hr class="paywall-divider" data-paywall="true" />
 
         <h2>3. Sovranità dei dati ed email deliverability</h2>
-        <p>Quando invii 10.000 email tramite Substack, condividi gli indirizzi IP di invio con migliaia di altri autori sconosciuti. Con ZeroStack puoi collegare Brevo o Resend con il tuo dominio verificato DKIM, SPF e DMARC, garantendo che le tue comunicazioni non finiscano mai nello spam.</p>
+        <p>Quando invii 10.000 email da una piattaforma condivisa, condividi gli indirizzi IP di invio con migliaia di altri autori sconosciuti. Con ZeroStack puoi collegare Brevo o Resend con il tuo dominio verificato DKIM, SPF e DMARC, garantendo che le tue comunicazioni non finiscano mai nello spam.</p>
       `
     }
   });
@@ -118,7 +119,7 @@ async function main() {
       status: "PUBLISHED",
       publishedAt: new Date(),
       viewsCount: 950,
-      likesCount: 65,
+      likesCount: 0,
       contentHtml: "<p>In questa prima puntata esploriamo come costruire piattaforme moderne scalabili con architetture containerizzate.</p>"
     }
   });
@@ -140,10 +141,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Abbiamo appena rilasciato la prima versione di ZeroStack! Completamente open-source, con supporto nativo a SDI, PEC e 0% commissioni. Cosa ne pensate?",
-      likesCount: 42,
-      restacksCount: 15,
-      repliesCount: 6
+      content: "Abbiamo appena rilasciato la prima versione di ZeroStack, open source e con le fatture elettroniche già dentro. Cosa ne pensate?"
     }
   });
 
@@ -151,10 +149,7 @@ async function main() {
     data: {
       authorId: author.id,
       publicationId: techPub.id,
-      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?",
-      likesCount: 19,
-      restacksCount: 4,
-      repliesCount: 8
+      content: "Un sondaggio rapido: quale provider email preferite per le vostre newsletter? Brevo (ex Sendinblue), Resend o Amazon SES?"
     }
   });
 

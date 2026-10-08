@@ -10,7 +10,7 @@ import {
   Heading,
   Hr,
   Link
-} from "@react-email/components";
+} from "react-email";
 
 interface SubscriptionEmailProps {
   publicationName: string;
@@ -31,7 +31,7 @@ export const SubscriptionConfirmationEmail: React.FC<SubscriptionEmailProps> = (
   ragioneSociale = "Mario Rossi",
   codiceFiscaleOiva = "RSSMRA85M01H501Z",
   sdiPec = "SDI: M5UXCR1",
-  portalUrl = "https://zerostack.it/account/billing"
+  portalUrl = "https://zerostack.it/account/subscriptions"
 }) => {
   return (
     <Html lang="it">

@@ -6,7 +6,7 @@ const mockPosts = [
   {
     id: "1",
     publication: "Tech & Futuro Italia",
-    title: "Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack",
+    title: "Perché l'ecosistema creator italiano ha bisogno di una piattaforma sua",
     subtitle: "Commissioni al 10%, assenza di fatturazione elettronica e server oltreoceano: come riconquistare la sovranità...",
     author: "Dario De Leonardis",
     date: "Oggi",

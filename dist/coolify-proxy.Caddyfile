@@ -1,14 +1,25 @@
 # ==============================================================================
-# ZeroStack - blocchi da aggiungere al Caddyfile del proxy di Coolify
+# ZeroStack - blocco per il proxy di Coolify (Caddy, caddy-docker-proxy)
 # ==============================================================================
-# Sul server: /data/coolify/proxy/caddy/dynamic/Caddyfile
-# (in Coolify: Servers -> localhost -> Proxy -> Configuration), poi riavviare il proxy.
+# Sul server: /data/coolify/proxy/caddy/dynamic/00-zerostack.caddy
+# Il Caddyfile di Coolify fa "import /dynamic/*.caddy": il nome "00-" lo fa leggere per primo,
+# perché le opzioni globali devono stare all'inizio. Dopo averlo cambiato si riavvia il proxy
+# (docker restart coolify-proxy): caddy-docker-proxy non rilegge da solo i file, solo i container.
 #
-# Il dominio principale (zerostack.it, www) lo gestisce Coolify dal campo Domains.
-# Qui c'è tutto il resto: nomeautore.zerostack.it e i domini personalizzati degli autori.
+# Il dominio principale (zerostack.it, www) lo gestisce Coolify dal campo Domains di zerostack-web.
+# Qui c'è tutto il resto: nomeautore.zerostack.it e i domini personalizzati verificati degli autori.
 # Caddy emette il certificato al primo accesso, solo se /api/domains/check risponde 200:
 # senza la domanda chiunque potrebbe puntare un dominio qui e farci chiedere certificati
 # a Let's Encrypt fino a esaurire i limiti.
+#
+# Due trappole pagate il 1/10:
+# 1. Niente jolly "*.zerostack.it": Caddy considera coperti dal jolly anche i nomi esatti
+#    (mail, webmail, mta-sts...) e smette di gestirne i certificati; con il jolly on demand
+#    chiedeva il permesso all'app, l'app rispondeva 403 (nomi riservati) e la posta restava
+#    senza HTTPS. Il blocco "https://" senza nome non copre niente.
+# 2. In Coolify: Servers > Proxy > Unknown requests = "Return the default 503 response"
+#    (redirect_enabled = false). L'altra voce, "Use custom request handling", scrive un
+#    blocco ":80, :443" che occupa lo stesso posto di questo e il proxy non parte.
 #
 # zerostack-web si risolve perché Coolify collega il proxy alla rete della risorsa.
 # ==============================================================================
@@ -25,10 +36,4 @@ https:// {
 	}
 	encode gzip zstd
 	reverse_proxy zerostack-web:3000
-}
-
-# Chi arriva in http su un sottodominio o dominio personalizzato va in https.
-# Le verifiche ACME sulla porta 80 le gestisce Caddy prima di questo blocco.
-http:// {
-	redir https://{host}{uri} permanent
 }

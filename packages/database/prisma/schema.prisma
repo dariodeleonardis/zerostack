@@ -69,13 +69,19 @@ model User {
   avatarUrl     String?
   bio           String?
   passwordHash  String
+  // Accesso con Google: il "sub" dell'account Google, stabile anche se cambia l'email. Chi entra solo
+  // con Google ha una password casuale che nessuno conosce; può impostarne una con "Password dimenticata".
+  googleId      String?   @unique
   role          Role      @default(READER)
   emailVerified DateTime?
+  // Sospeso dall'amministrazione: niente accesso, sessioni chiuse.
+  suspendedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   ownedPublications  Publication[]        @relation("PublicationOwner")
   memberships        PublicationMember[]
+  invitesSent        PublicationInvite[]
   posts              Post[]               @relation("AuthorPosts")
   notes              Note[]               @relation("AuthorNotes")
   comments           Comment[]
@@ -84,6 +90,10 @@ model User {
   subscriptions      Subscription[]
   billingDetails     ItalianBillingInfo[]
   sessions           Session[]
+  passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  media              Media[]
+  reads              PostRead[]
 }
 
 // Sessioni di login: nel cookie viaggia un token casuale, qui solo il suo SHA-256.
@@ -100,6 +110,50 @@ model Session {
   @@index([userId])
 }
 
+// Recupero password: nel database solo l'hash del token spedito per email, valido un'ora e una volta sola.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Conferma dell'indirizzo email dopo la registrazione (solo l'hash del token nel database).
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// File caricati dagli utenti (immagini, audio), sul disco del server o su uno storage S3.
+model Media {
+  id          String   @id @default(uuid())
+  ownerId     String
+  key         String   @unique
+  url         String
+  contentType String
+  size        Int
+  kind        String   // image | audio
+  createdAt   DateTime @default(now())
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
 model Publication {
   id                     String   @id @default(uuid())
   ownerId                String
@@ -110,11 +164,25 @@ model Publication {
   coverUrl               String?
   customDomain           String?  @unique
   isDomainVerified       Boolean  @default(false)
+  // Valore del record TXT _zerostack.<dominio> che prova la proprietà del dominio personalizzato.
+  domainVerifyToken      String?
+  // Sospesa dall'amministrazione: pagine, feed, certificati e invii fermi.
+  suspendedAt            DateTime?
+  // Aspetto scelto dall'autore (Studio › Aspetto): colore principale, fondo, caratteri
+  // ("bodoni" | "serif" | "sans"). Il contrasto del testo lo garantisce apps/web/lib/colors.ts.
   primaryColor           String   @default("#FF5722")
-  fontStyle              String   @default("sans")
+  backgroundColor        String   @default("#FBF8F2")
+  fontStyle              String   @default("bodoni")
+
+  // Fediverso (T6): chiavi RSA dell'attore ActivityPub, create alla prima richiesta. Con la privata
+  // si firmano le consegne verso Mastodon e simili.
+  apPublicKeyPem         String?  @db.Text
+  apPrivateKeyPem        String?  @db.Text
   
   // Impostazioni integrazione pagamenti & email (indipendenza del creator)
   stripeAccountId        String?
+  // Aggiornato dal webhook account.updated: finché è false il checkout resta chiuso.
+  stripeChargesEnabled   Boolean  @default(false)
   emailProvider          String   @default("SMTP") // "BREVO" | "RESEND" | "POSTMARK" | "SMTP"
   smtpHost               String?
   smtpPort               Int?     @default(587)
@@ -128,12 +196,17 @@ model Publication {
 
   owner                  User                @relation("PublicationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members                PublicationMember[]
+  invites                PublicationInvite[]
+  apFollowers            ApFollower[]
   tiers                  Tier[]
   posts                  Post[]
   notes                  Note[]
   subscribers            NewsletterSubscriber[]
   subscriptions          Subscription[]
   emailCampaigns         EmailCampaign[]
+  fiscalProfile          FiscalProfile?
+  payments               Payment[]
+  invoices               Invoice[]
 }
 
 model PublicationMember {
@@ -146,6 +219,41 @@ model PublicationMember {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([publicationId, userId])
+}
+
+// Inviti alla squadra (T4, 3/10/2026): il proprietario invita un indirizzo come editor o collaboratore.
+// Nel database solo l'hash del token spedito per email; un invito per indirizzo (rinnovarlo cambia il
+// token), valido 7 giorni. Accettato diventa un PublicationMember e la riga sparisce.
+model PublicationInvite {
+  id            String                @id @default(uuid())
+  publicationId String
+  email         String
+  role          PublicationMemberRole @default(CONTRIBUTOR)
+  tokenHash     String                @unique
+  invitedById   String?
+  expiresAt     DateTime
+  createdAt     DateTime              @default(now())
+
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  invitedBy     User?       @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([publicationId, email])
+}
+
+// Chi segue una pubblicazione dal Fediverso (T6): l'attore remoto e dove consegnargli i post.
+model ApFollower {
+  id             String   @id @default(uuid())
+  publicationId  String
+  actorUrl       String
+  inboxUrl       String
+  sharedInboxUrl String?
+  // "nome@server", solo da mostrare
+  handle         String?
+  createdAt      DateTime @default(now())
+
+  publication    Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@unique([publicationId, actorUrl])
 }
 
 model Tier {
@@ -171,9 +279,11 @@ model Subscription {
   userId               String
   tierId               String?
   status               SubscriptionStatus @default(ACTIVE)
-  stripeSubscriptionId String?
+  // Unico: due avvisi di Stripe in contemporanea non devono creare due abbonamenti (audit A1, 2/10).
+  stripeSubscriptionId String?            @unique
   stripeCustomerId     String?
   currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
   isPaid               Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
@@ -182,6 +292,9 @@ model Subscription {
   user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier                 Tier?               @relation(fields: [tierId], references: [id])
   billingInfo          ItalianBillingInfo?
+  payments             Payment[]
+
+  @@index([userId, publicationId])
 }
 
 model ItalianBillingInfo {
@@ -224,6 +337,10 @@ model Post {
   commentsCount   Int         @default(0)
   publishedAt     DateTime?
   scheduledAt     DateTime?
+  // Per i post programmati: all'uscita il worker crea anche la campagna email.
+  emailOnPublish  Boolean     @default(false)
+  // Annunciato ai seguaci del Fediverso (T6): il worker lo fa una volta sola.
+  apDeliveredAt   DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -234,6 +351,7 @@ model Post {
   likes           Like[]
   bookmarks       Bookmark[]
   campaigns       EmailCampaign[]
+  reads           PostRead[]
 
   @@unique([publicationId, slug])
 }
@@ -262,13 +380,22 @@ model Note {
   restacksCount   Int      @default(0)
   repliesCount    Int      @default(0)
   replyToNoteId   String?
+  // Annunciata ai seguaci del Fediverso (T6), solo le note principali.
+  apDeliveredAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   author          User         @relation("AuthorNotes", fields: [authorId], references: [id], onDelete: Cascade)
   publication     Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  // Note (T5, 3/10/2026): le risposte sono note con replyToNoteId, di un solo livello; cancellando
+  // la nota se ne vanno anche le risposte.
+  replyTo         Note?        @relation("NoteReplies", fields: [replyToNoteId], references: [id], onDelete: Cascade)
+  replies         Note[]       @relation("NoteReplies")
   comments        Comment[]
   likes           Like[]
+
+  @@index([publicationId, createdAt])
+  @@index([replyToNoteId, createdAt])
 }
 
 model Comment {
@@ -279,11 +406,18 @@ model Comment {
   parentId  String?
   content   String   @db.Text
   likesCount Int     @default(0)
+  // Nascosto da chi modera la pubblicazione (proprietario o editor): resta per loro, sparisce per gli altri.
+  hiddenAt  DateTime?
   createdAt DateTime @default(now())
 
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  // Risposte di un solo livello: cancellando il commento se ne vanno anche le risposte.
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Replies")
+
+  @@index([postId, createdAt])
 }
 
 model Like {
@@ -298,7 +432,25 @@ model Like {
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   note      Note?    @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, postId, noteId, commentId])
+  // Un vincolo per oggetto (audit A9): quello unico su quattro colonne non bloccava i doppioni,
+  // perché per Postgres due NULL sono sempre diversi. Così un utente ha al massimo un mi piace
+  // per articolo, uno per nota e uno per commento.
+  @@unique([userId, postId])
+  @@unique([userId, noteId])
+  @@unique([userId, commentId])
+}
+
+// Articoli già aperti da un lettore: servono alla Posta per "letto / da leggere" (T3, 3/10/2026).
+model PostRead {
+  userId    String
+  postId    String
+  readAt    DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
 }
 
 model Bookmark {
@@ -314,18 +466,30 @@ model Bookmark {
 }
 
 model NewsletterSubscriber {
-  id            String   @id @default(uuid())
-  publicationId String
-  email         String
-  name          String?
-  status        String   @default("ACTIVE") // ACTIVE, UNSUBSCRIBED, BOUNCED
-  isDoubleOptIn Boolean  @default(true)
-  source        String   @default("WEB") // WEB, IMPORT_SUBSTACK, API
-  createdAt     DateTime @default(now())
+  id               String    @id @default(uuid())
+  publicationId    String
+  email            String
+  name             String?
+  status           String    @default("PENDING") // PENDING (in attesa di conferma), ACTIVE, UNSUBSCRIBED, BOUNCED
+  isDoubleOptIn    Boolean   @default(true)
+  source           String    @default("WEB") // WEB, IMPORT_SUBSTACK, API
+  // Doppia conferma: nel database solo l'hash del token spedito per email (indicizzato sotto).
+  confirmTokenHash String?
+  confirmSentAt    DateTime?
+  confirmedAt      DateTime?
+  // Token casuale per il link di disiscrizione presente in ogni email. Indice e non @unique:
+  // un vincolo nuovo su una tabella già piena fermerebbe il `prisma db push` del deploy.
+  unsubscribeToken String    @default(dbgenerated("gen_random_uuid()"))
+  unsubscribedAt   DateTime?
+  createdAt        DateTime  @default(now())
 
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  publication      Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  deliveries       EmailDelivery[]
 
   @@unique([publicationId, email])
+  @@index([publicationId, status])
+  @@index([unsubscribeToken])
+  @@index([confirmTokenHash])
 }
 
 model EmailCampaign {
@@ -335,11 +499,160 @@ model EmailCampaign {
   subject         String
   status          CampaignStatus @default(PENDING)
   recipientsCount Int            @default(0)
+  sentCount       Int            @default(0)
+  failedCount     Int            @default(0)
   opensCount      Int            @default(0)
   clicksCount     Int            @default(0)
+  lastError       String?
+  startedAt       DateTime?
   sentAt          DateTime?
   createdAt       DateTime       @default(now())
 
-  publication     Publication    @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  publication     Publication     @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  post            Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  deliveries      EmailDelivery[]
+
+  // Nessun @unique su postId (fermerebbe il db push del deploy): l'invio singolo lo garantisce
+  // il passaggio atomico del post a PUBLISHED, l'unico momento in cui nasce la campagna.
+  @@index([status])
+  @@index([postId])
+}
+
+// Una riga per destinatario: se il worker si ferma a metà, riparte senza rispedire a nessuno.
+model EmailDelivery {
+  id           String   @id @default(uuid())
+  campaignId   String
+  subscriberId String
+  status       String   // SENT, FAILED
+  error        String?
+  createdAt    DateTime @default(now())
+
+  campaign     EmailCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, subscriberId])
+}
+
+// Stato dei processi in background (worker, backup) per il controllo di salute e il pannello admin.
+model SystemStatus {
+  key       String   @id
+  ok        Boolean  @default(true)
+  detail    String?
+  updatedAt DateTime @updatedAt
+}
+
+// Impostazioni della piattaforma che l'amministrazione cambia da /admin senza un nuovo deploy
+// (per esempio i dati del titolare nelle pagine legali, chiave "dati-legali"). value è JSON.
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+// Registro delle scelte sui cookie facoltativi, per dimostrare il consenso (Garante, 10/6/2021).
+// Il legame con la persona è solo il codice casuale nel suo cookie zs_consent: niente IP, niente account.
+// Si conserva per 24 mesi (CONSENT_RECORD_MONTHS), poi si cancella.
+model ConsentRecord {
+  id        String   @id @default(uuid())
+  consentId String
+  version   Int
+  granted   String[]
+  host      String
+  createdAt DateTime @default(now())
+
+  @@index([consentId])
+  @@index([createdAt])
+}
+
+// Dati fiscali di chi incassa (l'autore): servono per emettere le fatture elettroniche a suo nome.
+model FiscalProfile {
+  id             String   @id @default(uuid())
+  publicationId  String   @unique
+  enabled        Boolean  @default(false)
+  // PERSON (ditta individuale, professionista) | COMPANY
+  kind           String   @default("PERSON")
+  denominazione  String?
+  nome           String?
+  cognome        String?
+  partitaIva     String
+  codiceFiscale  String
+  // RF01 ordinario | RF19 forfettario
+  regimeFiscale  String   @default("RF19")
+  // Solo regime ordinario: 22, oppure 4 per le testate con ISSN
+  aliquotaIva    Int      @default(22)
+  indirizzo      String
+  numeroCivico   String?
+  cap            String
+  comune         String
+  provincia      String
+  email          String?
+  // Numerazione: riparte da 1 ogni anno
+  numberingYear  Int      @default(0)
+  nextNumber     Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  publication    Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+}
+
+// Ogni incasso andato a buon fine (prima rata, rinnovi, pagamenti una tantum), come lo registra Stripe.
+model Payment {
+  id             String    @id @default(uuid())
+  publicationId  String
+  subscriptionId String?
+  userId         String?
+  // ID della fattura Stripe (rinnovi) o della sessione di checkout (una tantum): evita i doppioni
+  stripeObjectId String    @unique
+  amountCents    Int
+  currency       String    @default("eur")
+  paidAt         DateTime
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  description    String
+  // ACCESS (abbonamenti e accessi una tantum) o TIP (mancia, T7): la mancia non dà accesso e non
+  // genera fattura automatica; il messaggio è quello che il lettore lascia all'autore.
+  kind           String    @default("ACCESS")
+  message        String?   @db.VarChar(280)
+  createdAt      DateTime  @default(now())
+
+  publication    Publication   @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  invoice        Invoice?
+
+  @@index([publicationId, paidAt])
+  @@index([subscriptionId])
+}
+
+enum InvoiceStatus {
+  READY
+  SENT
+  ERROR
+}
+
+// Fattura elettronica (XML FatturaPA) emessa dall'autore al lettore che ha chiesto la fattura.
+// Va conservata 10 anni: resta anche se il lettore cancella l'account.
+model Invoice {
+  id             String        @id @default(uuid())
+  publicationId  String
+  paymentId      String        @unique
+  year           Int
+  number         Int
+  label          String
+  progressivo    String
+  fileName       String
+  xml            String
+  totalCents     Int
+  taxCents       Int
+  buyerName      String
+  status         InvoiceStatus @default(READY)
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  publication    Publication   @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  payment        Payment       @relation(fields: [paymentId], references: [id], onDelete: NoAction)
+
+  @@unique([publicationId, year, number])
+  @@index([publicationId, createdAt])
 }

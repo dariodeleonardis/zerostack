@@ -1,74 +1,78 @@
 import React from "react";
 import Link from "next/link";
-import { Inbox, CheckCircle2, BookOpen, Clock } from "lucide-react";
+import type { Metadata } from "next";
+import { publicationBaseUrl } from "@zerostack/shared";
+import { requireUser } from "../../lib/auth";
+import { inboxPage } from "../../lib/inbox";
+import { publicationPalette } from "../../lib/colors";
+import { MarkAllRead } from "./MarkAllRead";
 
-const feedItems = [
-  {
-    id: "post-1",
-    publication: "Tech & Futuro Italia",
-    publicationSlug: "tech-italia",
-    title: "Perché l'ecosistema creator italiano ha bisogno di un'alternativa a Substack",
-    date: "Oggi alle 08:30",
-    readTime: "4 min",
-    excerpt: "Analisi delle criticità dei modelli a percentuale fissa e l'importanza della fattura elettronica per i lettori B2B italiani...",
-    isRead: false
-  },
-  {
-    id: "post-2",
-    publication: "Caffè Finanziario",
-    publicationSlug: "caffe-finanza",
-    title: "Tassi BCE, inflazione e scenari per le imprese italiane nell'autunno 2026",
-    date: "Ieri",
-    readTime: "6 min",
-    excerpt: "L'impatto delle recenti decisioni di Francoforte sui mutui e sui finanziamenti aziendali...",
-    isRead: true
-  }
-];
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Posta | ZeroStack" };
 
-export default function InboxPage() {
+const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
+
+export default async function InboxPage({ searchParams }: { searchParams: { prima?: string } }) {
+  const user = await requireUser("/inbox");
+  const before = searchParams.prima ? new Date(searchParams.prima) : undefined;
+  const { followed, unread, posts, next } = await inboxPage(user, before && !Number.isNaN(before.getTime()) ? before : undefined);
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-            <Inbox className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900">La Tua Posta</h1>
-            <p className="text-xs text-gray-500">Tutti i post e le newsletter delle pubblicazioni a cui sei iscritto.</p>
-          </div>
+    <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b-[3px] border-ink pb-5">
+        <div>
+          <p className="kicker text-saffron-800">{unread > 0 ? `${unread} da leggere` : followed > 0 ? "Tutto letto" : "La tua posta"}</p>
+          <h1 className="mt-2 font-display text-5xl font-extrabold tracking-tight">Posta</h1>
         </div>
-
-        <button className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-          <CheckCircle2 className="h-3.5 w-3.5 text-gray-400" /> Segna tutti come letti
-        </button>
+        {unread > 0 && <MarkAllRead />}
       </div>
 
-      <div className="space-y-4">
-        {feedItems.map((item) => (
-          <Link
-            key={item.id}
-            href={`/p/${item.publicationSlug}/alternativa-italiana-a-substack`}
-            className={`block rounded-2xl border p-5 transition hover:border-blue-300 hover:shadow-sm ${
-              item.isRead ? "border-gray-200 bg-white" : "border-blue-200 bg-blue-50/20"
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span className="font-bold text-blue-600">{item.publication}</span>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> {item.date}
-                </span>
-                <span>&bull;</span>
-                <span>{item.readTime}</span>
-              </div>
-            </div>
-
-            <h2 className="mt-2 text-lg font-bold text-gray-900">{item.title}</h2>
-            <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-relaxed">{item.excerpt}</p>
+      {followed === 0 ? (
+        <div className="py-14 text-center">
+          <p className="font-display text-2xl italic">Non segui ancora nessuna pubblicazione.</p>
+          <p className="mx-auto mt-3 max-w-md text-gray-600">
+            Qui arrivano gli articoli delle pubblicazioni a cui ti iscrivi o ti abboni. Iscriviti dalla pagina di una pubblicazione: trovi le più recenti nella prima pagina.
+          </p>
+          <Link href="/" className="mt-6 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-paper transition hover:bg-ink-700">
+            Scopri le pubblicazioni
           </Link>
-        ))}
-      </div>
+        </div>
+      ) : posts.length === 0 ? (
+        <p className="py-14 text-center text-lg italic text-gray-600">Le pubblicazioni che segui non hanno ancora articoli.</p>
+      ) : (
+        <ol className="divide-y divide-gray-300">
+          {posts.map((post) => {
+            const color = publicationPalette(post.publication.primaryColor, null).accent;
+            return (
+              <li key={post.id}>
+                <a href={`${publicationBaseUrl(post.publication)}/${post.slug}`} className="group grid grid-cols-[1rem_1fr] gap-3 py-6">
+                  <span className="mt-2 h-3 w-3 rounded-full" style={{ backgroundColor: post.read ? "transparent" : color, boxShadow: `inset 0 0 0 2px ${color}` }} aria-hidden />
+                  <span>
+                    <span className="kicker flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600">
+                      <span>{post.publication.name}</span>
+                      {post.publishedAt && <span>{dateFmt.format(post.publishedAt)}</span>}
+                      {!post.read && <span className="rounded-full bg-saffron px-2 py-0.5 text-ink">Nuovo</span>}
+                      {post.access !== "FREE" && <span className="rounded-full border border-gray-400 px-2 py-0.5">Per gli abbonati</span>}
+                    </span>
+                    <span className={`mt-2 block font-display text-2xl leading-snug group-hover:underline sm:text-3xl ${post.read ? "font-semibold text-gray-600" : "font-extrabold text-ink"}`}>
+                      {post.title}
+                    </span>
+                    {(post.subtitle || post.excerpt) && <span className="mt-1 line-clamp-2 block text-gray-600">{post.subtitle || post.excerpt}</span>}
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {next && (
+        <div className="mt-8 text-center">
+          <Link href={`/inbox?prima=${encodeURIComponent(next)}`} className="font-semibold underline underline-offset-4">
+            Articoli precedenti
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

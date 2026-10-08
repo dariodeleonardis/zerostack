@@ -1,61 +1,22 @@
-# ZeroStack - Pacchetto di Distribuzione di Produzione (VPS) 🚀
+# dist/: file per il server
 
-Questa cartella `dist/` contiene la configurazione di produzione ottimizzata per ospitare **ZeroStack** su qualsiasi VPS Linux (Hetzner, OVH, DigitalOcean, AWS EC2, ecc.).
+ZeroStack si pubblica **solo con Coolify** (build pack Docker Compose, file `docker-compose.coolify.yml`
+alla radice del repository). La vecchia via con `deploy.sh`, `update-vps.sh`, `backup-vps.sh` e
+`docker-compose.prod.yml` è stata tolta il 2/10/2026: non era allineata alla produzione (niente volume per
+gli upload, worker senza email, passphrase dei backup visibile nei processi) e mantenerla in parallelo
+voleva dire lavoro doppio.
 
----
-
-## 📋 File Inclusi
-
-| File | Scopo |
+| File | A cosa serve |
 |---|---|
-| `docker-compose.prod.yml` | Stack multi-container con riavvio automatico, healthcheck e isolamento di rete |
-| `Caddyfile` | Reverse proxy con gzip, zstd e certificati SSL gratuiti on-demand |
-| `.env.production.example` | File di esempio con tutte le variabili d'ambiente necessarie |
-| `deploy.sh` | Script di installazione automatica (installa Docker se manca, genera chiavi e avvia) |
-| `update-vps.sh` | Aggiornamento rapido con `git pull` e ricostruzione container senza downtime |
-| `backup-vps.sh` | Backup automatico con cifratura GPG AES-256 e sincronizzazione offsite opzionale |
-| `harden-vps.sh` | Hardening sicurezza Linux (UFW firewall, Fail2ban, SYN flood protect, unattended-upgrades) |
+| `coolify-proxy.Caddyfile` | Blocco on demand per il proxy Caddy di Coolify: certificati HTTPS per i sottodomini e i domini degli autori, chiesti a `/api/domains/check`. Va in `/data/coolify/proxy/caddy/dynamic/`, poi `docker restart coolify-proxy`. |
+| `harden-vps.sh` | Messa in sicurezza di un VPS nuovo (UFW, Fail2ban, aggiornamenti automatici), da lanciare una volta prima di Coolify. |
 
----
+## Backup
 
-## 🛡️ Hardening Sicurezza Server (Consigliato prima del deploy)
+Li fa il servizio `zerostack-backup` del compose (`apps/worker/src/backup.ts`): `pg_dump` del database e
+archivio degli upload ogni 24 ore, cifrati se c'è `BACKUP_PASSPHRASE`, copiati su S3 se ci sono le
+variabili `BACKUP_S3_*`. Senza S3 restano sul VPS e non proteggono dalla perdita del server.
 
-Per blindare il server Linux appena acquistato contro attacchi brute-force e vulnerabilità di rete:
-
-```bash
-sudo bash harden-vps.sh
-```
-
----
-
-## ⚡ Installazione su VPS in 3 Passaggi
-
-1. **Copia i file sul tuo server** (o clona l'intero repository):
-   ```bash
-   git clone https://github.com/dariodeleonardis/zerostack.git
-   cd zerostack/dist
-   ```
-
-2. **Avvia il deploy automatico**:
-   ```bash
-   sudo bash deploy.sh
-   ```
-
-3. **Punta il tuo dominio & Configura i Sottodomini Wildcard**:
-   * **Record A (Principale)**: crea un record DNS di tipo `A` con host `@` puntando `zerostack.it` all'IP pubblico del VPS.
-   * **Record A (Wildcard Sottodomini)**: crea un record DNS di tipo `A` con host `*` puntando `*.zerostack.it` all'IP pubblico del VPS.
-   * Caddy rileverà sia il dominio principale che qualsiasi nuovo sottodominio utente (`nomeautore.zerostack.it`) emettendo certificati SSL Let's Encrypt in automatico On-Demand.
-
----
-
-## 🔄 Backup Automatico Giornaliero (Cron Job) con Cifratura GPG
-
-Per pianificare un backup automatico ogni notte alle 03:00 con cifratura AES-256:
-
-```bash
-# Modifica le variabili d'ambiente in crontab se desideri la cifratura:
-sudo crontab -e
-# Aggiungi in fondo:
-GPG_PASSPHRASE="tua_passphrase_sicura"
-0 3 * * * /bin/bash /percorso/a/zerostack/dist/backup-vps.sh >> /var/log/zerostack_backup.log 2>&1
-```
+La prova di ripristino si fa sul VPS con `vps/zs-prova-ripristino.sh` (cartella `vps/` del progetto,
+esclusa da git perché descrive il server): ripristina l'ultimo dump in un Postgres usa e getta e confronta
+le righe con la produzione.
