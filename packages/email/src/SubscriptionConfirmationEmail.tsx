@@ -10,7 +10,7 @@ import {
   Heading,
   Hr,
   Link
-} from "@react-email/components";
+} from "react-email";
 
 interface SubscriptionEmailProps {
   publicationName: string;

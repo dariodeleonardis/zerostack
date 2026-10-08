@@ -38,7 +38,7 @@ import { envNumber, SUBSTACK_FEE_PERCENT, formatPercent, percentWithArticle, pla
 import { contrast, publicationFont, publicationPalette, readableOn, textSafe } from "../apps/web/lib/colors";
 import { AppearanceSchema } from "../packages/shared/src/index";
 import { CONSENT_ID_PATTERN, CONSENT_VERSION, TECHNICAL_COOKIES, activeCategories, isGranted, needsConsentPrompt, newConsentId, parseConsent, serializeConsent, type OptionalService } from "../apps/web/lib/consent";
-import { buildNewsletterEmail, buildConfirmationEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
+import { buildNewsletterEmail, buildConfirmationEmail, buildPasswordResetEmail, buildVerifyEmail, createTransportFromEnv, platformSender, turboSmtpTransport, EmailSendError } from "../packages/email/src/index";
 import http from "http";
 import fs from "fs";
 import path from "path";
@@ -592,7 +592,7 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(platformUrlFromEnv({ APP_URL: "https://zerostack.it/" }) === "https://zerostack.it", "APP_URL senza barra finale");
   assert(platformSender("Lettere", { APP_DOMAIN: "zerostack.it" }).email === "newsletter@zerostack.it", "Mittente di piattaforma dal dominio");
 
-  const newsletter = buildNewsletterEmail({
+  const newsletter = await buildNewsletterEmail({
     to: "lettore@example.it",
     publication: { name: "Lettere", primaryColor: "#123456", replyTo: "redazione@lettere.it" },
     post: { title: "Numero uno", subtitle: "Sotto", authorName: "Dario", publishedAt: new Date("2026-09-28T10:00:00Z") },
@@ -607,8 +607,16 @@ riga_non_valida_senza_chiocciola,2026-04-01T00:00:00Z,free,IT
   assert(newsletter.html.includes("Ciao lettori") && newsletter.html.includes("Sblocca"), "HTML con testo e invito ad abbonarsi");
   assert(Boolean(newsletter.text?.includes("Ciao lettori")), "Versione solo testo generata");
 
-  const confirmationMail = buildConfirmationEmail({ to: "a@b.it", publication: { name: "Lettere" }, confirmUrl: "https://zerostack.it/api/subscribe/confirm?token=xyz" });
+  const confirmationMail = await buildConfirmationEmail({ to: "a@b.it", publication: { name: "Lettere" }, confirmUrl: "https://zerostack.it/api/subscribe/confirm?token=xyz" });
   assert(confirmationMail.html.includes("token=xyz") && Boolean(confirmationMail.text?.includes("token=xyz")), "Email di conferma con il link");
+  // react-email 6 (8/10): anche le email della piattaforma escono con HTML e testo.
+  const resetMail = await buildPasswordResetEmail({ to: "a@b.it", name: "Ada", resetUrl: "https://zerostack.it/reset-password?token=rst", validMinutes: 60 });
+  const verifyMail = await buildVerifyEmail({ to: "a@b.it", name: "Ada", verifyUrl: "https://zerostack.it/api/auth/verify-email?token=vrf" });
+  assert(
+    resetMail.html.includes("token=rst") && Boolean(resetMail.text?.includes("token=rst")) && resetMail.html.startsWith("<!DOCTYPE"),
+    "Email per la nuova password: link nell'HTML e nel testo"
+  );
+  assert(verifyMail.html.includes("token=vrf") && Boolean(verifyMail.text?.includes("token=vrf")), "Email di conferma dell'indirizzo con il link");
 
   let unknownProvider = false;
   try { createTransportFromEnv({ EMAIL_PROVIDER: "piccione" }); } catch { unknownProvider = true; }

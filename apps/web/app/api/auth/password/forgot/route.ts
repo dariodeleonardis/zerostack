@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
   try {
     await emailTransport().send(
-      buildPasswordResetEmail({
+      await buildPasswordResetEmail({
         to: user.email,
         name: user.name,
         resetUrl: `${platformUrlFromEnv()}/reset-password?token=${token}`,

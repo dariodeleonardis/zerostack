@@ -11,7 +11,7 @@ import {
   Button,
   Hr,
   Link
-} from "@react-email/components";
+} from "react-email";
 
 interface WelcomeEmailProps {
   publicationName: string;

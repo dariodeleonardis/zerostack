@@ -1,4 +1,4 @@
-import { render } from "@react-email/render";
+import { render } from "react-email";
 import * as React from "react";
 
 export * from "./NewsletterEmail";

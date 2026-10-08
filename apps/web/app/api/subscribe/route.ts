@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   const confirmUrl = `${platformUrlFromEnv()}/api/subscribe/confirm?token=${token}`;
   try {
     await emailTransport().send(
-      buildConfirmationEmail({
+      await buildConfirmationEmail({
         to: email,
         subscriberName: name,
         publication: { name: publication.name, primaryColor: publication.primaryColor, replyTo: publication.fromEmail },

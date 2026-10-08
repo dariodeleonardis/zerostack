@@ -15,7 +15,7 @@ export async function sendVerificationEmail(user: { id: string; email: string; n
     data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + VALID_HOURS * 60 * 60 * 1000) }
   });
   await emailTransport().send(
-    buildVerifyEmail({ to: user.email, name: user.name, verifyUrl: `${platformUrlFromEnv()}/api/auth/verify-email?token=${token}` })
+    await buildVerifyEmail({ to: user.email, name: user.name, verifyUrl: `${platformUrlFromEnv()}/api/auth/verify-email?token=${token}` })
   );
 }
 

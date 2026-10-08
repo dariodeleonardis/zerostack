@@ -106,6 +106,25 @@ try {
   const suspended = await loginAs(nuovo);
   assert(suspended.location.endsWith("errore=sospeso") && !suspended.session, "Account sospeso: niente accesso nemmeno con Google");
 
+  // --- Pagina di cortesia accesa (8/10): Google non crea account nuovi, chi c'è già entra
+  await prisma.systemStatus.upsert({ where: { key: "pagina-cortesia" }, create: { key: "pagina-cortesia", ok: false }, update: { ok: false } });
+  try {
+    const closed = await loginAs(profile("chiuso"));
+    assert(
+      closed.location.endsWith("/login?errore=iscrizioni-chiuse") && !closed.session && !(await prisma.user.findFirst({ where: { email: `chiuso-${run}@gmail.com` } })),
+      "Cortesia accesa: un profilo Google nuovo non crea l'account",
+      `(${closed.location})`
+    );
+    const returning = await loginAs(profile("esistente", { email: existingEmail, sub: `google-link-${run}` }));
+    assert(Boolean(returning.session), "Cortesia accesa: chi ha già l'account entra con Google", `(${returning.location})`);
+    const byEmail = await loginAs(profile("altro-sub", { email: existingEmail }));
+    assert(Boolean(byEmail.session), "Cortesia accesa: un account esistente si collega a Google per email");
+    const closedPage = await (await get("/login?errore=iscrizioni-chiuse")).text();
+    assert(closedPage.includes("non è ancora aperto alle iscrizioni"), "La pagina di accesso spiega perché");
+  } finally {
+    await prisma.systemStatus.deleteMany({ where: { key: "pagina-cortesia" } });
+  }
+
   // --- Pagine
   const loginPage = await (await get("/login?errore=sospeso")).text();
   assert(loginPage.includes("Continua con Google") && loginPage.includes("Questo account è sospeso"), "La pagina di accesso mostra il pulsante e il motivo del rifiuto");

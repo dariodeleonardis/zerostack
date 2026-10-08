@@ -12,7 +12,7 @@ import {
   Hr,
   Img,
   Button
-} from "@react-email/components";
+} from "react-email";
 
 interface NewsletterEmailProps {
   publicationName: string;

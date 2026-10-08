@@ -173,7 +173,7 @@ export async function processCampaign(
 
       const fullAccess = !isPaid || paidEmails.has(subscriber.email.toLowerCase());
       const unsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribeToken)}`;
-      const message = buildNewsletterEmail({
+      const message = await buildNewsletterEmail({
         to: subscriber.email,
         publicationId: campaign.publicationId,
         publication: pubInfo,

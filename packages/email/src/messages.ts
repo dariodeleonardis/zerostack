@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render } from "@react-email/render";
+import { render } from "react-email";
 import { NewsletterEmail } from "./NewsletterEmail";
 import { WelcomeEmail } from "./WelcomeEmail";
 import { PasswordResetEmail } from "./PasswordResetEmail";
@@ -13,18 +13,20 @@ interface PublicationInfo {
   replyTo?: string | null;
 }
 
-function renderBoth(element: React.ReactElement): { html: string; text: string } {
-  return { html: render(element), text: render(element, { plainText: true }) };
+// Da react-email 1.0 render è asincrono: tutte le build* restituiscono una Promise.
+async function renderBoth(element: React.ReactElement): Promise<{ html: string; text: string }> {
+  const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  return { html, text };
 }
 
 /** Email della doppia conferma (double opt-in). */
-export function buildConfirmationEmail(input: {
+export async function buildConfirmationEmail(input: {
   to: string;
   subscriberName?: string | null;
   publication: PublicationInfo;
   confirmUrl: string;
-}): OutgoingEmail {
-  const { html, text } = renderBoth(
+}): Promise<OutgoingEmail> {
+  const { html, text } = await renderBoth(
     React.createElement(WelcomeEmail, {
       publicationName: input.publication.name,
       subscriberName: input.subscriberName ?? undefined,
@@ -47,7 +49,7 @@ export function buildConfirmationEmail(input: {
  * `oneClickUrl` riceve la POST "List-Unsubscribe=One-Click" dei client di posta (RFC 8058):
  * Gmail e Yahoo la richiedono a chi spedisce in massa.
  */
-export function buildNewsletterEmail(input: {
+export async function buildNewsletterEmail(input: {
   to: string;
   /** Finisce nei tag del provider: i webhook dei rimbalzi sanno da quale pubblicazione veniva l'email. */
   publicationId?: string;
@@ -58,11 +60,11 @@ export function buildNewsletterEmail(input: {
   postUrl: string;
   unsubscribeUrl: string;
   oneClickUrl: string;
-}): OutgoingEmail {
+}): Promise<OutgoingEmail> {
   const publishedDate = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(
     input.post.publishedAt
   );
-  const { html, text } = renderBoth(
+  const { html, text } = await renderBoth(
     React.createElement(NewsletterEmail, {
       publicationName: input.publication.name,
       publicationLogoUrl: input.publication.logoUrl ?? undefined,
@@ -93,15 +95,15 @@ export function buildNewsletterEmail(input: {
 }
 
 /** Email per reimpostare la password: mittente della piattaforma, non di una pubblicazione. */
-export function buildPasswordResetEmail(input: { to: string; name?: string | null; resetUrl: string; validMinutes: number }): OutgoingEmail {
-  const { html, text } = renderBoth(
+export async function buildPasswordResetEmail(input: { to: string; name?: string | null; resetUrl: string; validMinutes: number }): Promise<OutgoingEmail> {
+  const { html, text } = await renderBoth(
     React.createElement(PasswordResetEmail, { name: input.name ?? undefined, resetUrl: input.resetUrl, validMinutes: input.validMinutes })
   );
   return { from: platformSender("ZeroStack"), to: input.to, subject: "Imposta una nuova password", html, text };
 }
 
 /** Conferma dell'indirizzo dopo la registrazione. */
-export function buildVerifyEmail(input: { to: string; name?: string | null; verifyUrl: string }): OutgoingEmail {
-  const { html, text } = renderBoth(React.createElement(VerifyEmail, { name: input.name ?? undefined, verifyUrl: input.verifyUrl }));
+export async function buildVerifyEmail(input: { to: string; name?: string | null; verifyUrl: string }): Promise<OutgoingEmail> {
+  const { html, text } = await renderBoth(React.createElement(VerifyEmail, { name: input.name ?? undefined, verifyUrl: input.verifyUrl }));
   return { from: platformSender("ZeroStack"), to: input.to, subject: "Conferma il tuo indirizzo email", html, text };
 }
