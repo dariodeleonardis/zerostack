@@ -5,7 +5,7 @@ Si aggiorna a ogni chiusura: la voce resta, con la data e come è stata chiusa, 
 Le voci sul server e sulla posta che non devono finire su GitHub (il repository è pubblico) stanno in
 `vps/IN-SOSPESO-SERVER.md`, nella cartella del progetto ma fuori da git.
 
-Ultimo aggiornamento: 3 ottobre 2026.
+Ultimo aggiornamento: 8 ottobre 2026.
 
 ## Aperte
 
@@ -13,9 +13,9 @@ Ultimo aggiornamento: 3 ottobre 2026.
 
 | Voce | Cosa serve | Dove | Dal |
 |---|---|---|---|
-| Accesso con Google | Creare le credenziali OAuth (applicazione web) nella Google Cloud Console, indirizzo di ritorno `https://zerostack.it/api/auth/google/callback`; poi `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` in Coolify e Redeploy. Il pulsante compare da solo | Google Cloud Console, Coolify | 2/10 |
-| Pagamenti | Chiavi Stripe e segreti dei webhook in Coolify (`STRIPE_*`), conto Connect della piattaforma | Stripe, Coolify | 1/10 |
-| Email della piattaforma | Scegliere il provider (turboSMTP, Brevo o Resend), chiavi in Coolify, SPF e DKIM del provider nel DNS di zerostack.it. Oggi le email (conferme, newsletter) sono solo scritte nel log | Provider, Coolify, Zone Editor | 1/10 |
+| Pagamenti | Chiavi Stripe e segreti dei webhook in Coolify (`STRIPE_*`, oggi tutte vuote), conto Connect della piattaforma. Senza, abbonamenti e mance non compaiono | Stripe, Coolify | 1/10 |
+| Webhook di turboSMTP | Impostare in turboSMTP l'indirizzo `https://zerostack.it/api/email/webhook/turbosmtp?token=…` (token = `EMAIL_WEBHOOK_TOKEN`): senza, rimbalzi e segnalazioni di spam non tolgono gli iscritti | turboSMTP | 3/10 |
+| Piano di turboSMTP | Il piano gratuito manda 200 email al giorno: basta per le email della piattaforma, non per le newsletter | turboSMTP | 3/10 |
 | Cifratura dei backup | `BACKUP_PASSPHRASE` in Coolify (frase lunga conservata fuori dal server: senza, i backup cifrati non si aprono) | Coolify | 2/10 |
 | Copia dei backup fuori dal VPS | Google Drive è pronto ma spento ("per ora no", 2/10): si accende con `vps/backup-esterno/configura-drive.sh`. Nel frattempo i backup si scaricano a mano in `backup/` | VPS, PC | 2/10 |
 | Pagina di cortesia | Spegnerla da `/admin` quando si apre al pubblico | `/admin` | 1/10 |
@@ -56,3 +56,6 @@ Altre voci di codice:
 | Commissione lievemente sotto Substack | 2/10 | 8%, commit 799f6fd |
 | Prova di ripristino dei backup | 2/10 | `vps/zs-prova-ripristino.sh`: stesse righe della produzione |
 | Funzioni vere T1-T7 (commenti, mi piace, posta, squadra, note, Fediverso, mance) | 3/10 | Commit fino a 6ff4383, in produzione |
+| Email della piattaforma | 8/10 | turboSMTP con SPF, DKIM e DMARC verificati; `newsletter@zerostack.it` esiste (prima il controllo del mittente le faceva rifiutare) |
+| Accesso con Google | 8/10 | Credenziali in Coolify, giro fino a Google verificato in produzione; con la pagina di cortesia accesa non crea account nuovi |
+| Giro di debug | 8/10 | Intestazioni di sicurezza, www verso zerostack.it, robots e sitemap, proxy di immagini chiuso, react-email 6 (commit 06d7141, a9d4a47) |
