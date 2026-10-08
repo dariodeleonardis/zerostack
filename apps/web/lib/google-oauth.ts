@@ -127,7 +127,14 @@ export async function availableHandle(email: string, name: string): Promise<stri
  * L'utente che corrisponde al profilo Google: già collegato, oppure con la stessa email (Google l'ha
  * verificata, quindi si collega e si dà l'email per confermata), oppure nuovo.
  */
-export async function userFromGoogle(profile: GoogleProfile): Promise<{ id: string; suspendedAt: Date | null; created: boolean }> {
+export class RegistrationClosedError extends Error {
+  constructor() {
+    super("iscrizioni chiuse");
+  }
+}
+
+/** allowCreate falso (pagina di cortesia accesa): entra solo chi ha già un account. */
+export async function userFromGoogle(profile: GoogleProfile, allowCreate = true): Promise<{ id: string; suspendedAt: Date | null; created: boolean }> {
   const linked = await prisma.user.findUnique({ where: { googleId: profile.sub }, select: { id: true, suspendedAt: true } });
   if (linked) return { ...linked, created: false };
 
@@ -136,6 +143,7 @@ export async function userFromGoogle(profile: GoogleProfile): Promise<{ id: stri
     await prisma.user.update({ where: { id: byEmail.id }, data: { googleId: profile.sub, emailVerified: byEmail.emailVerified ?? new Date() } });
     return { id: byEmail.id, suspendedAt: byEmail.suspendedAt, created: false };
   }
+  if (!allowCreate) throw new RegistrationClosedError();
 
   const user = await prisma.user.create({
     data: {

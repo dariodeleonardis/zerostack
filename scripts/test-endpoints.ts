@@ -138,6 +138,18 @@ async function testLiveEndpoints() {
   await check("WebFinger di un nome inesistente -> 404", "/.well-known/webfinger?resource=acct:non-esiste-davvero@localhost", undefined, (res) => res.status === 404);
   await check("Attore ActivityPub finto rimosso -> 404", "/api/activitypub/users/tech-italia", undefined, (res) => res.status === 404);
 
+  // Giro di debug dell'8/10: intestazioni di sicurezza, robots e sitemap, niente proxy di immagini altrui.
+  await check("Intestazioni di sicurezza e niente X-Powered-By", "/login", undefined, (res) =>
+    res.status === 200 &&
+    res.headers.get("x-frame-options") === "SAMEORIGIN" &&
+    res.headers.get("x-content-type-options") === "nosniff" &&
+    Boolean(res.headers.get("strict-transport-security")) &&
+    !res.headers.get("x-powered-by")
+  );
+  await check("robots.txt con la sitemap", "/robots.txt", undefined, (res, text) => res.status === 200 && text.includes("Sitemap:"));
+  await check("sitemap.xml", "/sitemap.xml", undefined, (res, text) => res.status === 200 && text.includes("/privacy</loc>"));
+  await check("/_next/image non fa da proxy per altri siti", "/_next/image?url=https%3A%2F%2Fexample.com%2Fx.png&w=64&q=75", undefined, (res) => res.status === 400);
+
   console.log("\n========================================================");
   console.log(`📊 RISULTATO TEST LIVE ENDPOINTS: ${passed}/${passed + failed} SUPERATI`);
   if (failed === 0) {

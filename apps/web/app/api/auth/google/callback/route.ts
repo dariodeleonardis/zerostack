@@ -3,9 +3,11 @@ import { cookies } from "next/headers";
 import { platformUrlFromEnv } from "@zerostack/shared";
 import { clientIp, createSession } from "../../../../../lib/auth";
 import { allowAttempt } from "../../../../../lib/rate-limit";
+import { getCourtesy } from "../../../../../lib/courtesy";
 import {
   OAUTH_COOKIE,
   OAUTH_COOKIE_PATH,
+  RegistrationClosedError,
   UnverifiedGoogleEmailError,
   fetchGoogleProfile,
   isGoogleConfigured,
@@ -40,7 +42,8 @@ export async function GET(req: Request) {
 
   try {
     const profile = await fetchGoogleProfile(code, saved.verifier);
-    const user = await userFromGoogle(profile);
+    // Con la pagina di cortesia accesa le iscrizioni sono chiuse anche da qui, come da /register.
+    const user = await userFromGoogle(profile, !(await getCourtesy()).enabled);
     if (user.suspendedAt) return fail("sospeso");
     await createSession(user.id);
     const target = saved.next || (user.created ? "/studio/publications/new" : "/studio");
@@ -49,6 +52,7 @@ export async function GET(req: Request) {
     return res;
   } catch (err) {
     if (err instanceof UnverifiedGoogleEmailError) return fail("google-email-non-verificata");
+    if (err instanceof RegistrationClosedError) return fail("iscrizioni-chiuse");
     console.error("[google] accesso non riuscito:", err instanceof Error ? err.message : err);
     return fail("google-errore");
   }

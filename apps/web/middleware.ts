@@ -65,6 +65,13 @@ function asPublication(req: NextRequest, target?: URL): NextResponse {
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
+  // www.<dominio> rimanda al dominio senza www: un solo indirizzo per i motori di ricerca, e
+  // l'accesso con Google torna sempre sull'host da cui è partito (il cookie OAuth è legato all'host).
+  const host = (req.headers.get("host") ?? "").split(":")[0].toLowerCase();
+  const root = (process.env.APP_DOMAIN || process.env.NEXT_PUBLIC_ROOT_DOMAIN || "zerostack.it").toLowerCase();
+  if (host === `www.${root}`) {
+    return NextResponse.redirect(`https://${root}${url.pathname}${url.search}`, 308);
+  }
   if (!COURTESY_OPEN_PAGES.has(url.pathname) && (await courtesyBlocks(req))) {
     const res = NextResponse.rewrite(new URL("/cortesia", req.url));
     res.headers.set("X-Robots-Tag", "noindex");

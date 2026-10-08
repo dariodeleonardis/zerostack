@@ -4,10 +4,15 @@ import { RegisterSchema } from "@zerostack/shared";
 import { clientIp, createSession, hashPassword, isSameOriginJson } from "../../../../lib/auth";
 import { allowAttempt } from "../../../../lib/rate-limit";
 import { sendVerificationEmail } from "../../../../lib/email-verification";
+import { getCourtesy } from "../../../../lib/courtesy";
 
 export async function POST(req: Request) {
   if (!isSameOriginJson(req)) {
     return NextResponse.json({ error: "Richiesta non valida" }, { status: 400 });
+  }
+  // La pagina di cortesia chiude /register, ma l'API restava aperta a chi la chiamava direttamente.
+  if ((await getCourtesy()).enabled) {
+    return NextResponse.json({ error: "ZeroStack non è ancora aperto alle iscrizioni." }, { status: 403 });
   }
   if (!(await allowAttempt(`register:${clientIp(req)}`, 5, 60 * 60))) {
     return NextResponse.json({ error: "Troppe registrazioni da questa rete. Riprova tra un'ora." }, { status: 429 });

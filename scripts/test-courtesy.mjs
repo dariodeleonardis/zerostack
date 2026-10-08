@@ -98,6 +98,10 @@ try {
   assert(String(home.headers["x-robots-tag"] || "").includes("noindex"), "La pagina di cortesia non si fa indicizzare", JSON.stringify(home.headers["x-robots-tag"]));
   assert(isCourtesy(await request("GET", "/register")), "Accesa: la registrazione è chiusa ai visitatori");
   assert(isCourtesy(await request("GET", "/studio")), "Accesa: lo Studio è chiuso ai visitatori");
+  const late = await register("tardivo");
+  assert(late.res.status === 403 && !late.cookie, "Accesa: anche l'API di registrazione è chiusa (403)", `(${late.res.status})`);
+  const www = await request("GET", "/login?next=%2Fstudio", { host: `www.${ROOT}` });
+  assert(www.status === 308 && www.headers.location === `https://${ROOT}/login?next=%2Fstudio`, "www rimanda al dominio senza www", `(${www.status} ${www.headers.location})`);
   assert(isCourtesy(await request("GET", "/", { host: `qualcosa-${run}.${ROOT}` })), "Accesa: anche i sottodomini mostrano la pagina di cortesia");
   assert(isCourtesy(await request("GET", "/", { cookie: reader.cookie })), "Accesa: un utente non amministratore vede la pagina di cortesia");
 

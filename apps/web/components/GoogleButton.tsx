@@ -7,6 +7,7 @@ const ERRORS: Record<string, string> = {
   "google-annullato": "Accesso con Google annullato.",
   "google-scaduto": "La richiesta a Google è scaduta o non è valida. Riprova.",
   "google-email-non-verificata": "Google non ha verificato l'email di questo account: usa email e password.",
+  "iscrizioni-chiuse": "ZeroStack non è ancora aperto alle iscrizioni: con Google può entrare solo chi ha già un account.",
   "google-errore": "Google non ha risposto come previsto. Riprova tra poco.",
   "troppi-tentativi": "Troppi tentativi. Riprova tra 15 minuti.",
   sospeso: "Questo account è sospeso. Scrivi all'assistenza per informazioni."
