@@ -20,7 +20,11 @@ export function StudioShell({
   publications: StudioPublication[];
   children: React.ReactNode;
 }) {
-  const [currentPub, setCurrentPub] = useState<StudioPublication | null>(publications[0] ?? null);
+  // Il layout dello Studio resta montato fra una pagina e l'altra: la pubblicazione attiva si ricava
+  // dall'elenco a ogni render, altrimenti dopo averne creata una il selettore restava su "Nessuna".
+  const [currentId, setCurrentId] = useState<string | null>(publications[0]?.id ?? null);
+  const currentPub = publications.find((p) => p.id === currentId) ?? publications[0] ?? null;
+  const setCurrentPub = (pub: StudioPublication) => setCurrentId(pub.id);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 

@@ -18,5 +18,5 @@ export async function GET(req: NextRequest) {
     prisma.emailVerificationToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
     prisma.user.update({ where: { id: row.userId }, data: { emailVerified: new Date() } })
   ]);
-  return simplePage("Email confermata", '<p>Grazie: il tuo indirizzo è confermato. Ora puoi inviare newsletter e ricevere pagamenti.</p><p><a href="/studio">Vai al pannello</a></p>');
+  return simplePage("Email confermata", '<p>Grazie: il tuo indirizzo è confermato. Ora puoi inviare newsletter e ricevere pagamenti.</p><p><a class="btn" href="/studio">Vai allo Studio</a></p>');
 }
