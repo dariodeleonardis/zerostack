@@ -7,9 +7,10 @@ export const config = {
      * - api routes
      * - _next static files and chunks
      * - .well-known (WebFinger del Fediverse, verifiche ACME): deve rispondere anche sui sottodomini
+     * - fonts/ (i caratteri di public/fonts, usati anche dalle pagine servite con la cortesia accesa)
      * - file con estensione (.ico, .png, .jpg, .svg, .css, .js, .xml, .txt)
      */
-    "/((?!api/|_next/|_static/|\\.well-known/|[\\w-]+\\.\\w+).*)"
+    "/((?!api/|_next/|_static/|\\.well-known/|fonts/|[\\w-]+\\.\\w+).*)"
   ]
 };
 

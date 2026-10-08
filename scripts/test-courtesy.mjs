@@ -109,6 +109,8 @@ try {
   const login = await request("GET", "/login");
   assert(login.status === 200 && !isCourtesy(login), "Accesa: la pagina di accesso resta raggiungibile");
   assert(!isCourtesy(await request("GET", "/privacy")), "Accesa: la privacy resta raggiungibile");
+  const font = await request("GET", "/fonts/archivo.woff2");
+  assert(font.status === 200 && String(font.headers["content-type"]).includes("font/woff2"), "Accesa: i caratteri di /fonts/ arrivano come file, non come pagina", `(${font.status} ${font.headers["content-type"]})`);
   const live = await request("GET", "/api/health/live");
   assert(live.status === 200 && live.json?.status === "ok", "Accesa: le API non si fermano (/api/health/live)", `(${live.status})`);
   const check = await request("GET", `/api/domains/check?domain=${ROOT}`);
